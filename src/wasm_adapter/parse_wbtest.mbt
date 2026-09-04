@@ -1,3 +1,4 @@
+///|
 test "wasm_core 0.14 parses an empty core module" {
   let parsed = parse_artifact(b"\x00asm\x01\x00\x00\x00")
   inspect(parsed.imports.length(), content="0")
@@ -16,6 +17,7 @@ test "wasm_core 0.14 parses an empty core module" {
   )
 }
 
+///|
 test "wasm_core parser rejects truncated module" {
   let parse_error = try parse_artifact(b"\x00asm") catch {
     err => Some(err)

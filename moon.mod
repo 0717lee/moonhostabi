@@ -19,7 +19,7 @@ repository = "https://github.com/0717lee/moonhostabi"
 
 license = "Apache-2.0"
 
-keywords = ["wasm-gc", "abi", "ffi", "host", "compatibility"]
+keywords = [ "wasm-gc", "abi", "ffi", "host", "compatibility" ]
 
 preferred_target = "native"
 
