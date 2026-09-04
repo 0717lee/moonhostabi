@@ -54,6 +54,14 @@ release-published SHA-256 before extraction:
 | `wasm-tools-1.258.0-x86_64-linux.tar.gz` | `b52d14eb74a4852cc249369bd4480c2b2fdd876145f41db51ff52269ded240ce` |
 | `wasm-tools-1.258.0-x86_64-windows.zip` | `527fe5c3ef5363c58888548827bb44c87fcbf17bb2a2df295055788d82c72081` |
 
+CI also downloads the official MoonBit installers as files rather than piping
+them directly into a shell. The pinned installer SHA-256 values are
+`46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe`
+(Unix) and
+`a5101e91ffa9905fb25cd009b9a4aa942971a294bd055c89836e3af89b710c64`
+(Windows). After installation, both the workflow and final gate reject any
+toolchain other than the exact versions listed above.
+
 ## Fresh fixture provenance
 
 Every fixture was authored for MoonHostABI. None comes from PixelForge or an
@@ -204,6 +212,10 @@ not evidence of a GitHub-hosted run.
   bytes can therefore defer an export mismatch to the first call.
 - The proof covers native CLI execution on Windows locally and configures Linux
   CI, but no remote Linux result is claimed yet.
+- MoonBit's CI installer is content-hash pinned and the installed binaries are
+  version-gated, but it still resolves the service's `latest` toolchain. A new
+  upstream release therefore fails closed instead of silently upgrading; an
+  immutable, checksum-pinned historical archive is a release prerequisite.
 - The browser verifier uses fixed loopback port 4173 with one worker; concurrent
   verifier processes intentionally contend rather than reuse an unknown server.
 - There is no public all-in-one `verify` CLI subcommand yet; the reproducible
