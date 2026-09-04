@@ -1,3 +1,7 @@
+param(
+  [switch] $KeepBuild
+)
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
@@ -32,6 +36,17 @@ foreach ($directory in @($artifactsRoot, $oracleRoot, $buildRoot)) {
 }
 
 $moonCommand = Get-Command moon -ErrorAction Stop
+$moonVersionOutput = & $moonCommand.Source version --all
+if ($LASTEXITCODE -ne 0) {
+  throw "moon version --all failed with exit code $LASTEXITCODE"
+}
+$moonVersionText = $moonVersionOutput -join "`n"
+if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20260819 \(fc2a4ee 2026-08-19\)') {
+  throw "Expected moon 0.1.20260819 (fc2a4ee), got '$($moonVersionOutput -join ' ')'."
+}
+if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.9\+6e6c44045 \(2026-08-19\)') {
+  throw "Expected moonc v0.10.9+6e6c44045, got '$($moonVersionOutput -join ' ')'."
+}
 
 $bundledTools = @()
 if (Test-Path -LiteralPath (Join-Path $toolsRoot 'wasm-tools')) {
@@ -96,7 +111,14 @@ $runRoot = [IO.Path]::GetFullPath(
 )
 Assert-ChildPath -Path $runRoot -Parent $buildRoot
 [IO.Directory]::CreateDirectory($runRoot) | Out-Null
+$stagedArtifactsRoot = [IO.Path]::GetFullPath((Join-Path $runRoot 'artifacts'))
+$stagedOracleRoot = [IO.Path]::GetFullPath((Join-Path $runRoot 'oracle'))
+foreach ($directory in @($stagedArtifactsRoot, $stagedOracleRoot)) {
+  Assert-ChildPath -Path $directory -Parent $runRoot
+  [IO.Directory]::CreateDirectory($directory) | Out-Null
+}
 
+try {
 $projects = @(
   @{ Name = 'scalar'; Patterns = @(
       @{ Regex = '\(export "add"'; Description = 'add export' },
@@ -127,6 +149,7 @@ $projects = @(
 )
 
 $successfulArtifacts = [Collections.Generic.List[string]]::new()
+$publishQueue = [Collections.Generic.List[object]]::new()
 foreach ($project in $projects) {
   $name = [string] $project.Name
   $projectRoot = [IO.Path]::GetFullPath((Join-Path $projectsRoot $name))
@@ -153,17 +176,23 @@ foreach ($project in $projects) {
     throw "Expected exactly one $name.wasm under '$targetDir', found $($matches.Count)"
   }
   $destination = [IO.Path]::GetFullPath((Join-Path $artifactsRoot "$name.wasm"))
+  $stagedArtifact = [IO.Path]::GetFullPath((Join-Path $stagedArtifactsRoot "$name.wasm"))
   Assert-ChildPath -Path $destination -Parent $artifactsRoot
-  Copy-Item -LiteralPath $matches[0].FullName -Destination $destination -Force
+  Assert-ChildPath -Path $stagedArtifact -Parent $stagedArtifactsRoot
+  Copy-Item -LiteralPath $matches[0].FullName -Destination $stagedArtifact -Force
 
-  Invoke-Checked -FilePath $wasmTools -Arguments @('validate', $destination) -Description "validation for $name"
-  $wat = Get-PrintedWat -Artifact $destination
+  Invoke-Checked -FilePath $wasmTools -Arguments @('validate', $stagedArtifact) -Description "validation for $name"
+  $wat = Get-PrintedWat -Artifact $stagedArtifact
   foreach ($expectation in $project.Patterns) {
     Assert-WatPattern -Wat $wat -Pattern $expectation.Regex -Fixture $name -Description $expectation.Description
   }
   $oraclePath = [IO.Path]::GetFullPath((Join-Path $oracleRoot "$name.wat"))
+  $stagedOracle = [IO.Path]::GetFullPath((Join-Path $stagedOracleRoot "$name.wat"))
   Assert-ChildPath -Path $oraclePath -Parent $oracleRoot
-  [IO.File]::WriteAllText($oraclePath, $wat + "`n", $utf8NoBom)
+  Assert-ChildPath -Path $stagedOracle -Parent $stagedOracleRoot
+  [IO.File]::WriteAllText($stagedOracle, $wat + "`n", $utf8NoBom)
+  $publishQueue.Add([PSCustomObject]@{ Staged = $stagedArtifact; Destination = $destination })
+  $publishQueue.Add([PSCustomObject]@{ Staged = $stagedOracle; Destination = $oraclePath })
   $successfulArtifacts.Add($destination)
 }
 
@@ -171,11 +200,13 @@ $watFixtures = @('rec-a', 'rec-reindexed')
 foreach ($name in $watFixtures) {
   $source = [IO.Path]::GetFullPath((Join-Path $fixturesRoot "wat/$name.wat"))
   $destination = [IO.Path]::GetFullPath((Join-Path $artifactsRoot "$name.wasm"))
+  $stagedArtifact = [IO.Path]::GetFullPath((Join-Path $stagedArtifactsRoot "$name.wasm"))
   Assert-ChildPath -Path $source -Parent (Join-Path $fixturesRoot 'wat')
   Assert-ChildPath -Path $destination -Parent $artifactsRoot
-  Invoke-Checked -FilePath $wasmTools -Arguments @('parse', $source, '-o', $destination) -Description "WAT parse for $name"
-  Invoke-Checked -FilePath $wasmTools -Arguments @('validate', $destination) -Description "validation for $name"
-  $wat = Get-PrintedWat -Artifact $destination
+  Assert-ChildPath -Path $stagedArtifact -Parent $stagedArtifactsRoot
+  Invoke-Checked -FilePath $wasmTools -Arguments @('parse', $source, '-o', $stagedArtifact) -Description "WAT parse for $name"
+  Invoke-Checked -FilePath $wasmTools -Arguments @('validate', $stagedArtifact) -Description "validation for $name"
+  $wat = Get-PrintedWat -Artifact $stagedArtifact
   foreach ($expectation in @(
       @{ Regex = '\(rec'; Description = 'recursive type group' },
       @{ Regex = '\(ref null (?:\$[A-Za-z][A-Za-z0-9_-]*|\d+)\)'; Description = 'nullable typed reference' },
@@ -185,12 +216,26 @@ foreach ($name in $watFixtures) {
     Assert-WatPattern -Wat $wat -Pattern $expectation.Regex -Fixture $name -Description $expectation.Description
   }
   $oraclePath = [IO.Path]::GetFullPath((Join-Path $oracleRoot "$name.wat"))
+  $stagedOracle = [IO.Path]::GetFullPath((Join-Path $stagedOracleRoot "$name.wat"))
   Assert-ChildPath -Path $oraclePath -Parent $oracleRoot
-  [IO.File]::WriteAllText($oraclePath, $wat + "`n", $utf8NoBom)
+  Assert-ChildPath -Path $stagedOracle -Parent $stagedOracleRoot
+  [IO.File]::WriteAllText($stagedOracle, $wat + "`n", $utf8NoBom)
+  $publishQueue.Add([PSCustomObject]@{ Staged = $stagedArtifact; Destination = $destination })
+  $publishQueue.Add([PSCustomObject]@{ Staged = $stagedOracle; Destination = $oraclePath })
   $successfulArtifacts.Add($destination)
+}
+
+foreach ($item in $publishQueue) {
+  [IO.File]::Move($item.Staged, $item.Destination, $true)
 }
 
 Write-Output "Validated fixture artifacts:"
 foreach ($artifact in $successfulArtifacts) {
   Write-Output "- $artifact"
+}
+} finally {
+  if (-not $KeepBuild -and (Test-Path -LiteralPath $runRoot)) {
+    Assert-ChildPath -Path $runRoot -Parent $buildRoot
+    Remove-Item -LiteralPath $runRoot -Recurse -Force
+  }
 }

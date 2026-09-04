@@ -21,5 +21,8 @@ moon test src/projector --target native
 ```
 
 The application script is idempotent and refuses versions other than `0.14.0`
-or source that no longer matches the reviewed patch. Remove this patch and the
-script after upgrading to an upstream release containing the same fix.
+or a target source file whose normalized UTF-8/LF SHA-256 is neither the
+reviewed baseline nor the reviewed patched result. Newline normalization keeps
+the guard cross-platform while all non-newline source drift is rejected. Remove
+this patch and the script after upgrading to an upstream release containing the
+same fix.

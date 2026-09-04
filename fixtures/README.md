@@ -17,4 +17,9 @@ Rebuild every artifact and Oracle printout from the repository root:
 pwsh -NoProfile -File scripts/build-fixtures.ps1
 ```
 
-The script requires MoonBit and the pinned `wasm-tools 1.258.0`. On Windows it discovers the checksum-verified executable under `.tools/wasm-tools`; CI may provide the same version on `PATH`.
+The script requires `moon 0.1.20260819` / `moonc 0.10.9+6e6c44045` and the
+pinned `wasm-tools 1.258.0`; it refuses other versions. On Windows it discovers
+the checksum-verified executable under `.tools/wasm-tools`; CI may provide the
+same version on `PATH`. Outputs are staged and structurally validated before
+the committed artifacts and Oracle files are replaced. Per-run build data is
+removed unless `-KeepBuild` is supplied for diagnosis.

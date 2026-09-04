@@ -44,3 +44,16 @@ test "wasm_core parses scalar and externref compiler artifacts" {
   inspect(externref.imports.length(), content="1")
   inspect(externref.exports.length(), content="1")
 }
+
+///|
+test "singleton recursive pre-scan still rejects malformed mutability" {
+  let malformed = b"\x00asm\x01\x00\x00\x00\x01\x06\x01\x5f\x01\x63\x00\x02"
+  let parse_error = try parse_artifact(malformed) catch {
+    err => Some(err)
+  } noraise {
+    _ => None
+  }
+  guard parse_error is Some(_) else {
+    fail("expected malformed singleton recursive type to fail closed")
+  }
+}
