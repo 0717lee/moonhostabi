@@ -9,6 +9,24 @@ proof-grade Spike is **local GO**; see [the validation evidence](docs/validation
 for hashes, the compatibility matrix, runtime observations, limits, and the
 unverified remote-CI boundary.
 
+## Judge quickstart
+
+MoonHostABI makes a compiled MoonBit Wasm-GC artifact's host-facing ABI
+reviewable before host code is shipped: one lock, one canonical report, and
+one deterministic reproduction bundle provide the evidence trail. From a clean
+repository root, run the three focused checks below and look for their exact
+`GO` markers. The full walkthrough is [the judge quickstart](docs/quickstart.md).
+
+| Check | Command | Expected marker |
+| --- | --- | --- |
+| CLI evidence | `pwsh -NoProfile -File scripts/verify-command.ps1` | `MOONHOSTABI_VERIFY_STATUS=GO` |
+| Reproduction bundle | `pwsh -NoProfile -File scripts/verify-reproduction-bundle.ps1` | `MOONHOSTABI_BUNDLE_STATUS=GO` |
+| Platform package | `pwsh -NoProfile -File scripts/verify-release-packaging.ps1` | `MOONHOSTABI_PACKAGE_STATUS=GO` |
+
+The package check is the locally observed Windows native path; its Linux archive
+metadata/mock path and the still-pending remote Linux native run are separated
+in the walkthrough and validation record.
+
 ## Reproduce the Spike
 
 Prerequisites are PowerShell 7, MoonBit `0.1.20260819`, Node.js `24.12.0` with

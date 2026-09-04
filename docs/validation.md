@@ -263,6 +263,25 @@ See [the release dry-run guide](releasing.md).
 This is local automation evidence, not a remote run. No workflow was triggered,
 no tag or GitHub Release exists, and no run URL is recorded.
 
+## Task 8 judge quickstart evidence
+
+The judge-facing quickstart is available at [docs/quickstart.md](quickstart.md),
+and the first screen links to it from `README.md`. From a clean repository root,
+the focused commands produced these observed local markers:
+
+| Command | Observed marker | Evidence scope |
+| --- | --- | --- |
+| `scripts/verify-command.ps1` | `MOONHOSTABI_VERIFY_STATUS=GO` | Native CLI report and failure contract |
+| `scripts/verify-reproduction-bundle.ps1` | `MOONHOSTABI_BUNDLE_STATUS=GO` | Deterministic seven-entry bundle |
+| `scripts/verify-release-packaging.ps1` | `MOONHOSTABI_PACKAGE_STATUS=GO` | Windows native package and extracted smoke |
+
+The quickstart also points to the six-section report schema and explains how
+`validation.json` connects that report to the bundle's artifact, lock, contract,
+adapter, commands, and manifest files. Its document validator checks links,
+relative command paths, encoding, and stale claims. The Linux archive metadata or
+mock path remains local-only evidence, and the remote Linux native run is still
+pending; no remote run URL is claimed here.
+
 ## Runtime observations
 
 The generated adapter contains no `any` escape hatch and passes TypeScript 7
