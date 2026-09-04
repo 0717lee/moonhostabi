@@ -34,9 +34,12 @@ pub(all) enum GenerateMode {
 
 ///|
 pub(all) enum CliCommand {
+  Help
+  Version
   Inspect(String)
   Lock(String, String)
   Check(String, String)
+  Verify(String, String, String?)
   Generate(String, String?, String, GenerateMode)
 } derive(Eq, Debug)
 
@@ -71,11 +74,15 @@ const MHA_LOCKFILE_INVALID : String = "MHA_LOCKFILE_INVALID"
 const MHA_CONTRACT_INVALID : String = "MHA_CONTRACT_INVALID"
 
 ///|
-const USAGE : String = "usage: moonhostabi inspect <artifact.wasm> --format json | lock <artifact.wasm> --out <lock.json> | check <artifact.wasm> --against <lock.json> | generate <artifact.wasm> --out <directory> [--update | --dry-run] | generate <artifact.wasm> --contract <contract.json> --out <directory>"
+const USAGE : String = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
 
 ///|
 fn parse_command(args : Array[String]) -> CliCommand? {
-  if args.length() == 4 &&
+  if args == ["--help"] {
+    Some(Help)
+  } else if args == ["--version"] {
+    Some(Version)
+  } else if args.length() == 4 &&
     args[0] == "inspect" &&
     !args[1].is_empty() &&
     args[2] == "--format" &&
@@ -93,6 +100,24 @@ fn parse_command(args : Array[String]) -> CliCommand? {
     args[2] == "--against" &&
     !args[3].is_empty() {
     Some(Check(args[1], args[3]))
+  } else if args.length() == 6 &&
+    args[0] == "verify" &&
+    !args[1].is_empty() &&
+    args[2] == "--against" &&
+    !args[3].is_empty() &&
+    args[4] == "--format" &&
+    args[5] == "json" {
+    Some(Verify(args[1], args[3], None))
+  } else if args.length() == 8 &&
+    args[0] == "verify" &&
+    !args[1].is_empty() &&
+    args[2] == "--against" &&
+    !args[3].is_empty() &&
+    args[4] == "--contract" &&
+    !args[5].is_empty() &&
+    args[6] == "--format" &&
+    args[7] == "json" {
+    Some(Verify(args[1], args[3], Some(args[5])))
   } else if args.length() == 4 &&
     args[0] == "generate" &&
     !args[1].is_empty() &&
@@ -300,6 +325,34 @@ fn decode_baseline(
 ) -> @lockfile.AbiLockfile raise CliExecutionError {
   @lockfile.decode_lockfile(@utf8.decode(bytes[:])) catch {
     error => raise CliExecutionError(MHA_LOCKFILE_INVALID, error.to_string())
+  }
+}
+
+///|
+fn decode_verification_baseline_bytes(
+  bytes : Bytes,
+) -> @verification.VerificationBaselineInput {
+  let text : Result[String, Unit] = Ok(@utf8.decode(bytes[:])) catch {
+    _ => Err(())
+  }
+  match text {
+    Ok(value) => @verification.decode_verification_baseline(value)
+    Err(_) =>
+      @verification.InvalidBaseline("lockfile: input is not valid UTF-8")
+  }
+}
+
+///|
+fn decode_verification_contract_bytes(
+  bytes : Bytes,
+) -> @verification.VerificationContractInput {
+  let text : Result[String, Unit] = Ok(@utf8.decode(bytes[:])) catch {
+    _ => Err(())
+  }
+  match text {
+    Ok(value) => @verification.ContractText(value)
+    Err(_) =>
+      @verification.InvalidContractInput("contract: input is not valid UTF-8")
   }
 }
 
@@ -1013,6 +1066,13 @@ fn publish_generated_directory(
 ///|
 fn execute_command(command : CliCommand) -> CommandResult raise {
   match command {
+    Help => { exit_code: 0, stdout: USAGE, stderr: "" }
+    Version =>
+      {
+        exit_code: 0,
+        stdout: "moonhostabi \{@generator.MOONHOSTABI_VERSION}",
+        stderr: "",
+      }
     Inspect(artifact_path) => {
       let analysis = analyze_artifact(read_bytes(artifact_path))
       let encoded_abi = @lockfile.encode_canonical_abi(analysis.abi)
@@ -1055,6 +1115,22 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
         @compat.Unknown => exit_code_for_failure(InvalidArtifact)
       }
       { exit_code, stdout: encode_report(report), stderr: "" }
+    }
+    Verify(artifact_path, baseline_path, contract_path) => {
+      let artifact = read_bytes(artifact_path)
+      let baseline = decode_verification_baseline_bytes(
+        read_bytes(baseline_path),
+      )
+      let contract = match contract_path {
+        Some(path) => decode_verification_contract_bytes(read_bytes(path))
+        None => @verification.ContractNotProvided
+      }
+      let report = @verification.verify_artifact(artifact, baseline, contract)
+      {
+        exit_code: report.recommended_exit_code(),
+        stdout: @verification.encode_verification_report(report),
+        stderr: "",
+      }
     }
     Generate(artifact_path, contract_path, output_directory, mode) => {
       let analysis = analyze_artifact(read_bytes(artifact_path))

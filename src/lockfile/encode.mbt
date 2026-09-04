@@ -128,3 +128,15 @@ pub fn encode_lockfile(lockfile : AbiLockfile) -> String {
 pub fn AbiLockfile::canonical_abi(self : AbiLockfile) -> @model.HostAbi {
   canonicalize_host_abi(self.abi)
 }
+
+///|
+/// Return the fingerprint of the exact artifact bytes that created this lockfile.
+pub fn AbiLockfile::artifact_fingerprint(self : AbiLockfile) -> String {
+  self.artifact_sha256
+}
+
+///|
+/// Return the fingerprint of the canonical ABI stored in this lockfile.
+pub fn AbiLockfile::abi_fingerprint(self : AbiLockfile) -> String {
+  self.abi_sha256
+}

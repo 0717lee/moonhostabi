@@ -2,7 +2,7 @@
 const GENERATION_MANIFEST_VERSION : Int = 1
 
 ///|
-const GENERATOR_VERSION : String = "0.1.0"
+pub const MOONHOSTABI_VERSION : String = "0.1.0"
 
 ///|
 const MAX_GENERATION_MANIFEST_LENGTH : Int = 64 * 1024
@@ -117,7 +117,7 @@ pub fn create_generation_manifest(
 ) -> GenerationManifest {
   GenerationManifest::{
     abi_sha256,
-    generator_version: GENERATOR_VERSION,
+    generator_version: MOONHOSTABI_VERSION,
     contract_sha256: manifest_sha256(contract),
     adapter_sha256: manifest_sha256(typescript),
   }
@@ -158,7 +158,7 @@ pub fn decode_generation_manifest(
   let generator_version = manifest_string(
     object, "generatorVersion", "manifest",
   )
-  if generator_version != GENERATOR_VERSION {
+  if generator_version != MOONHOSTABI_VERSION {
     invalid_manifest("manifest.generatorVersion: unsupported generator version")
   }
   let contract_sha256 = manifest_hash(object, "contractSha256", "manifest")

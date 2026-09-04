@@ -1,10 +1,16 @@
 ///|
 test "CLI failure categories reserve stable exit codes" {
-  inspect(exit_code_for_failure(Usage), content="1")
-  inspect(exit_code_for_failure(BreakingAbi), content="2")
-  inspect(exit_code_for_failure(InvalidArtifact), content="3")
-  inspect(exit_code_for_failure(AdapterMismatch), content="4")
-  inspect(exit_code_for_failure(RuntimeFailure), content="5")
+  let cases : Array[(FailureKind, Int)] = [
+    (Usage, 1),
+    (BreakingAbi, 2),
+    (InvalidArtifact, 3),
+    (AdapterMismatch, 4),
+    (RuntimeFailure, 5),
+  ]
+  for case in cases {
+    let (failure, expected) = case
+    inspect(exit_code_for_failure(failure) == expected, content="true")
+  }
 }
 
 ///|
@@ -16,6 +22,12 @@ test "missing command returns a usage error" {
 
 ///|
 test "argument parsing is pure and order-sensitive" {
+  guard parse_command(["--help"]) is Some(Help) else {
+    fail("expected help command")
+  }
+  guard parse_command(["--version"]) is Some(Version) else {
+    fail("expected version command")
+  }
   guard parse_command(["inspect", "module.wasm", "--format", "json"])
     is Some(Inspect(path)) else {
     fail("expected inspect command")
@@ -45,6 +57,22 @@ test "argument parsing is pure and order-sensitive" {
     is Some(Generate(_, None, _, DryRun)) else {
     fail("expected dry-run command")
   }
+  guard parse_command([
+      "verify", "module.wasm", "--against", "baseline.json", "--format", "json",
+    ])
+    is Some(Verify(verify_artifact, verify_baseline, None)) else {
+    fail("expected verify command")
+  }
+  inspect(verify_artifact, content="module.wasm")
+  inspect(verify_baseline, content="baseline.json")
+  guard parse_command([
+      "verify", "module.wasm", "--against", "baseline.json", "--contract", "contract.json",
+      "--format", "json",
+    ])
+    is Some(Verify(_, _, Some(verify_contract))) else {
+    fail("expected verify command with contract")
+  }
+  inspect(verify_contract, content="contract.json")
   assert_true(
     parse_command(["generate", "module.wasm", "--update", "--out", "generated"])
     is None,
@@ -67,6 +95,109 @@ test "argument parsing is pure and order-sensitive" {
     is None,
   )
   assert_true(parse_command(["generate", "module.wasm"]) is None)
+  for
+    invalid in [
+      ["--help", "extra"],
+      ["--version", "extra"],
+      ["-h"],
+      ["verify", "module.wasm", "--against", "baseline.json"],
+      [
+        "verify", "module.wasm", "--against", "baseline.json", "--format", "text",
+      ],
+      [
+        "verify", "module.wasm", "--contract", "contract.json", "--against", "baseline.json",
+        "--format", "json",
+      ],
+      [
+        "verify", "module.wasm", "--against", "baseline.json", "--format", "json",
+        "--contract", "contract.json",
+      ],
+      [
+        "verify", "module.wasm", "--against", "baseline.json", "--against", "other.json",
+        "--format", "json",
+      ],
+    ] {
+    assert_true(parse_command(invalid) is None)
+  }
+}
+
+///|
+test "help and version have exact stdout-only contracts" {
+  let expected_help = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
+  let help = dispatch(["--help"])
+  inspect(help.exit_code, content="0")
+  inspect(help.stdout, content=expected_help)
+  inspect(help.stderr, content="")
+  let version = dispatch(["--version"])
+  inspect(version.exit_code, content="0")
+  inspect(version.stdout, content="moonhostabi 0.1.0")
+  inspect(version.stderr, content="")
+}
+
+///|
+test "verify dispatch reports success and readable invalid inputs on stdout" {
+  let lock_path = "_build/task5-verify.lock.json"
+  let invalid_lock_path = "_build/task5-invalid.lock.json"
+  let malformed_path = "_build/task5-malformed.wasm"
+  for path in [lock_path, invalid_lock_path, malformed_path] {
+    if @fs.path_exists(path) {
+      @fs.remove_file(path)
+    }
+  }
+  let locked = dispatch([
+    "lock", "fixtures/artifacts/scalar.wasm", "--out", lock_path,
+  ])
+  inspect(locked.exit_code, content="0")
+
+  let compatible = dispatch([
+    "verify", "fixtures/artifacts/scalar.wasm", "--against", lock_path, "--format",
+    "json",
+  ])
+  inspect(compatible.exit_code, content="0")
+  inspect(compatible.stderr, content="")
+  guard @json.parse(compatible.stdout)
+    is Object(
+      {
+        "schemaVersion": Number(schema_version, ..),
+        "outcome": String(outcome),
+        "artifact": Object(_),
+        "baseline": Object(_),
+        "provenance": Object(_),
+        "compatibility": Object(_),
+        "contract": Object(_),
+        "generator": Object(_),
+        ..
+      }
+    ) else {
+    fail("expected canonical verification report")
+  }
+  inspect(schema_version, content="1")
+  inspect(outcome, content="compatible")
+
+  @fs.write_string_to_file(invalid_lock_path, "{")
+  let invalid_lock = dispatch([
+    "verify", "fixtures/artifacts/scalar.wasm", "--against", invalid_lock_path, "--format",
+    "json",
+  ])
+  inspect(invalid_lock.exit_code, content="3")
+  inspect(invalid_lock.stderr, content="")
+  inspect(
+    invalid_lock.stdout.contains("\"baseline\":{\"status\":\"invalid\""),
+    content="true",
+  )
+  inspect(invalid_lock.stdout.contains("MHA_LOCKFILE_INVALID"), content="true")
+
+  @fs.write_bytes_to_file(malformed_path, b"\x00asm")
+  let malformed = dispatch([
+    "verify", malformed_path, "--against", lock_path, "--format", "json",
+  ])
+  inspect(malformed.exit_code, content="3")
+  inspect(malformed.stderr, content="")
+  inspect(malformed.stdout.contains("MHA_PARSE_MALFORMED"), content="true")
+
+  for path in [lock_path, invalid_lock_path, malformed_path] {
+    @fs.remove_file(path)
+  }
 }
 
 ///|

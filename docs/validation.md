@@ -27,6 +27,18 @@ The run creates a GUID directory beneath the resolved OS temporary directory.
 Before recursive cleanup it resolves the path again, checks the exact GUID leaf
 and parent boundary, and refuses deletion if either invariant changed.
 
+The focused real-process CLI gate is also independently reproducible:
+
+```powershell
+pwsh -NoProfile -File scripts/verify-command.ps1
+```
+
+It ends with `MOONHOSTABI_VERIFY_STATUS=GO` after checking the bounded-process
+timeout/kill path, exact help/version output, strict argument ordering,
+canonical report structure, exit codes `0`, `2`, `3`, and `4`, paths containing
+Chinese characters and spaces, and a Wasm module whose trapping start function
+proves that verification does not instantiate or execute the artifact.
+
 ## Verified toolchain
 
 | Tool | Locally verified version |
@@ -131,6 +143,35 @@ The final CLI check over the compiled breaking pair returned exactly exit code
 {"classification":"breaking","changes":[{"classification":"breaking","code":"MHA_SIGNATURE_CHANGED","path":"exports[add].params","message":"function value count changed"}]}
 ```
 
+## One-command verification report
+
+`moonhostabi verify <artifact.wasm> --against <lock.json> [--contract
+<contract.json>] --format json` aggregates the release decision into one
+canonical schema-v1 document. Its six evidence sections are `artifact`,
+`baseline`, `provenance`, `compatibility`, `contract`, and `generator`; the
+top-level `outcome` is one of `compatible`, `breaking`, `unknown`, `invalid`,
+or `adapterMismatch`.
+
+The focused golden suite covers compatible input with a valid contract,
+breaking ABI, unsupported projection, invalid lockfile, stale and malformed
+contracts, generator adapter mismatch, equal ABI from different artifact
+bytes, and malformed Wasm. In the real-process gate:
+
+- compatible and representable input returned exit `0`;
+- the compiled breaking pair returned exit `2` with
+  `MHA_SIGNATURE_CHANGED` at `exports[add].params`;
+- invalid and unsupported inputs returned exit `3` as distinct `invalid` and
+  `unknown` outcomes;
+- an invalid `moonbit:ffi.make_closure` signature returned exit `4` with
+  `MHA_ADAPTER_MISMATCH`;
+- equal canonical ABI with different artifact bytes returned exit `0` while
+  reporting `artifactMatchesBaseline: false` and
+  `abiMatchesBaseline: true`.
+
+Readable semantic inputs always use the canonical report on stdout. CLI usage
+errors and unreadable paths remain stderr-only. Verification has no fallback,
+mock host, or artifact execution path.
+
 ## Runtime observations
 
 The generated adapter contains no `any` escape hatch and passes TypeScript 7
@@ -172,8 +213,9 @@ binds to `127.0.0.1`, and had zero listeners after the run.
   policy: exit 3 with `MHA_PROJECT_UNREPRESENTABLE`.
 - Unknown value encodings, Host ABI features and schema versions classify as
   `unknown`.
-- Malformed, noncanonical or hash-inconsistent lockfiles and malformed or
-  ABI-mismatched contracts are rejected before output is written.
+- `verify` reports malformed, noncanonical or hash-inconsistent lockfiles and
+  malformed or ABI-mismatched contracts in its canonical stdout document;
+  mutating commands still reject them before output is written.
 - Duplicate JavaScript import/export keys are rejected; `__proto__` is emitted
   as a computed own property and validated with an own-property check.
 
@@ -190,6 +232,7 @@ that today's Node/Chromium adapter can exchange typed GC references.
 | Repeated lock output is byte-identical | two files, one SHA-256 above | GO |
 | Raw type reindexing creates no drift | different artifacts, identical canonical ABI bytes | GO |
 | Seeded breaking changes have stable code/path | matrix plus compiled pair exit 2 | GO |
+| One command aggregates release evidence | canonical six-section report, exits 0/2/3/4, real Unicode/space paths | GO |
 | Generated TypeScript is strict and has no `any` | pinned TypeScript check and token scan | GO |
 | Node and Chromium exercise real imports/exports | scalar, identity, trace and negative observations | GO |
 | Malformed/unsupported values fail closed | parser, projector, decoder, generator and CLI tests | GO |
@@ -231,8 +274,9 @@ not evidence of a GitHub-hosted run.
   immutable, checksum-pinned historical archive is a release prerequisite.
 - The browser verifier uses fixed loopback port 4173 with one worker; concurrent
   verifier processes intentionally contend rather than reuse an unknown server.
-- There is no public all-in-one `verify` CLI subcommand yet; the reproducible
-  PowerShell gate is the Spike interface.
+- `verify` currently accepts canonical JSON output only and uses the semantic
+  compatibility policy. Strict-policy selection and additional report formats
+  are not implemented.
 
 ## `wasm_core` parser patch and upstream status
 

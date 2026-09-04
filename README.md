@@ -29,9 +29,45 @@ Run the native CLI from source:
 moon run cmd/moonhostabi --target native inspect <artifact.wasm> --format json
 moon run cmd/moonhostabi --target native lock <artifact.wasm> --out <lock.json>
 moon run cmd/moonhostabi --target native check <artifact.wasm> --against <lock.json>
+moon run cmd/moonhostabi --target native verify <artifact.wasm> --against <lock.json> --format json
+moon run cmd/moonhostabi --target native verify <artifact.wasm> --against <lock.json> --contract <contract.json> --format json
 moon run cmd/moonhostabi --target native generate <artifact.wasm> --out <new-directory>
 moon run cmd/moonhostabi --target native generate <artifact.wasm> --out <owned-directory> --update
 moon run cmd/moonhostabi --target native generate <artifact.wasm> --out <new-directory> --dry-run
+moon run cmd/moonhostabi --target native -- --help
+moon run cmd/moonhostabi --target native -- --version
+```
+
+`verify` is the machine-facing release gate. It emits one canonical JSON report
+on stdout with `artifact`, `baseline`, `provenance`, `compatibility`, `contract`,
+and `generator` sections. It parses and analyzes Wasm bytes but never
+instantiates them or runs host behavior. `--contract` is optional and its
+absence is reported explicitly as `notProvided`; generator representability is
+still checked against a deterministic draft contract.
+
+The stable verification exit codes are:
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | compatible and representable |
+| `1` | invalid CLI usage |
+| `2` | breaking ABI |
+| `3` | invalid artifact/baseline or unsupported/unknown compatibility |
+| `4` | invalid contract or adapter/generator mismatch |
+| `5` | unexpected runtime failure |
+
+For combined findings, an invalid artifact/baseline or unknown compatibility
+takes precedence, followed by a contract or generator mismatch, then a
+breaking ABI.
+
+Readable but invalid lockfiles, contracts, and artifacts are represented in the
+canonical report. Missing or unreadable paths remain I/O errors on stderr.
+Option order is intentionally strict; use `--help` as the authoritative grammar.
+The real-process verification suite, including paths containing Chinese
+characters and spaces, can be run independently:
+
+```powershell
+pwsh -NoProfile -File scripts/verify-command.ps1
 ```
 
 `generate` also accepts `--contract <contract.json>` before `--out`. Generated
