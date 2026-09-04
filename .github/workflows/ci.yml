@@ -1,0 +1,155 @@
+name: Verification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spike:
+    name: Spike / ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86_64
+            os: ubuntu-latest
+            wasm_asset: wasm-tools-1.258.0-x86_64-linux.tar.gz
+            wasm_sha256: b52d14eb74a4852cc249369bd4480c2b2fdd876145f41db51ff52269ded240ce
+          - name: Windows x86_64
+            os: windows-latest
+            wasm_asset: wasm-tools-1.258.0-x86_64-windows.zip
+            wasm_sha256: 527fe5c3ef5363c58888548827bb44c87fcbf17bb2a2df295055788d82c72081
+    env:
+      MOONBIT_VERSION: 0.1.20260819
+      WASM_TOOLS_VERSION: 1.258.0
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: runtime/package-lock.json
+
+      - name: Install exact MoonBit toolchain on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s "$MOONBIT_VERSION"
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Install exact MoonBit toolchain on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:MOONBIT_INSTALL_VERSION = $env:MOONBIT_VERSION
+          Invoke-RestMethod https://cli.moonbitlang.com/install/powershell.ps1 | Invoke-Expression
+          (Join-Path $env:USERPROFILE '.moon\bin') | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Install exact wasm-tools release
+        shell: pwsh
+        env:
+          WASM_ASSET: ${{ matrix.wasm_asset }}
+          WASM_SHA256: ${{ matrix.wasm_sha256 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (
+            [Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+            [Runtime.InteropServices.Architecture]::X64
+          ) {
+            throw 'This matrix entry requires an x86_64 runner.'
+          }
+          $archive = Join-Path $env:RUNNER_TEMP $env:WASM_ASSET
+          $installRoot = Join-Path $env:RUNNER_TEMP 'wasm-tools-install'
+          $uri = "https://github.com/bytecodealliance/wasm-tools/releases/download/v$env:WASM_TOOLS_VERSION/$env:WASM_ASSET"
+          Invoke-WebRequest -Uri $uri -OutFile $archive
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
+          if ($actual -cne $env:WASM_SHA256) {
+            throw "wasm-tools archive checksum mismatch: $actual"
+          }
+          [IO.Directory]::CreateDirectory($installRoot) | Out-Null
+          if ($IsWindows) {
+            Expand-Archive -LiteralPath $archive -DestinationPath $installRoot
+            $executableName = 'wasm-tools.exe'
+          } else {
+            & tar -xzf $archive -C $installRoot
+            if ($LASTEXITCODE -ne 0) {
+              throw "tar failed with exit code $LASTEXITCODE"
+            }
+            $executableName = 'wasm-tools'
+          }
+          $executables = @(
+            Get-ChildItem -LiteralPath $installRoot -Recurse -File |
+              Where-Object { $_.Name -ceq $executableName }
+          )
+          if ($executables.Count -ne 1) {
+            throw "Expected one wasm-tools executable, found $($executables.Count)"
+          }
+          $executables[0].DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Show external tool versions
+        shell: pwsh
+        run: |
+          moon version --all
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          wasm-tools --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install locked npm dependencies
+        shell: pwsh
+        run: npm --prefix runtime ci --registry=https://registry.npmjs.org
+
+      - name: Install Chromium and Linux system dependencies
+        if: runner.os == 'Linux'
+        shell: pwsh
+        run: npm --prefix runtime exec -- playwright install --with-deps chromium
+
+      - name: Install Chromium on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: npm --prefix runtime exec -- playwright install chromium
+
+      - name: Run the reproducible Spike gate
+        shell: pwsh
+        run: |
+          $verifyLog = Join-Path $env:RUNNER_TEMP 'moonhostabi-verify.log'
+          try {
+            & ./scripts/verify-spike.ps1 *>&1 | Tee-Object -FilePath $verifyLog
+          } catch {
+            $_ | Out-String | Tee-Object -FilePath $verifyLog -Append
+            throw
+          }
+
+      - name: Verify generated artifacts remain reproducible
+        shell: pwsh
+        run: |
+          git diff --exit-code
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $unexpected = git status --short
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not [String]::IsNullOrWhiteSpace(($unexpected -join "`n"))) {
+            $unexpected | Write-Output
+            throw 'Verification left unexpected files in the checkout.'
+          }
+
+      - name: Upload failure diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: moonhostabi-diagnostics-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/moonhostabi-verify.log
+            runtime/test-results
+            runtime/playwright-report
+          if-no-files-found: ignore
+          retention-days: 14

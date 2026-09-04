@@ -9,7 +9,9 @@ export default defineConfig({
   testMatch: "verify.spec.ts",
   fullyParallel: false,
   workers: 1,
-  reporter: "list",
+  reporter: process.env.CI
+    ? [["list"], ["html", { open: "never" }]]
+    : "list",
   timeout: 30_000,
   expect: { timeout: 5_000 },
   use: {
