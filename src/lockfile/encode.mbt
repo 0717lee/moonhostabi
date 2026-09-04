@@ -117,3 +117,9 @@ pub fn create_lockfile(abi : @model.HostAbi, artifact : Bytes) -> AbiLockfile {
 pub fn encode_lockfile(lockfile : AbiLockfile) -> String {
   "{\"lockfileVersion\":\{lockfile.lockfile_version},\"schemaSha256\":\{json_string(lockfile.schema_sha256)},\"artifactSha256\":\{json_string(lockfile.artifact_sha256)},\"abiSha256\":\{json_string(lockfile.abi_sha256)},\"abi\":\{encode_canonical_host_abi(lockfile.abi)}}"
 }
+
+///|
+/// Return a fresh canonical ABI value without exposing mutable lockfile fields.
+pub fn AbiLockfile::canonical_abi(self : AbiLockfile) -> @model.HostAbi {
+  canonicalize_host_abi(self.abi)
+}
