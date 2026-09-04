@@ -173,6 +173,51 @@ Readable semantic inputs always use the canonical report on stdout. CLI usage
 errors and unreadable paths remain stderr-only. Verification has no fallback,
 mock host, or artifact execution path.
 
+## Deterministic reproduction bundle
+
+The public bundle creator composes the existing `lock`, `generate`, and
+`verify` commands; `validation.json` is the real canonical verify stdout, not a
+second implementation or a substituted success result:
+
+```powershell
+pwsh -NoProfile -File scripts/create-reproduction-bundle.ps1 `
+  -Artifact fixtures/artifacts/externref.wasm `
+  -Contract fixtures/contracts/externref.contract.json `
+  -Out <new-absolute-path>.zip
+```
+
+The focused gate created two archives from separate input copies and independent
+temporary/staging runs. Every unpacked byte and both final archive hashes were
+identical:
+
+```text
+590507a2f6a865dcbe4cba496356a203fa92cc30c83c94f2e45b64bc5a49e1af
+```
+
+This is external local-gate evidence. `manifest.json` deliberately does not
+claim its own hash or the archive hash; it records fixed-order SHA-256 and byte
+size entries for the other six payloads. The ZIP uses a fixed entry order,
+forward-slash names, no compression, zero external attributes, UTF-8/LF text,
+and timestamp `1980-01-01 00:00:00`.
+
+Appending a valid empty custom section changed exactly:
+
+- `manifest.json`;
+- `validation.json`;
+- `host-abi.lock.json`;
+- `artifact.wasm`.
+
+It left `moonhostabi.contract.json`, `adapter.ts`, and `commands.txt`
+byte-identical because the canonical ABI did not change. The same gate validates
+the exact seven-entry archive, every manifest hash/size, and rejects artifact
+paths through links/reparse points, output overwrite, pre-publication failure,
+Zip Slip, absolute/drive-qualified, duplicate, and unknown entries. No creator
+work directory or sibling staging file remained.
+
+See [the report schema](report-schema.md) and the
+[bundle reproduction guide](../fixtures/reproduction/README.md) for the field
+contract and portable commands.
+
 ## Runtime observations
 
 The generated adapter contains no `any` escape hatch and passes TypeScript 7
@@ -234,6 +279,7 @@ that today's Node/Chromium adapter can exchange typed GC references.
 | Raw type reindexing creates no drift | different artifacts, identical canonical ABI bytes | GO |
 | Seeded breaking changes have stable code/path | matrix plus compiled pair exit 2 | GO |
 | One command aggregates release evidence | canonical six-section report, exits 0/2/3/4, real Unicode/space paths | GO |
+| Reproduction archive is deterministic and bounded | two independent ZIPs/bytes, manifest hash+size checks, mutation and path-security negatives | GO |
 | Generated TypeScript is strict and has no `any` | pinned TypeScript check and token scan | GO |
 | Node and Chromium exercise real imports/exports | scalar, identity, trace and negative observations | GO |
 | Malformed/unsupported values fail closed | parser, projector, decoder, generator and CLI tests | GO |
@@ -278,6 +324,10 @@ not evidence of a GitHub-hosted run.
 - `verify` currently accepts canonical JSON output only and uses the semantic
   compatibility policy. Strict-policy selection and additional report formats
   are not implemented.
+- The deterministic ZIP result above is locally observed with the tool/runtime
+  versions recorded inside its manifest. Fixed metadata minimizes platform
+  variation, but byte identity across Windows and Linux is not claimed before a
+  green remote matrix run compares those outputs.
 
 ## `wasm_core` parser patch and upstream status
 
