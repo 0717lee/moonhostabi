@@ -51,6 +51,14 @@ pub fn AbiFunction::stable_text(self : AbiFunction) -> String {
 }
 
 ///|
+fn AbiFunction::surface_kind_order(self : AbiFunction) -> Int {
+  match self.module_name {
+    Some(_) => 0
+    None => 1
+  }
+}
+
+///|
 pub fn sort_abi_functions(functions : Array[AbiFunction]) -> Array[AbiFunction] {
   let sorted = functions.copy()
   sorted.sort_by(fn(left, right) {
@@ -60,7 +68,17 @@ pub fn sort_abi_functions(functions : Array[AbiFunction]) -> Array[AbiFunction] 
     if module_order != 0 {
       module_order
     } else {
-      left.name.compare(right.name)
+      let name_order = left.name.compare(right.name)
+      if name_order != 0 {
+        name_order
+      } else {
+        let kind_order = left.surface_kind_order() - right.surface_kind_order()
+        if kind_order != 0 {
+          kind_order
+        } else {
+          left.stable_text().compare(right.stable_text())
+        }
+      }
     }
   })
   sorted

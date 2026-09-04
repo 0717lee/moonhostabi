@@ -21,6 +21,25 @@ test "ABI functions sort by module, name, and function kind" {
 }
 
 ///|
+test "ABI function sorting distinguishes empty-module imports from exports" {
+  let imported = AbiFunction::{
+    module_name: Some(""),
+    name: "same",
+    params: [I64],
+    results: [],
+  }
+  let exported = AbiFunction::{
+    module_name: None,
+    name: "same",
+    params: [I32],
+    results: [],
+  }
+  let sorted = sort_abi_functions([exported, imported])
+  inspect(sorted[0].stable_text(), content="func import .same(i64)->()")
+  inspect(sorted[1].stable_text(), content="func export same(i32)->()")
+}
+
+///|
 test "unknown ABI values retain their Wasm type path" {
   let value = AbiValueType::Unknown("types[7].struct.fields[1]")
   inspect(value.stable_text(), content="unknown(types[7].struct.fields[1])")
@@ -38,6 +57,10 @@ test "diagnostics preserve stable machine fields" {
   inspect(diagnostic.code, content="MHA_PROJECT_UNREPRESENTABLE")
   debug_inspect(diagnostic.severity, content="Error")
   inspect(diagnostic.path, content="exports.render.params[0]")
+  inspect(
+    diagnostic.message,
+    content="typed GC ref is not JavaScript-representable",
+  )
   debug_inspect(diagnostic.byte_offset, content="Some(42)")
 }
 
