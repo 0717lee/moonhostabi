@@ -219,7 +219,7 @@ function Assert-CompleteGeneration {
   $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
   if (
     $manifest.schemaVersion -ne 1 -or
-    $manifest.generatorVersion -cne '0.1.0' -or
+    [String]::IsNullOrWhiteSpace($manifest.generatorVersion) -or
     [String]::IsNullOrWhiteSpace($manifest.abiSha256) -or
     [String]::IsNullOrWhiteSpace($manifest.files.'adapter.ts') -or
     [String]::IsNullOrWhiteSpace($manifest.files.'moonhostabi.contract.json')

@@ -21,7 +21,9 @@ test "generation manifest has one exact canonical encoding" {
   let manifest = create_generation_manifest(abi_sha256, contract, typescript)
   let expected = "{\"schemaVersion\":1,\"abiSha256\":\"" +
     abi_sha256 +
-    "\",\"generatorVersion\":\"0.1.0\",\"contractSha256\":\"" +
+    "\",\"generatorVersion\":\"" +
+    MOONHOSTABI_VERSION +
+    "\",\"contractSha256\":\"" +
     contract_sha256 +
     "\",\"files\":{\"adapter.ts\":\"" +
     typescript_sha256 +

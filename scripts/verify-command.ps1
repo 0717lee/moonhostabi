@@ -99,6 +99,50 @@ function Normalize-Output {
   ($Text -replace "`r`n?", "`n").TrimEnd("`n")
 }
 
+function Get-StrictModuleVersion {
+  param([Parameter(Mandatory)] [string] $Path)
+
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    throw "Module manifest was not found at '$Path'."
+  }
+  $versionLines = @(
+    [IO.File]::ReadAllLines($Path) |
+      Where-Object { $_ -match '^\s*version\b' }
+  )
+  if ($versionLines.Count -ne 1) {
+    throw "Module manifest must contain exactly one version field; found $($versionLines.Count)."
+  }
+  $versionMatch = [regex]::Match(
+    $versionLines[0],
+    '^version = "([0-9]+\.[0-9]+\.[0-9]+)"$',
+    [Text.RegularExpressions.RegexOptions]::CultureInvariant
+  )
+  if (-not $versionMatch.Success) {
+    throw 'Module manifest version must use the exact form version = "MAJOR.MINOR.PATCH".'
+  }
+  $versionMatch.Groups[1].Value
+}
+
+function Assert-ModuleVersionParserRejects {
+  param(
+    [Parameter(Mandatory)] [string] $Path,
+    [Parameter(Mandatory)] [AllowEmptyString()] [string] $Content,
+    [Parameter(Mandatory)] [string] $Description
+  )
+
+  [IO.File]::WriteAllText($Path, $Content)
+  $rejected = $false
+  try {
+    $null = Get-StrictModuleVersion -Path $Path
+  }
+  catch {
+    $rejected = $true
+  }
+  if (-not $rejected) {
+    throw "$Description was accepted by the strict module version parser."
+  }
+}
+
 function Assert-ExitAndStreams {
   param(
     [Parameter(Mandatory)] $Result,
@@ -152,6 +196,22 @@ function Assert-VerificationReport {
   $report
 }
 
+function Assert-ExactProcessRepeat {
+  param(
+    [Parameter(Mandatory)] $First,
+    [Parameter(Mandatory)] $Second,
+    [Parameter(Mandatory)] [string] $Description
+  )
+
+  if (
+    $First.ExitCode -ne $Second.ExitCode -or
+    $First.Stdout -cne $Second.Stdout -or
+    $First.Stderr -cne $Second.Stderr
+  ) {
+    throw "$Description was not byte-for-byte stable across real process runs."
+  }
+}
+
 function Invoke-Lock {
   param(
     [Parameter(Mandatory)] [string] $CliPath,
@@ -181,6 +241,41 @@ try {
   $cliPath = Join-Path $repositoryRoot "_build/native/debug/build/cmd/moonhostabi/$executableName"
   if (-not (Test-Path -LiteralPath $cliPath -PathType Leaf)) {
     throw "Built MoonHostABI executable was not found at '$cliPath'."
+  }
+
+  $moduleManifestPath = Join-Path $repositoryRoot 'moon.mod'
+  $moduleVersion = Get-StrictModuleVersion -Path $moduleManifestPath
+  $invalidVersionPath = Join-Path $runRoot 'invalid-version.moon.mod'
+  Assert-ModuleVersionParserRejects `
+    -Path $invalidVersionPath `
+    -Content 'name = "missing/version"' `
+    -Description 'Missing module version'
+  Assert-ModuleVersionParserRejects `
+    -Path $invalidVersionPath `
+    -Content "version = `"$moduleVersion`"`nversion = `"$moduleVersion`"" `
+    -Description 'Duplicate module version'
+  Assert-ModuleVersionParserRejects `
+    -Path $invalidVersionPath `
+    -Content "version=`"$moduleVersion`"" `
+    -Description 'Unexpected module version format'
+
+  $committedManifestPath = Join-Path $repositoryRoot 'runtime/generated/moonhostabi.manifest.json'
+  $committedManifestText = [IO.File]::ReadAllText($committedManifestPath)
+  if ([regex]::Matches(
+    $committedManifestText,
+    '"generatorVersion":',
+    [Text.RegularExpressions.RegexOptions]::CultureInvariant
+  ).Count -ne 1) {
+    throw 'Committed generation manifest must contain exactly one generatorVersion field.'
+  }
+  try {
+    $committedManifest = $committedManifestText | ConvertFrom-Json -ErrorAction Stop
+  }
+  catch {
+    throw "Committed generation manifest is invalid JSON: $($_.Exception.Message)"
+  }
+  if ($committedManifest.generatorVersion -cne $moduleVersion) {
+    throw "Committed generator version '$($committedManifest.generatorVersion)' does not match module version '$moduleVersion'."
   }
 
   $pwsh = @(Get-Command pwsh -CommandType Application -ErrorAction Stop)[0].Source
@@ -222,7 +317,7 @@ try {
   }
   $version = Invoke-MoonHostAbi -CliPath $cliPath -Arguments @('--version')
   Assert-ExitAndStreams -Result $version -ExitCode 0 -Description '--version' -AllowStdout
-  if ((Normalize-Output $version.Stdout) -cne 'moonhostabi 0.1.0') {
+  if ((Normalize-Output $version.Stdout) -cne "moonhostabi $moduleVersion") {
     throw "--version emitted '$($version.Stdout)'."
   }
   $badOrder = Invoke-MoonHostAbi -CliPath $cliPath -Arguments @(
@@ -239,11 +334,15 @@ try {
   Copy-Item -LiteralPath (Join-Path $repositoryRoot 'fixtures/artifacts/externref.wasm') -Destination $externref
   Copy-Item -LiteralPath (Join-Path $repositoryRoot 'fixtures/contracts/externref.contract.json') -Destination $contract
   Invoke-Lock -CliPath $cliPath -Artifact $externref -Output $externrefLock
-  $compatible = Invoke-MoonHostAbi -CliPath $cliPath -Arguments @(
+  $compatibleArguments = @(
     'verify', $externref, '--against', $externrefLock,
     '--contract', $contract, '--format', 'json'
   )
+  $compatible = Invoke-MoonHostAbi -CliPath $cliPath -Arguments $compatibleArguments
+  $compatibleRepeat = Invoke-MoonHostAbi -CliPath $cliPath -Arguments $compatibleArguments
   $compatibleReport = Assert-VerificationReport -Result $compatible -ExitCode 0 -Outcome 'compatible' -Description 'compatible contract verification'
+  $null = Assert-VerificationReport -Result $compatibleRepeat -ExitCode 0 -Outcome 'compatible' -Description 'repeated compatible contract verification'
+  Assert-ExactProcessRepeat -First $compatible -Second $compatibleRepeat -Description 'Compatible canonical report'
   if (
     $compatibleReport.artifact.status -cne 'valid' -or
     $compatibleReport.baseline.status -cne 'valid' -or
@@ -262,10 +361,14 @@ try {
   Copy-Item -LiteralPath (Join-Path $repositoryRoot 'fixtures/artifacts/breaking_v1.wasm') -Destination $breakingV1
   Copy-Item -LiteralPath (Join-Path $repositoryRoot 'fixtures/artifacts/breaking_v2.wasm') -Destination $breakingV2
   Invoke-Lock -CliPath $cliPath -Artifact $breakingV1 -Output $breakingLock
-  $breaking = Invoke-MoonHostAbi -CliPath $cliPath -Arguments @(
+  $breakingArguments = @(
     'verify', $breakingV2, '--against', $breakingLock, '--format', 'json'
   )
+  $breaking = Invoke-MoonHostAbi -CliPath $cliPath -Arguments $breakingArguments
+  $breakingRepeat = Invoke-MoonHostAbi -CliPath $cliPath -Arguments $breakingArguments
   $breakingReport = Assert-VerificationReport -Result $breaking -ExitCode 2 -Outcome 'breaking' -Description 'breaking verification'
+  $null = Assert-VerificationReport -Result $breakingRepeat -ExitCode 2 -Outcome 'breaking' -Description 'repeated breaking verification'
+  Assert-ExactProcessRepeat -First $breaking -Second $breakingRepeat -Description 'Breaking canonical report'
   if (-not (@($breakingReport.compatibility.changes) | Where-Object {
     $_.code -ceq 'MHA_SIGNATURE_CHANGED' -and $_.path -ceq 'exports[add].params'
   })) {
@@ -347,6 +450,7 @@ try {
   $null = Assert-VerificationReport -Result $trapResult -ExitCode 0 -Outcome 'compatible' -Description 'non-executing trap artifact verification'
 
   Write-Output 'MOONHOSTABI_VERIFY_HELP_VERSION=GO'
+  Write-Output 'MOONHOSTABI_VERIFY_VERSION_SOURCE=GO'
   Write-Output 'MOONHOSTABI_VERIFY_TIMEOUT_KILL=GO'
   Write-Output 'MOONHOSTABI_VERIFY_EXIT_CODES=0,2,3,4'
   Write-Output 'MOONHOSTABI_VERIFY_CANONICAL_REPORT=GO'

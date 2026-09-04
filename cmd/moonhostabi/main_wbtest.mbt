@@ -130,7 +130,10 @@ test "help and version have exact stdout-only contracts" {
   inspect(help.stderr, content="")
   let version = dispatch(["--version"])
   inspect(version.exit_code, content="0")
-  inspect(version.stdout, content="moonhostabi 0.1.0")
+  inspect(
+    version.stdout,
+    content="moonhostabi \{@generator.MOONHOSTABI_VERSION}",
+  )
   inspect(version.stderr, content="")
 }
 

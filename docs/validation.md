@@ -34,10 +34,11 @@ pwsh -NoProfile -File scripts/verify-command.ps1
 ```
 
 It ends with `MOONHOSTABI_VERIFY_STATUS=GO` after checking the bounded-process
-timeout/kill path, exact help/version output, strict argument ordering,
-canonical report structure, exit codes `0`, `2`, `3`, and `4`, paths containing
-Chinese characters and spaces, and a Wasm module whose trapping start function
-proves that verification does not instantiate or execute the artifact.
+timeout/kill path, strict `moon.mod`/CLI/committed-manifest version consistency,
+exact help output, strict argument ordering, byte-identical repeated compatible
+and breaking reports, exit codes `0`, `2`, `3`, and `4`, paths containing Chinese
+characters and spaces, and a Wasm module whose trapping start function proves
+that verification does not instantiate or execute the artifact.
 
 ## Verified toolchain
 
