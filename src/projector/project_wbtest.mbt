@@ -281,3 +281,160 @@ test "MoonBit capability policy can explicitly allow typed refs and v128" {
   assert_true(typed_ref_diagnostic is None)
   assert_true(v128_diagnostic is None)
 }
+
+///|
+test "recursive GC projection preserves fields supertypes and finite edges" {
+  let wasm_module = @wasm_types.Module::Module()
+  let base_struct = @wasm_types.SubType::simple(
+    @wasm_types.CompositeType::Struct(@wasm_types.StructType::{
+      fields: [
+        {
+          storage_type: @wasm_types.StorageType::Packed(
+            @wasm_types.PackedType::I8,
+          ),
+          mutable: false,
+        },
+      ],
+    }),
+  )
+  let recursive_struct = @wasm_types.SubType::{
+    final_: false,
+    supertypes: [0],
+    composite: @wasm_types.CompositeType::Struct(@wasm_types.StructType::{
+      fields: [
+        {
+          storage_type: @wasm_types.StorageType::Val(RefNullStruct(1)),
+          mutable: false,
+        },
+        {
+          storage_type: @wasm_types.StorageType::Packed(
+            @wasm_types.PackedType::I16,
+          ),
+          mutable: true,
+        },
+      ],
+    }),
+  }
+  let array_type = @wasm_types.SubType::simple(
+    @wasm_types.CompositeType::Array(@wasm_types.ArrayType::{
+      element: {
+        storage_type: @wasm_types.StorageType::Val(RefStruct(1)),
+        mutable: false,
+      },
+    }),
+  )
+  let private_struct = @wasm_types.SubType::simple(
+    @wasm_types.CompositeType::Struct(@wasm_types.StructType::{ fields: [] }),
+  )
+  let exported_function = @wasm_types.SubType::func([], [RefArray(2)])
+  wasm_module.types.push(base_struct)
+  wasm_module.types.push(recursive_struct)
+  wasm_module.types.push(array_type)
+  wasm_module.types.push(private_struct)
+  wasm_module.types.push(exported_function)
+  for group in [0, 1, 2, 3, 4] {
+    wasm_module.type_rec_groups.push(group)
+  }
+  wasm_module.funcs.push(4)
+  wasm_module.exports.push({
+    name: "nodes",
+    desc: @wasm_types.ExportDesc::Func(0),
+  })
+
+  let abi = project_host_abi(wasm_module)
+
+  inspect(abi.types.length(), content="3")
+  guard abi.types[0] is @model.Struct(base) else {
+    fail("expected reachable base struct")
+  }
+  guard abi.types[1] is @model.Struct(recursive) else {
+    fail("expected reachable recursive struct")
+  }
+  guard abi.types[2] is @model.Array(array) else {
+    fail("expected reachable array")
+  }
+  inspect(base.id, content="type[0]")
+  debug_inspect(base.supertypes, content="[]")
+  inspect(base.final_, content="true")
+  debug_inspect(base.fields[0].storage, content="PackedI8")
+  inspect(base.fields[0].mutable, content="false")
+  inspect(recursive.id, content="type[1]")
+  debug_inspect(recursive.supertypes, content="[\"type[0]\"]")
+  inspect(recursive.final_, content="false")
+  inspect(recursive.fields.length(), content="2")
+  debug_inspect(
+    recursive.fields[0].storage,
+    content="Value(TypedRef(\"type[1]\", true))",
+  )
+  inspect(recursive.fields[0].mutable, content="false")
+  debug_inspect(recursive.fields[1].storage, content="PackedI16")
+  inspect(recursive.fields[1].mutable, content="true")
+  inspect(array.id, content="type[2]")
+  debug_inspect(array.supertypes, content="[]")
+  debug_inspect(
+    array.element.storage,
+    content="Value(TypedRef(\"type[1]\", false))",
+  )
+  inspect(array.element.mutable, content="false")
+}
+
+///|
+test "non-function public ABI items produce explicit diagnostics" {
+  let wasm_module = @wasm_types.Module::Module()
+  let limits = @wasm_types.Limits::{ min: 1L, max: None }
+  let table = @wasm_types.TableType::{
+    elem_type: ExternRef,
+    limits,
+    is_table64: false,
+  }
+  let memory = @wasm_types.MemoryType::{
+    limits,
+    is_memory64: false,
+    page_size_log2: 16,
+  }
+  let global = @wasm_types.GlobalType::{ value_type: I32, mutable: false }
+  wasm_module.imports.push({
+    mod_name: "env",
+    name: "table",
+    desc: @wasm_types.ImportDesc::Table(table),
+  })
+  wasm_module.imports.push({
+    mod_name: "env",
+    name: "memory",
+    desc: @wasm_types.ImportDesc::Memory(memory),
+  })
+  wasm_module.imports.push({
+    mod_name: "env",
+    name: "global",
+    desc: @wasm_types.ImportDesc::Global(global),
+  })
+  wasm_module.imports.push({
+    mod_name: "env",
+    name: "tag",
+    desc: @wasm_types.ImportDesc::Tag(0),
+  })
+  wasm_module.exports.push({
+    name: "table",
+    desc: @wasm_types.ExportDesc::Table(0),
+  })
+  wasm_module.exports.push({
+    name: "memory",
+    desc: @wasm_types.ExportDesc::Memory(0),
+  })
+  wasm_module.exports.push({
+    name: "global",
+    desc: @wasm_types.ExportDesc::Global(0),
+  })
+  wasm_module.exports.push({ name: "tag", desc: @wasm_types.ExportDesc::Tag(0) })
+
+  let analysis = analyze_host_abi(wasm_module, default_js_capability_policy())
+
+  inspect(analysis.diagnostics.length(), content="8")
+  for diagnostic in analysis.diagnostics {
+    inspect(diagnostic.code, content="MHA_PROJECT_UNSUPPORTED_ITEM")
+  }
+  inspect(analysis.diagnostics[0].path, content="imports[env.table]")
+  inspect(analysis.diagnostics[3].path, content="imports[env.tag]")
+  inspect(analysis.diagnostics[4].path, content="exports[table]")
+  inspect(analysis.diagnostics[7].path, content="exports[tag]")
+}

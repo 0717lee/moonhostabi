@@ -113,12 +113,60 @@ fn append_function_diagnostics(
 }
 
 ///|
+fn unsupported_item(path : String, kind : String) -> @model.Diagnostic {
+  @model.Diagnostic::{
+    code: @model.MHA_PROJECT_UNSUPPORTED_ITEM,
+    severity: @model.Error,
+    path,
+    message: "public \{kind} is not supported by the Spike adapter",
+    byte_offset: None,
+  }
+}
+
+///|
+fn append_non_function_diagnostics(
+  wasm_module : @wasm_types.Module,
+  diagnostics : Array[@model.Diagnostic],
+) -> Unit {
+  for imported in wasm_module.imports {
+    let kind = match imported.desc {
+      Func(_) => None
+      Table(_) => Some("table import")
+      Memory(_) => Some("memory import")
+      Global(_) => Some("global import")
+      Tag(_) => Some("tag import")
+    }
+    if kind is Some(value) {
+      diagnostics.push(
+        unsupported_item(
+          "imports[\{imported.mod_name}.\{imported.name}]",
+          value,
+        ),
+      )
+    }
+  }
+  for exported in wasm_module.exports {
+    let kind = match exported.desc {
+      Func(_) => None
+      Table(_) => Some("table export")
+      Memory(_) => Some("memory export")
+      Global(_) => Some("global export")
+      Tag(_) => Some("tag export")
+    }
+    if kind is Some(value) {
+      diagnostics.push(unsupported_item("exports[\{exported.name}]", value))
+    }
+  }
+}
+
+///|
 pub fn analyze_host_abi(
   wasm_module : @wasm_types.Module,
   policy : JsCapabilityPolicy,
 ) -> ProjectionAnalysis {
   let abi = project_host_abi(wasm_module)
   let diagnostics : Array[@model.Diagnostic] = []
+  append_non_function_diagnostics(wasm_module, diagnostics)
   for function in abi.imports {
     let module_name = function.module_name.unwrap_or("")
     append_function_diagnostics(

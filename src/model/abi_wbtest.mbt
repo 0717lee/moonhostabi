@@ -77,3 +77,23 @@ test "all initial diagnostic codes are stable" {
   inspect(MHA_ADAPTER_MISMATCH, content="MHA_ADAPTER_MISMATCH")
   inspect(MHA_RUNTIME_FAILURE, content="MHA_RUNTIME_FAILURE")
 }
+
+///|
+test "GC type definitions preserve graph metadata" {
+  let definition = AbiTypeDef::Struct(AbiStructType::{
+    id: "type[1]",
+    supertypes: ["type[0]"],
+    final_: false,
+    fields: [
+      { storage: Value(TypedRef("type[1]", true)), mutable: false },
+      { storage: PackedI16, mutable: true },
+    ],
+  })
+  guard definition is Struct(struct_type) else {
+    fail("expected struct definition")
+  }
+  inspect(struct_type.id, content="type[1]")
+  debug_inspect(struct_type.supertypes, content="[\"type[0]\"]")
+  inspect(struct_type.final_, content="false")
+  inspect(struct_type.fields.length(), content="2")
+}

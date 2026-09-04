@@ -98,9 +98,25 @@ pub(all) struct AbiField {
 } derive(Eq, Debug)
 
 ///|
+pub(all) struct AbiStructType {
+  id : String
+  supertypes : Array[String]
+  final_ : Bool
+  fields : Array[AbiField]
+} derive(Eq, Debug)
+
+///|
+pub(all) struct AbiArrayType {
+  id : String
+  supertypes : Array[String]
+  final_ : Bool
+  element : AbiField
+} derive(Eq, Debug)
+
+///|
 pub(all) enum AbiTypeDef {
-  Struct(String, Array[AbiField])
-  Array(String, AbiField)
+  Struct(AbiStructType)
+  Array(AbiArrayType)
 } derive(Eq, Debug)
 
 ///|
