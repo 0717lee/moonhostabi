@@ -27,19 +27,27 @@ jobs:
             wasm_sha256: 527fe5c3ef5363c58888548827bb44c87fcbf17bb2a2df295055788d82c72081
     env:
       MOONBIT_VERSION: 0.1.20260819
+      MOONBIT_COMMIT: fc2a4ee
+      MOONC_VERSION: v0.10.9+6e6c44045
+      MOONBIT_RELEASE_DATE: 2026-08-19
       MOONBIT_UNIX_INSTALLER_SHA256: 46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe
       MOONBIT_WINDOWS_INSTALLER_SHA256: a5101e91ffa9905fb25cd009b9a4aa942971a294bd055c89836e3af89b710c64
       WASM_TOOLS_VERSION: 1.258.0
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js 24
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24.12.0
           cache: npm
           cache-dependency-path: runtime/package-lock.json
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
 
       - name: Install exact MoonBit toolchain on Linux
         if: runner.os == 'Linux'
@@ -48,7 +56,7 @@ jobs:
           installer="$RUNNER_TEMP/moonbit-install.sh"
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o "$installer"
           echo "$MOONBIT_UNIX_INSTALLER_SHA256  $installer" | sha256sum -c -
-          MOONBIT_INSTALL_VERSION=latest bash "$installer"
+          MOONBIT_INSTALL_VERSION="$MOONBIT_VERSION" bash "$installer"
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: Install exact MoonBit toolchain on Windows
@@ -61,7 +69,7 @@ jobs:
           if ($actual -cne $env:MOONBIT_WINDOWS_INSTALLER_SHA256) {
             throw "MoonBit installer checksum mismatch: $actual"
           }
-          $env:MOONBIT_INSTALL_VERSION = 'latest'
+          $env:MOONBIT_INSTALL_VERSION = $env:MOONBIT_VERSION
           & pwsh -NoProfile -ExecutionPolicy Bypass -File $installer
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           (Join-Path $env:USERPROFILE '.moon\bin') | Out-File -FilePath $env:GITHUB_PATH -Append
@@ -113,13 +121,32 @@ jobs:
           $moonVersion = moon version --all
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $moonVersion | Write-Output
-          if (($moonVersion -join "`n") -notmatch '^moon 0\.1\.20260819 ' ) {
-            throw "Unexpected MoonBit toolchain version."
+          $versionText = $moonVersion -join "`n"
+          $expectedPatterns = @(
+            '^moon ' + [regex]::Escape($env:MOONBIT_VERSION) +
+              ' \(' + [regex]::Escape($env:MOONBIT_COMMIT) + ' ' +
+              [regex]::Escape($env:MOONBIT_RELEASE_DATE) + '\) ',
+            '^moonc ' + [regex]::Escape($env:MOONC_VERSION) +
+              ' \(' + [regex]::Escape($env:MOONBIT_RELEASE_DATE) + '\) ',
+            '^moonrun ' + [regex]::Escape($env:MOONBIT_VERSION) +
+              ' \(' + [regex]::Escape($env:MOONBIT_COMMIT) + ' ' +
+              [regex]::Escape($env:MOONBIT_RELEASE_DATE) + '\) '
+          )
+          foreach ($pattern in $expectedPatterns) {
+            if ($versionText -cnotmatch $pattern) {
+              throw "Unexpected MoonBit toolchain version."
+            }
           }
           node --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           wasm-tools --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install hash-pinned workflow validator
+        shell: pwsh
+        run: python -m pip install --disable-pip-version-check --index-url=https://pypi.org/simple --require-hashes -r scripts/requirements-workflow-validation.txt
 
       - name: Install locked npm dependencies
         shell: pwsh
@@ -160,7 +187,7 @@ jobs:
 
       - name: Upload failure diagnostics
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: moonhostabi-diagnostics-${{ matrix.os }}
           path: |

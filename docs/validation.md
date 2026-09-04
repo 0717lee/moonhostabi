@@ -222,6 +222,47 @@ See [the report schema](report-schema.md) and the
 [bundle reproduction guide](../fixtures/reproduction/README.md) for the field
 contract and portable commands.
 
+## Local release packaging evidence
+
+Task 7 adds deterministic platform packages and a dry-run-only release
+aggregate. The local Windows gate created two independent release ZIPs, compared
+their complete bytes, validated the exact eight-file layout and ZIP metadata,
+then ran `--version`, `--help`, and compatible `verify` using the executable and
+example files extracted from each archive. Checkout binaries cannot satisfy the
+smoke assertion.
+
+The package includes this validation document, so embedding its own final
+archive hash here would create a self-reference. Instead, the gate emits
+`MOONHOSTABI_PACKAGE_SHA256=<hash>` as external evidence after each run. The
+final aggregate can bind both platform hashes without being inside either
+archive.
+
+Local aggregate tests use the real Windows ZIP plus an explicitly marked
+simulated Linux tar.gz. They prove fixed input/output sets, canonical
+`SHA256SUMS`, deterministic `provenance.json`, and rejection of missing, extra,
+tampered, duplicate-platform, duplicate-key, and noncanonical evidence. Package
+negatives independently cover linked/nonempty outputs, overwrite attempts, and
+archive rollback when evidence publication fails. Simulated evidence records all
+smoke fields as false and production aggregation rejects it unless the test-only
+switch is explicit. No Linux binary execution is claimed from this Windows run.
+
+The archive validator also rejects traversal, absolute/drive-qualified,
+backslash-ambiguous, duplicate/case-fold paths and tar symlink, hardlink, device,
+FIFO, socket, or other non-regular entries. Package contents are scanned for
+checkout/temp paths, usernames, `.codex`, and high-confidence credential
+markers.
+
+`.github/workflows/release.yml` is `workflow_dispatch` only, uses
+`permissions: contents: read`, and contains no secret or publication API. Linux
+and Windows jobs create immutable platform handoffs; an Ubuntu job validates and
+aggregates them into two archives, `SHA256SUMS`, and `provenance.json`. The
+workflow and existing CI action references are pinned to official full commit
+SHAs and are checked by a PyYAML semantic validator with negative self-tests.
+See [the release dry-run guide](releasing.md).
+
+This is local automation evidence, not a remote run. No workflow was triggered,
+no tag or GitHub Release exists, and no run URL is recorded.
+
 ## Runtime observations
 
 The generated adapter contains no `any` escape hatch and passes TypeScript 7
@@ -284,6 +325,8 @@ that today's Node/Chromium adapter can exchange typed GC references.
 | Seeded breaking changes have stable code/path | matrix plus compiled pair exit 2 | GO |
 | One command aggregates release evidence | canonical six-section report, exits 0/2/3/4, real Unicode/space paths | GO |
 | Reproduction archive is deterministic and bounded | two independent ZIPs/bytes, manifest hash+size checks, mutation and path-security negatives | GO |
+| Local platform release package is deterministic | two native packages, exact layout/metadata, unpacked CLI smoke and negative tests | GO |
+| Release automation is non-publishing | dispatch-only workflow, read-only permission, pinned actions, fixed aggregate contract | GO |
 | Generated TypeScript is strict and has no `any` | pinned TypeScript check and token scan | GO |
 | Node and Chromium exercise real imports/exports | scalar, identity, trace and negative observations | GO |
 | Malformed/unsupported values fail closed | parser, projector, decoder, generator and CLI tests | GO |
@@ -319,10 +362,11 @@ not evidence of a GitHub-hosted run.
   those signatures.
 - The proof covers native CLI execution on Windows locally and configures Linux
   CI, but no remote Linux result is claimed yet.
-- MoonBit's CI installer is content-hash pinned and the installed binaries are
-  version-gated, but it still resolves the service's `latest` toolchain. A new
-  upstream release therefore fails closed instead of silently upgrading; an
-  immutable, checksum-pinned historical archive is a release prerequisite.
+- MoonBit's CI installer is content-hash pinned, receives the explicit dated
+  `0.1.20260819` version, and the installed moon/moonc/moonrun binaries are
+  version-gated. The downloaded toolchain archives are not independently
+  checksum-pinned, so recording and pinning those archive hashes remains a
+  prerequisite for any future public release.
 - The browser verifier uses fixed loopback port 4173 with one worker; concurrent
   verifier processes intentionally contend rather than reuse an unknown server.
 - `verify` currently accepts canonical JSON output only and uses the semantic
@@ -332,6 +376,10 @@ not evidence of a GitHub-hosted run.
   versions recorded inside its manifest. Fixed metadata minimizes platform
   variation, but byte identity across Windows and Linux is not claimed before a
   green remote matrix run compares those outputs.
+- The Windows release ZIP path is locally executed and deterministic. Linux
+  tar/gzip flags, modes, entry types, and aggregate behavior have local static or
+  simulated coverage, but a real Linux release binary/tar smoke remains pending
+  the authorized Ubuntu workflow run.
 
 ## `wasm_core` parser patch and upstream status
 

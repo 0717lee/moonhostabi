@@ -1,0 +1,167 @@
+name: Release dry run
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Strict MAJOR.MINOR.PATCH matching moon.mod
+        required: true
+        default: 0.1.0
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package / ${{ matrix.platform }} x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            os: ubuntu-latest
+          - platform: windows
+            os: windows-latest
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      MOONBIT_VERSION: 0.1.20260819
+      MOONBIT_COMMIT: fc2a4ee
+      MOONC_VERSION: v0.10.9+6e6c44045
+      MOONBIT_RELEASE_DATE: 2026-08-19
+      MOONBIT_UNIX_INSTALLER_SHA256: 46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe
+      MOONBIT_WINDOWS_INSTALLER_SHA256: a5101e91ffa9905fb25cd009b9a4aa942971a294bd055c89836e3af89b710c64
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Install exact MoonBit toolchain on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          installer="$RUNNER_TEMP/moonbit-install.sh"
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o "$installer"
+          echo "$MOONBIT_UNIX_INSTALLER_SHA256  $installer" | sha256sum -c -
+          MOONBIT_INSTALL_VERSION="$MOONBIT_VERSION" bash "$installer"
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Install exact MoonBit toolchain on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Join-Path $env:RUNNER_TEMP 'moonbit-install.ps1'
+          Invoke-WebRequest https://cli.moonbitlang.com/install/powershell.ps1 -OutFile $installer
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash.ToLowerInvariant()
+          if ($actual -cne $env:MOONBIT_WINDOWS_INSTALLER_SHA256) {
+            throw "MoonBit installer checksum mismatch: $actual"
+          }
+          $env:MOONBIT_INSTALL_VERSION = $env:MOONBIT_VERSION
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File $installer
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          (Join-Path $env:USERPROFILE '.moon\bin') | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Verify exact MoonBit toolchain
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $moonVersion = moon version --all
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $moonVersion | Write-Output
+          $versionText = $moonVersion -join "`n"
+          $expectedPatterns = @(
+            '^moon ' + [regex]::Escape($env:MOONBIT_VERSION) +
+              ' \(' + [regex]::Escape($env:MOONBIT_COMMIT) + ' ' +
+              [regex]::Escape($env:MOONBIT_RELEASE_DATE) + '\) ',
+            '^moonc ' + [regex]::Escape($env:MOONC_VERSION) +
+              ' \(' + [regex]::Escape($env:MOONBIT_RELEASE_DATE) + '\) ',
+            '^moonrun ' + [regex]::Escape($env:MOONBIT_VERSION) +
+              ' \(' + [regex]::Escape($env:MOONBIT_COMMIT) + ' ' +
+              [regex]::Escape($env:MOONBIT_RELEASE_DATE) + '\) '
+          )
+          foreach ($pattern in $expectedPatterns) {
+            if ($versionText -cnotmatch $pattern) {
+              throw 'Unexpected MoonBit toolchain version.'
+            }
+          }
+
+      - name: Resolve dependencies and guarded parser patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          moon update
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./scripts/apply-wasm-core-patch.ps1
+
+      - name: Build deterministic platform package and unpacked smoke evidence
+        shell: pwsh
+        env:
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packageRoot = Join-Path $env:RUNNER_TEMP 'moonhostabi-package'
+          $evidence = Join-Path $env:RUNNER_TEMP "$env:PACKAGE_PLATFORM.evidence.json"
+          [IO.Directory]::CreateDirectory($packageRoot) | Out-Null
+          & ./scripts/package-release.ps1 `
+            -Version $env:RELEASE_VERSION `
+            -Output $packageRoot `
+            -EvidenceOut $evidence
+
+      - name: Upload immutable platform handoff
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: moonhostabi-package-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/moonhostabi-package/*
+            ${{ runner.temp }}/${{ matrix.platform }}.evidence.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  aggregate:
+    name: Aggregate dry-run release
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Download both platform handoffs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: moonhostabi-package-*
+          path: ${{ runner.temp }}/moonhostabi-release-input
+          merge-multiple: true
+
+      - name: Validate and aggregate fixed release set
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & ./scripts/create-release-aggregate.ps1 `
+            -Version $env:RELEASE_VERSION `
+            -Input ${{ runner.temp }}/moonhostabi-release-input `
+            -Output ${{ runner.temp }}/moonhostabi-release-output
+
+      - name: Upload one dry-run release artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: moonhostabi-release-dry-run
+          path: ${{ runner.temp }}/moonhostabi-release-output/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

@@ -185,6 +185,7 @@ try {
   Invoke-Checked -FilePath $moonExecutable -Arguments @('test', '--target', 'native') -Description 'moon test'
   Invoke-Checked -FilePath $pwshExecutable -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-command.ps1'), '-RepositoryRoot', $repositoryRoot) -Description 'one-command Host ABI verification'
   Invoke-Checked -FilePath $pwshExecutable -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-reproduction-bundle.ps1'), '-RepositoryRoot', $repositoryRoot) -Description 'deterministic reproduction bundle verification'
+  Invoke-Checked -FilePath $pwshExecutable -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-release-packaging.ps1'), '-RepositoryRoot', $repositoryRoot) -Description 'release packaging and workflow verification'
   Invoke-Checked -FilePath $pwshExecutable -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-generate-transactions.ps1'), '-RepositoryRoot', $repositoryRoot) -Description 'transactional generate concurrency verification'
   Invoke-Checked `
     -FilePath $pwshExecutable `
