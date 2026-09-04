@@ -8,6 +8,7 @@
     "test:browser": "playwright test --config playwright.config.ts browser/verify.spec.ts"
   },
   "devDependencies": {
+    "@types/node": "24.12.0",
     "playwright": "1.62.1",
     "typescript": "7.0.2"
   }

@@ -99,10 +99,56 @@ test "generator emits exact typed ESM and throwing host stubs" {
       #|  };
       #|}
       #|
+      #|function assertHostImports<TExtern>(
+      #|  imports: HostImports<TExtern>,
+      #|): void {
+      #|  if (typeof imports !== "object" || imports === null) {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[env.now]");
+      #|  }
+      #|  const root = imports as unknown as Record<string, unknown>;
+      #|  if (!Object.prototype.hasOwnProperty.call(root, "env")) {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[env.now]");
+      #|  }
+      #|  const module0 = root["env"];
+      #|  if (typeof module0 !== "object" || module0 === null) {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[env.now]");
+      #|  }
+      #|  const module0Record = module0 as Record<string, unknown>;
+      #|  if (!Object.prototype.hasOwnProperty.call(module0Record, "now") ||
+      #|    typeof module0Record["now"] !== "function") {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: host import imports[env.now] must be a function");
+      #|  }
+      #|  if (!Object.prototype.hasOwnProperty.call(root, "host")) {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[host.echo]");
+      #|  }
+      #|  const module1 = root["host"];
+      #|  if (typeof module1 !== "object" || module1 === null) {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[host.echo]");
+      #|  }
+      #|  const module1Record = module1 as Record<string, unknown>;
+      #|  if (!Object.prototype.hasOwnProperty.call(module1Record, "echo") ||
+      #|    typeof module1Record["echo"] !== "function") {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: host import imports[host.echo] must be a function");
+      #|  }
+      #|  if (!Object.prototype.hasOwnProperty.call(root, "moonbit:ffi")) {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[moonbit:ffi.make_closure]");
+      #|  }
+      #|  const module2 = root["moonbit:ffi"];
+      #|  if (typeof module2 !== "object" || module2 === null) {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[moonbit:ffi.make_closure]");
+      #|  }
+      #|  const module2Record = module2 as Record<string, unknown>;
+      #|  if (!Object.prototype.hasOwnProperty.call(module2Record, "make_closure") ||
+      #|    typeof module2Record["make_closure"] !== "function") {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: host import imports[moonbit:ffi.make_closure] must be a function");
+      #|  }
+      #|}
+      #|
       #|export async function instantiate<TExtern = unknown>(
       #|  bytes: BufferSource,
       #|  imports: HostImports<TExtern>,
       #|): Promise<ModuleExports<TExtern>> {
+      #|  assertHostImports(imports);
       #|  const result = await WebAssembly.instantiate(bytes, imports);
       #|  return result.instance.exports as unknown as ModuleExports<TExtern>;
       #|}
@@ -220,6 +266,18 @@ test "special JavaScript property keys are emitted as computed own properties" {
   )
   inspect(
     generated.typescript.contains("      [\"__proto__\"]: () => {"),
+    content="true",
+  )
+  inspect(
+    generated.typescript.contains(
+      "Object.prototype.hasOwnProperty.call(root, \"__proto__\")",
+    ),
+    content="true",
+  )
+  inspect(
+    generated.typescript.contains(
+      "Object.prototype.hasOwnProperty.call(module0Record, \"__proto__\")",
+    ),
     content="true",
   )
 }

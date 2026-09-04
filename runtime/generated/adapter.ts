@@ -22,10 +22,32 @@ export function createHostImports<HostToken = unknown>(): HostImports<HostToken>
   };
 }
 
+function assertHostImports<HostToken>(
+  imports: HostImports<HostToken>,
+): void {
+  if (typeof imports !== "object" || imports === null) {
+    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[host.echo]");
+  }
+  const root = imports as unknown as Record<string, unknown>;
+  if (!Object.prototype.hasOwnProperty.call(root, "host")) {
+    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[host.echo]");
+  }
+  const module0 = root["host"];
+  if (typeof module0 !== "object" || module0 === null) {
+    throw new Error("MHA_ADAPTER_MISMATCH: missing or invalid host import imports[host.echo]");
+  }
+  const module0Record = module0 as Record<string, unknown>;
+  if (!Object.prototype.hasOwnProperty.call(module0Record, "echo") ||
+    typeof module0Record["echo"] !== "function") {
+    throw new Error("MHA_ADAPTER_MISMATCH: host import imports[host.echo] must be a function");
+  }
+}
+
 export async function instantiate<HostToken = unknown>(
   bytes: BufferSource,
   imports: HostImports<HostToken>,
 ): Promise<ModuleExports<HostToken>> {
+  assertHostImports(imports);
   const result = await WebAssembly.instantiate(bytes, imports);
   return result.instance.exports as unknown as ModuleExports<HostToken>;
 }

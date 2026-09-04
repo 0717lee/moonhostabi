@@ -297,6 +297,73 @@ fn append_host_import_factory(
 }
 
 ///|
+fn import_path(module_name : String, function_name : String) -> String {
+  "imports[\{module_name}.\{function_name}]"
+}
+
+///|
+fn append_host_import_preflight(
+  lines : Array[String],
+  imports : Array[@model.AbiFunction],
+  generic : String,
+) -> Unit {
+  lines.push("function assertHostImports<\{generic}>(")
+  lines.push("  imports: HostImports<\{generic}>,")
+  lines.push("): void {")
+  let first = imports[0]
+  let first_path = import_path(first.module_name.unwrap_or(""), first.name)
+  let first_message = "MHA_ADAPTER_MISMATCH: missing or invalid host import \{first_path}"
+  lines.push("  if (typeof imports !== \"object\" || imports === null) {")
+  lines.push("    throw new Error(\{contract_json_string(first_message)});")
+  lines.push("  }")
+  lines.push("  const root = imports as unknown as Record<string, unknown>;")
+  for module_index, module_name in sorted_import_modules(imports) {
+    let mut first_function_name = ""
+    let mut found_first_function = false
+    for function in imports {
+      if function.module_name.unwrap_or("") == module_name &&
+        !found_first_function {
+        first_function_name = function.name
+        found_first_function = true
+      }
+    }
+    let module_path = import_path(module_name, first_function_name)
+    let module_message = "MHA_ADAPTER_MISMATCH: missing or invalid host import \{module_path}"
+    let module_key = contract_json_string(module_name)
+    lines.push(
+      "  if (!Object.prototype.hasOwnProperty.call(root, \{module_key})) {",
+    )
+    lines.push("    throw new Error(\{contract_json_string(module_message)});")
+    lines.push("  }")
+    lines.push("  const module\{module_index} = root[\{module_key}];")
+    lines.push(
+      "  if (typeof module\{module_index} !== \"object\" || module\{module_index} === null) {",
+    )
+    lines.push("    throw new Error(\{contract_json_string(module_message)});")
+    lines.push("  }")
+    lines.push(
+      "  const module\{module_index}Record = module\{module_index} as Record<string, unknown>;",
+    )
+    for function in imports {
+      if function.module_name.unwrap_or("") == module_name {
+        let function_key = contract_json_string(function.name)
+        let path = import_path(module_name, function.name)
+        let message = "MHA_ADAPTER_MISMATCH: host import \{path} must be a function"
+        lines.push(
+          "  if (!Object.prototype.hasOwnProperty.call(module\{module_index}Record, \{function_key}) ||",
+        )
+        lines.push(
+          "    typeof module\{module_index}Record[\{function_key}] !== \"function\") {",
+        )
+        lines.push("    throw new Error(\{contract_json_string(message)});")
+        lines.push("  }")
+      }
+    }
+  }
+  lines.push("}")
+}
+
+///|
 fn render_typescript(
   abi : @model.HostAbi,
   abi_sha256 : String,
@@ -319,11 +386,18 @@ fn render_typescript(
   }
   lines.push("")
   append_host_import_factory(lines, imports, generic)
+  if !imports.is_empty() {
+    lines.push("")
+    append_host_import_preflight(lines, imports, generic)
+  }
   lines.push("")
   lines.push("export async function instantiate<\{generic} = unknown>(")
   lines.push("  bytes: BufferSource,")
   lines.push("  imports: HostImports<\{generic}>,")
   lines.push("): Promise<ModuleExports<\{generic}>> {")
+  if !imports.is_empty() {
+    lines.push("  assertHostImports(imports);")
+  }
   lines.push("  const result = await WebAssembly.instantiate(bytes, imports);")
   lines.push(
     "  return result.instance.exports as unknown as ModuleExports<\{generic}>;",
