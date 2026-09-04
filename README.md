@@ -11,9 +11,9 @@ unverified remote-CI boundary.
 
 ## Reproduce the Spike
 
-Prerequisites are PowerShell 7, MoonBit `0.1.20260819`, Node.js 24, and
-`wasm-tools 1.258.0`. The command below installs locked npm dependencies and the
-pinned Playwright Chromium build as part of the gate:
+Prerequisites are PowerShell 7, MoonBit `0.1.20260819`, Node.js `24.12.0` with
+npm `11.6.2`, and `wasm-tools 1.258.0`. The command below installs locked npm
+dependencies and the pinned Playwright Chromium build as part of the gate:
 
 ```powershell
 pwsh -NoProfile -File scripts/verify-spike.ps1

@@ -8,8 +8,8 @@ this document because the repository has not been pushed by this workflow.
 
 ## Reproduce the local gate
 
-The host must provide PowerShell 7, the exact MoonBit snapshot, Node.js 24, and
-`wasm-tools 1.258.0`. The script resolves dependencies, applies the guarded
+The host must provide PowerShell 7, the exact MoonBit snapshot, Node.js
+`24.12.0` with npm `11.6.2`, and `wasm-tools 1.258.0`. The script resolves dependencies, applies the guarded
 `wasm_core` patch, rebuilds all fixtures, installs the locked npm graph and
 Chromium, and stops at the first unexpected result.
 
@@ -199,6 +199,9 @@ not evidence of a GitHub-hosted run.
 - Duplicate `(module, name)` imports are rejected instead of synthesized as
   overloads. Generate output directories must be new; there is no update flow.
 - The lockfile/contract schemas are version 1 and have no migration framework.
+- Runtime preflight validates required imports, but the returned Wasm exports
+  are currently type-asserted rather than shape-validated. Supplying unrelated
+  bytes can therefore defer an export mismatch to the first call.
 - The proof covers native CLI execution on Windows locally and configures Linux
   CI, but no remote Linux result is claimed yet.
 - The browser verifier uses fixed loopback port 4173 with one worker; concurrent

@@ -157,10 +157,16 @@ try {
   $nodeVersion = (& $nodeExecutable --version) -join "`n"
   $nodeVersionExit = $LASTEXITCODE
   Write-Output $nodeVersion
-  if ($nodeVersionExit -ne 0 -or $nodeVersion -notmatch '^v24\.') {
-    throw "Expected Node.js 24.x, received '$nodeVersion'."
+  if ($nodeVersionExit -ne 0 -or $nodeVersion -cne 'v24.12.0') {
+    throw "Expected Node.js v24.12.0, received '$nodeVersion'."
   }
-  Invoke-Checked -FilePath $npmExecutable -Arguments @('--version') -Description 'npm version'
+  $npmVersionLines = & $npmExecutable --version
+  $npmVersionExit = $LASTEXITCODE
+  $npmVersion = $npmVersionLines -join "`n"
+  $npmVersionLines | Write-Output
+  if ($npmVersionExit -ne 0 -or $npmVersion -cne '11.6.2') {
+    throw "Expected npm 11.6.2, received '$npmVersion'."
+  }
 
   $wasmToolsVersion = (& $wasmToolsExecutable --version) -join "`n"
   $wasmToolsVersionExit = $LASTEXITCODE

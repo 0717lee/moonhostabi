@@ -35,7 +35,7 @@ jobs:
       - name: Set up Node.js 24
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 24.12.0
           cache: npm
           cache-dependency-path: runtime/package-lock.json
 
@@ -43,7 +43,7 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s "$MOONBIT_VERSION"
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOONBIT_VERSION"
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: Install exact MoonBit toolchain on Windows
