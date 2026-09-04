@@ -13,6 +13,12 @@ $repositoryRoot = [IO.Path]::GetFullPath($RepositoryRoot)
 $hostTempRoot = (Resolve-Path -LiteralPath ([IO.Path]::GetTempPath())).ProviderPath
 $runLeaf = 'moonhostabi-repro-verify-' + [Guid]::NewGuid().ToString('N')
 $runRoot = [IO.Path]::GetFullPath((Join-Path $hostTempRoot $runLeaf))
+$creatorToken = [Guid]::NewGuid().ToString('N')
+$sentinelToken = [Guid]::NewGuid().ToString('N')
+$sentinelRunToken = [Guid]::NewGuid().ToString('N')
+$sentinelLeaf = "moonhostabi-repro-work-$sentinelToken-$sentinelRunToken"
+$sentinelPath = [IO.Path]::GetFullPath((Join-Path $hostTempRoot $sentinelLeaf))
+$sentinelCreated = $false
 $pathComparison = if ($IsWindows) {
   [StringComparison]::OrdinalIgnoreCase
 } else {
@@ -83,6 +89,7 @@ function Invoke-CapturedProcess {
   $startInfo.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
   $startInfo.StandardErrorEncoding = [Text.UTF8Encoding]::new($false)
   [void]$startInfo.Environment.Remove('MOONHOSTABI_INTERNAL_TEST_ONLY_BUNDLE_FAULT')
+  [void]$startInfo.Environment.Remove('MOONHOSTABI_INTERNAL_TEST_ONLY_BUNDLE_TOKEN')
   foreach ($name in $Environment.Keys) {
     $startInfo.Environment[$name] = [string]$Environment[$name]
   }
@@ -131,6 +138,7 @@ function Invoke-BundleCreation {
     [Parameter(Mandatory)] [string] $Contract,
     [Parameter(Mandatory)] [string] $Out,
     [string] $CreationRepositoryRoot,
+    [string] $CorrelationToken,
     [hashtable] $Environment = @{}
   )
 
@@ -138,6 +146,17 @@ function Invoke-BundleCreation {
     $script:repositoryRoot
   } else {
     $CreationRepositoryRoot
+  }
+  $effectiveToken = if ([String]::IsNullOrEmpty($CorrelationToken)) {
+    $script:creatorToken
+  } else {
+    $CorrelationToken
+  }
+  $childEnvironment = @{
+    MOONHOSTABI_INTERNAL_TEST_ONLY_BUNDLE_TOKEN = $effectiveToken
+  }
+  foreach ($name in $Environment.Keys) {
+    $childEnvironment[$name] = $Environment[$name]
   }
   Invoke-CapturedProcess `
     -FilePath $PowerShell `
@@ -150,7 +169,7 @@ function Invoke-BundleCreation {
       '-Contract', $Contract,
       '-Out', $Out
     ) `
-    -Environment $Environment
+    -Environment $childEnvironment
 }
 
 function Assert-CreationSuccess {
@@ -541,13 +560,50 @@ function Assert-ArchiveRejected {
   }
 }
 
-function Get-CreatorTempDirectories {
+function Get-CorrelatedCreatorTempDirectories {
+  $pattern = '^moonhostabi-repro-work-' +
+    [regex]::Escape($script:creatorToken) +
+    '-[0-9a-f]{32}$'
   @(
     Get-ChildItem -LiteralPath $script:hostTempRoot -Directory -Force |
-      Where-Object { $_.Name -match '^moonhostabi-repro-work-[0-9a-f]{32}$' } |
+      Where-Object { $_.Name -cmatch $pattern } |
       ForEach-Object FullName |
       Sort-Object
   )
+}
+
+function Assert-ExactUnrelatedSentinel {
+  $item = Get-Item -LiteralPath $script:sentinelPath -Force
+  if (
+    ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+    -not [String]::IsNullOrEmpty($item.LinkType)
+  ) {
+    throw 'Refusing to remove a linked concurrency sentinel.'
+  }
+  $resolvedPath = (Resolve-Path -LiteralPath $script:sentinelPath).ProviderPath
+  $resolvedParent = (Resolve-Path -LiteralPath $script:hostTempRoot).ProviderPath
+  $sentinelParent = [IO.Path]::GetDirectoryName(
+    [IO.Path]::GetFullPath($resolvedPath)
+  ).TrimEnd(
+    [IO.Path]::DirectorySeparatorChar,
+    [IO.Path]::AltDirectorySeparatorChar
+  )
+  $normalizedParent = [IO.Path]::GetFullPath($resolvedParent).TrimEnd(
+    [IO.Path]::DirectorySeparatorChar,
+    [IO.Path]::AltDirectorySeparatorChar
+  )
+  if (
+    -not [String]::Equals(
+      $sentinelParent,
+      $normalizedParent,
+      $script:pathComparison
+    ) -or
+    [IO.Path]::GetFileName($resolvedPath) -cne $script:sentinelLeaf -or
+    $script:sentinelLeaf -cnotmatch '^moonhostabi-repro-work-[0-9a-f]{32}-[0-9a-f]{32}$' -or
+    $script:sentinelToken -ceq $script:creatorToken
+  ) {
+    throw "Refusing to remove unexpected concurrency sentinel '$resolvedPath'."
+  }
 }
 
 function Remove-DirectoryLink {
@@ -566,7 +622,13 @@ try {
   [IO.Directory]::CreateDirectory($runRoot) | Out-Null
   Assert-ExactVerifierTemp
   $pwsh = @(Get-Command pwsh -CommandType Application -ErrorAction Stop)[0].Source
-  $creatorTempsBefore = @(Get-CreatorTempDirectories)
+  $creatorTempsBefore = @(Get-CorrelatedCreatorTempDirectories)
+  if ($creatorTempsBefore.Count -ne 0) {
+    throw 'Unique creator correlation token unexpectedly has preexisting work directories.'
+  }
+  [IO.Directory]::CreateDirectory($sentinelPath) | Out-Null
+  $sentinelCreated = $true
+  Assert-ExactUnrelatedSentinel
 
   $sourceArtifact = Join-Path $repositoryRoot 'fixtures/artifacts/externref.wasm'
   $sourceContract = Join-Path $repositoryRoot 'fixtures/contracts/externref.contract.json'
@@ -703,6 +765,21 @@ try {
     -Environment @{ MOONHOSTABI_INTERNAL_TEST_ONLY_BUNDLE_FAULT = 'before-publish' }
   Assert-CreationFailure -Result $fault -Archive $faultArchive -Description 'Before-publish fault'
 
+  $invalidTokenArchive = Join-Path $runA 'output/invalid-token.zip'
+  $invalidToken = Invoke-BundleCreation `
+    -PowerShell $pwsh `
+    -Artifact $artifactA `
+    -Contract $contractA `
+    -Out $invalidTokenArchive `
+    -CorrelationToken 'INVALID'
+  Assert-CreationFailure `
+    -Result $invalidToken `
+    -Archive $invalidTokenArchive `
+    -Description 'Invalid correlation token'
+  if ($invalidToken.Stderr -notmatch '32 lowercase hex characters') {
+    throw 'Invalid correlation token did not fail closed with an explicit diagnostic.'
+  }
+
   $linkTarget = Join-Path $runRoot 'link-target'
   $linkPath = Join-Path $runRoot 'artifact-link-parent'
   [IO.Directory]::CreateDirectory($linkTarget) | Out-Null
@@ -828,12 +905,12 @@ try {
     throw 'docs/report-schema.md example drifted from the real bundled verify output.'
   }
 
-  $creatorTempsAfter = @(Get-CreatorTempDirectories)
-  if (
-    [String]::Join("`n", $creatorTempsBefore) -cne
-    [String]::Join("`n", $creatorTempsAfter)
-  ) {
-    throw 'Bundle creation left a temporary work directory behind.'
+  $creatorTempsAfter = @(Get-CorrelatedCreatorTempDirectories)
+  if ($creatorTempsAfter.Count -ne 0) {
+    throw 'Bundle creation left a current-token work directory behind.'
+  }
+  if (-not (Test-Path -LiteralPath $sentinelPath -PathType Container)) {
+    throw 'Current verifier removed an unrelated creator sentinel.'
   }
   $stageResiduals = @(
     Get-ChildItem -LiteralPath $runRoot -File -Force -Recurse |
@@ -851,7 +928,7 @@ try {
   Write-Output 'MOONHOSTABI_BUNDLE_STATUS=GO'
 }
 finally {
-  $processCleanupErrors = [Collections.Generic.List[string]]::new()
+  $cleanupErrors = [Collections.Generic.List[string]]::new()
   foreach ($process in $runningProcesses) {
     try {
       if (-not $process.HasExited) {
@@ -860,17 +937,31 @@ finally {
       }
     }
     catch {
-      [void]$processCleanupErrors.Add($_.Exception.Message)
+      [void]$cleanupErrors.Add($_.Exception.Message)
     }
     finally {
       $process.Dispose()
     }
   }
-  if (Test-Path -LiteralPath $runRoot) {
-    Assert-ExactVerifierTemp
-    Remove-Item -LiteralPath $runRoot -Recurse -Force
+  if ($sentinelCreated -and (Test-Path -LiteralPath $sentinelPath)) {
+    try {
+      Assert-ExactUnrelatedSentinel
+      [IO.Directory]::Delete($sentinelPath, $false)
+    }
+    catch {
+      [void]$cleanupErrors.Add($_.Exception.Message)
+    }
   }
-  if ($processCleanupErrors.Count -ne 0) {
-    throw "Failed to terminate reproduction verifier processes: $($processCleanupErrors -join '; ')"
+  if (Test-Path -LiteralPath $runRoot) {
+    try {
+      Assert-ExactVerifierTemp
+      Remove-Item -LiteralPath $runRoot -Recurse -Force
+    }
+    catch {
+      [void]$cleanupErrors.Add($_.Exception.Message)
+    }
+  }
+  if ($cleanupErrors.Count -ne 0) {
+    throw "Reproduction verifier cleanup failed: $($cleanupErrors -join '; ')"
   }
 }

@@ -212,7 +212,11 @@ byte-identical because the canonical ABI did not change. The same gate validates
 the exact seven-entry archive, every manifest hash/size, and rejects artifact
 paths through links/reparse points, output overwrite, pre-publication failure,
 Zip Slip, absolute/drive-qualified, duplicate, and unknown entries. No creator
-work directory or sibling staging file remained.
+work directory or sibling staging file associated with the current verifier
+remained; an unrelated same-shape creator sentinel is preserved until its own
+strict cleanup, so legitimate concurrent runs do not create false failures. A
+separate black-box run started two full reproduction verifiers concurrently;
+both exited `0` with `MOONHOSTABI_BUNDLE_STATUS=GO` and empty stderr.
 
 See [the report schema](report-schema.md) and the
 [bundle reproduction guide](../fixtures/reproduction/README.md) for the field

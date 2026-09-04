@@ -15,7 +15,21 @@ if ([String]::IsNullOrWhiteSpace($RepositoryRoot)) {
 }
 $repositoryRoot = [IO.Path]::GetFullPath($RepositoryRoot)
 $hostTempRoot = (Resolve-Path -LiteralPath ([IO.Path]::GetTempPath())).ProviderPath
-$workLeaf = 'moonhostabi-repro-work-' + [Guid]::NewGuid().ToString('N')
+$correlationToken = [Environment]::GetEnvironmentVariable(
+  'MOONHOSTABI_INTERNAL_TEST_ONLY_BUNDLE_TOKEN'
+)
+if (
+  -not [String]::IsNullOrEmpty($correlationToken) -and
+  $correlationToken -cnotmatch '^[0-9a-f]{32}$'
+) {
+  throw 'Internal bundle correlation token must be exactly 32 lowercase hex characters.'
+}
+$workRunToken = [Guid]::NewGuid().ToString('N')
+$workLeaf = if ([String]::IsNullOrEmpty($correlationToken)) {
+  'moonhostabi-repro-work-' + $workRunToken
+} else {
+  'moonhostabi-repro-work-' + $correlationToken + '-' + $workRunToken
+}
 $workRoot = [IO.Path]::GetFullPath((Join-Path $hostTempRoot $workLeaf))
 $outputPath = [IO.Path]::GetFullPath($Out)
 $outputParent = [IO.Path]::GetDirectoryName($outputPath)
@@ -169,10 +183,18 @@ function Assert-ExactWorkRoot {
     [IO.Path]::AltDirectorySeparatorChar
   )
   $prefix = $normalizedParent + [IO.Path]::DirectorySeparatorChar
+  $normalLeaf = [String]::IsNullOrEmpty($script:correlationToken) -and
+    $script:workLeaf -cmatch '^moonhostabi-repro-work-[0-9a-f]{32}$'
+  $correlatedLeaf = -not [String]::IsNullOrEmpty($script:correlationToken) -and
+    $script:workLeaf -cmatch (
+      '^moonhostabi-repro-work-' +
+      [regex]::Escape($script:correlationToken) +
+      '-[0-9a-f]{32}$'
+    )
   if (
     -not $normalizedPath.StartsWith($prefix, $script:pathComparison) -or
     [IO.Path]::GetFileName($normalizedPath) -cne $script:workLeaf -or
-    $script:workLeaf -notmatch '^moonhostabi-repro-work-[0-9a-f]{32}$'
+    -not ($normalLeaf -or $correlatedLeaf)
   ) {
     throw "Refusing to remove unexpected work path '$normalizedPath'."
   }
