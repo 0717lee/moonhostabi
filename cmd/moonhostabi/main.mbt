@@ -269,11 +269,20 @@ fn decode_contract_file(path : String) -> String raise CliExecutionError {
 ///|
 fn generate_adapter(
   abi : @model.HostAbi,
-  contract : String?,
+  contract_text : String?,
 ) -> @generator.GenerationResult raise CliExecutionError {
+  let contract = try {
+    match contract_text {
+      Some(text) => @contract.decode_contract(abi, text)
+      None => @contract.create_contract_draft(abi)
+    }
+  } catch {
+    error =>
+      raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
+  }
   @generator.generate_typescript_adapter(abi, contract) catch {
-    @generator.InvalidContract(message) =>
-      raise CliExecutionError(MHA_CONTRACT_INVALID, message)
+    error =>
+      raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
   }
 }
 

@@ -227,8 +227,11 @@ test "generate writes typed adapter and normalized explicit contract" {
   let normalized_contract = @fs.read_file_to_string(
     "\{output}/moonhostabi.contract.json",
   )
+  inspect(normalized_contract.contains("\"schemaVersion\":2"), content="true")
   inspect(
-    normalized_contract.contains("\"externrefGeneric\":\"HostToken\""),
+    normalized_contract.contains(
+      "\"exports[roundtrip].results[0]\":\"HostToken\"",
+    ),
     content="true",
   )
   inspect(
@@ -253,11 +256,23 @@ test "generate draft is conservative and refuses invalid output boundaries" {
     "\{draft_output}/moonhostabi.contract.json",
   )
   inspect(
-    draft_source.contains("HostImports<TExtern = unknown>"),
+    draft_source.contains("HostImports<TExtern0 = unknown, TExtern1 = unknown>"),
     content="true",
   )
-  inspect(draft_contract.contains("\"externrefGeneric\":null"), content="true")
-  inspect(draft_contract.contains("\"params[0]\""), content="true")
+  inspect(
+    draft_source.contains(
+      "ModuleExports<TExtern2 = unknown, TExtern3 = unknown>",
+    ),
+    content="true",
+  )
+  inspect(
+    draft_contract.contains("\"imports[host.echo].params[0]\":\"TExtern0\""),
+    content="true",
+  )
+  inspect(
+    draft_contract.contains("\"exports[roundtrip].results[0]\":\"TExtern3\""),
+    content="true",
+  )
   let repeated = dispatch([
     "generate", "fixtures/artifacts/externref.wasm", "--out", draft_output,
   ])

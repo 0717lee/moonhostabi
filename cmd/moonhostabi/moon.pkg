@@ -1,5 +1,6 @@
 import {
   "0717lee/moonhostabi/src/compat",
+  "0717lee/moonhostabi/src/contract",
   "0717lee/moonhostabi/src/generator",
   "0717lee/moonhostabi/src/lockfile",
   "0717lee/moonhostabi/src/model",

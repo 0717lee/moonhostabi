@@ -206,7 +206,9 @@ not evidence of a GitHub-hosted run.
   behavior. Other host behavior remains an explicit throwing stub.
 - Duplicate `(module, name)` imports are rejected instead of synthesized as
   overloads. Generate output directories must be new; there is no update flow.
-- The lockfile/contract schemas are version 1 and have no migration framework.
+- The lockfile schema remains version 1. Host ABI contracts use canonical
+  schema v2 and accept only a strictly validated v1-to-v2 migration; no later
+  schema migration is implemented.
 - Runtime preflight validates required imports, but the returned Wasm exports
   are currently type-asserted rather than shape-validated. Supplying unrelated
   bytes can therefore defer an export mismatch to the first call.
