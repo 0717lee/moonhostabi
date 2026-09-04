@@ -461,6 +461,29 @@ fn append_host_import_preflight(
 }
 
 ///|
+fn append_module_export_preflight(
+  lines : Array[String],
+  exports : Array[@model.AbiFunction],
+) -> Unit {
+  lines.push("function assertModuleExports(")
+  lines.push("  exports: WebAssembly.Exports,")
+  lines.push("): void {")
+  lines.push("  const root = exports as unknown as Record<string, unknown>;")
+  for function in exports {
+    let function_key = contract_json_string(function.name)
+    let path = export_path(function.name)
+    let message = "MHA_ADAPTER_MISMATCH: module export \{path} must be a function"
+    lines.push(
+      "  if (!Object.prototype.hasOwnProperty.call(root, \{function_key}) ||",
+    )
+    lines.push("    typeof root[\{function_key}] !== \"function\") {")
+    lines.push("    throw new Error(\{contract_json_string(message)});")
+    lines.push("  }")
+  }
+  lines.push("}")
+}
+
+///|
 fn render_typescript(
   abi : @model.HostAbi,
   abi_sha256 : String,
@@ -486,6 +509,10 @@ fn render_typescript(
     lines.push("")
     append_host_import_preflight(lines, imports, contract)
   }
+  if !exports.is_empty() {
+    lines.push("")
+    append_module_export_preflight(lines, exports)
+  }
   let all_names = contract.semantic_aliases()
   let import_names = semantic_aliases_for_functions(imports, contract)
   let export_names = semantic_aliases_for_functions(exports, contract)
@@ -500,6 +527,9 @@ fn render_typescript(
     lines.push("  assertHostImports(imports);")
   }
   lines.push("  const result = await WebAssembly.instantiate(bytes, imports);")
+  if !exports.is_empty() {
+    lines.push("  assertModuleExports(result.instance.exports);")
+  }
   lines.push(
     "  return result.instance.exports as unknown as ModuleExports\{type_arguments(export_names)};",
   )

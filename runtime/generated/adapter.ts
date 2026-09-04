@@ -43,11 +43,26 @@ function assertHostImports<HostToken>(
   }
 }
 
+function assertModuleExports(
+  exports: WebAssembly.Exports,
+): void {
+  const root = exports as unknown as Record<string, unknown>;
+  if (!Object.prototype.hasOwnProperty.call(root, "add") ||
+    typeof root["add"] !== "function") {
+    throw new Error("MHA_ADAPTER_MISMATCH: module export exports[add] must be a function");
+  }
+  if (!Object.prototype.hasOwnProperty.call(root, "roundtrip") ||
+    typeof root["roundtrip"] !== "function") {
+    throw new Error("MHA_ADAPTER_MISMATCH: module export exports[roundtrip] must be a function");
+  }
+}
+
 export async function instantiate<HostToken = unknown>(
   bytes: BufferSource,
   imports: HostImports<HostToken>,
 ): Promise<ModuleExports<HostToken>> {
   assertHostImports(imports);
   const result = await WebAssembly.instantiate(bytes, imports);
+  assertModuleExports(result.instance.exports);
   return result.instance.exports as unknown as ModuleExports<HostToken>;
 }

@@ -160,12 +160,23 @@ test "generator emits exact typed ESM and throwing host stubs" {
       #|  }
       #|}
       #|
+      #|function assertModuleExports(
+      #|  exports: WebAssembly.Exports,
+      #|): void {
+      #|  const root = exports as unknown as Record<string, unknown>;
+      #|  if (!Object.prototype.hasOwnProperty.call(root, "add") ||
+      #|    typeof root["add"] !== "function") {
+      #|    throw new Error("MHA_ADAPTER_MISMATCH: module export exports[add] must be a function");
+      #|  }
+      #|}
+      #|
       #|export async function instantiate<TExtern0 = unknown, TExtern1 = unknown, TExtern2 = unknown>(
       #|  bytes: BufferSource,
       #|  imports: HostImports<TExtern0, TExtern1, TExtern2>,
       #|): Promise<ModuleExports> {
       #|  assertHostImports(imports);
       #|  const result = await WebAssembly.instantiate(bytes, imports);
+      #|  assertModuleExports(result.instance.exports);
       #|  return result.instance.exports as unknown as ModuleExports;
       #|}
       #|
@@ -246,6 +257,7 @@ test "generator rejects a validated contract bound to another ABI" {
 
 ///|
 test "special JavaScript property keys are emitted as computed own properties" {
+  let escaped_export_name = "odd\"\\\nname"
   let abi = @model.HostAbi::{
     schema_version: 1,
     imports: [
@@ -256,7 +268,20 @@ test "special JavaScript property keys are emitted as computed own properties" {
         results: [],
       },
     ],
-    exports: [],
+    exports: [
+      @model.AbiFunction::{
+        module_name: None,
+        name: "__proto__",
+        params: [],
+        results: [],
+      },
+      @model.AbiFunction::{
+        module_name: None,
+        name: escaped_export_name,
+        params: [],
+        results: [],
+      },
+    ],
     types: [],
     features: [],
   }
@@ -282,6 +307,62 @@ test "special JavaScript property keys are emitted as computed own properties" {
     ),
     content="true",
   )
+  let proto_export_check =
+    #|  if (!Object.prototype.hasOwnProperty.call(root, "__proto__") ||
+    #|    typeof root["__proto__"] !== "function") {
+    #|    throw new Error("MHA_ADAPTER_MISMATCH: module export exports[__proto__] must be a function");
+    #|  }
+    #|
+  inspect(generated.typescript.contains(proto_export_check), content="true")
+  let escaped_export_key = contract_json_string(escaped_export_name)
+  inspect(
+    generated.typescript.contains(
+      "Object.prototype.hasOwnProperty.call(root, \{escaped_export_key})",
+    ),
+    content="true",
+  )
+  inspect(
+    generated.typescript.contains(
+      "typeof root[\{escaped_export_key}] !== \"function\"",
+    ),
+    content="true",
+  )
+}
+
+///|
+test "module export preflight follows canonical export order" {
+  let abi = @model.HostAbi::{
+    schema_version: 1,
+    imports: [],
+    exports: [
+      @model.AbiFunction::{
+        module_name: None,
+        name: "zeta",
+        params: [],
+        results: [],
+      },
+      @model.AbiFunction::{
+        module_name: None,
+        name: "beta",
+        params: [],
+        results: [],
+      },
+    ],
+    types: [],
+    features: [],
+  }
+  let generated = generate_draft(abi)
+  let ordered_checks =
+    #|  if (!Object.prototype.hasOwnProperty.call(root, "beta") ||
+    #|    typeof root["beta"] !== "function") {
+    #|    throw new Error("MHA_ADAPTER_MISMATCH: module export exports[beta] must be a function");
+    #|  }
+    #|  if (!Object.prototype.hasOwnProperty.call(root, "zeta") ||
+    #|    typeof root["zeta"] !== "function") {
+    #|    throw new Error("MHA_ADAPTER_MISMATCH: module export exports[zeta] must be a function");
+    #|  }
+    #|
+  inspect(generated.typescript.contains(ordered_checks), content="true")
 }
 
 ///|

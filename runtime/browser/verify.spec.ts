@@ -46,11 +46,41 @@ test("Chromium executes the real scalar and externref paths", async ({ page }) =
   expect(failures).toEqual([]);
 });
 
-test("Chromium reports a missing required host import", async ({ page }) => {
-  const failures = capturePageFailures(page);
-  await page.goto("/?case=negative");
+const negativeCases = [
+  {
+    name: "a missing required host import",
+    query: "negative",
+    message:
+      "MHA_ADAPTER_MISMATCH: host import imports[host.echo] must be a function",
+  },
+  {
+    name: "a missing roundtrip export",
+    query: "missing-roundtrip",
+    message:
+      "MHA_ADAPTER_MISMATCH: module export exports[roundtrip] must be a function",
+  },
+  {
+    name: "a renamed add export",
+    query: "renamed-add",
+    message:
+      "MHA_ADAPTER_MISMATCH: module export exports[add] must be a function",
+  },
+  {
+    name: "a non-function add export",
+    query: "non-function-add",
+    message:
+      "MHA_ADAPTER_MISMATCH: module export exports[add] must be a function",
+  },
+] as const;
 
-  await expect(page.locator("#error")).toContainText("MHA_ADAPTER_MISMATCH");
-  await expect(page.locator("#error")).toContainText("imports[host.echo]");
-  expect(failures).toEqual([]);
-});
+for (const scenario of negativeCases) {
+  test(`Chromium rejects ${scenario.name}`, async ({ page }) => {
+    const failures = capturePageFailures(page);
+    await page.goto(`/?case=${scenario.query}`);
+
+    const error = page.locator("#error");
+    await expect(error).toHaveAttribute("data-status", "observed");
+    await expect(error).toHaveText(scenario.message);
+    expect(failures).toEqual([]);
+  });
+}
