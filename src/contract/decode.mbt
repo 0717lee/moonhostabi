@@ -8,7 +8,7 @@ fn[T] invalid_shape(message : String) -> T raise ContractError {
 
 ///|
 fn parse_contract_json(text : String) -> Json raise ContractError {
-  if text.length() > MAX_CONTRACT_LENGTH {
+  if @encoding.encode(@encoding.UTF8, text).length() > MAX_CONTRACT_LENGTH {
     raise ContractInputTooLarge
   }
   @json.parse(text) catch {

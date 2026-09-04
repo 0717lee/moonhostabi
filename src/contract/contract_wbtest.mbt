@@ -106,7 +106,7 @@ test "decoder rejects structural, duplicate-key, version, and ordering drift" {
 }
 
 ///|
-test "decoder preserves the one MiB input limit" {
+test "decoder enforces the one MiB limit on UTF-8 bytes" {
   let chunks : Array[String] = []
   for _ in 0..<65537 {
     chunks.push("0123456789abcdef")
@@ -114,6 +114,17 @@ test "decoder preserves the one MiB input limit" {
   inspect(
     decode_error(contract_fixture_abi(), chunks.join("")),
     content="contract: input exceeds 1 MiB limit",
+  )
+  inspect(
+    decode_error(contract_fixture_abi(), String::make(600000, 'é')),
+    content="contract: input exceeds 1 MiB limit",
+  )
+  inspect(
+    decode_error(
+      contract_fixture_abi(),
+      String::make(MAX_CONTRACT_LENGTH / 2, 'é'),
+    ),
+    content="contract: invalid JSON",
   )
 }
 
