@@ -1,5 +1,5 @@
 ///|
-pub(all) struct AbiLockfile {
+pub struct AbiLockfile {
   lockfile_version : Int
   schema_sha256 : String
   artifact_sha256 : String

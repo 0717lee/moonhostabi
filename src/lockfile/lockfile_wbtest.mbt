@@ -190,5 +190,6 @@ test "lockfile JSON escapes names and stays byte-identical" {
   let first = encode_lockfile(lockfile)
   let second = encode_lockfile(lockfile)
   inspect(first == second, content="true")
+  inspect(@json.valid(first), content="true")
   inspect(first.contains("quote\\\"slash\\\\line\\n"), content="true")
 }

@@ -3,3 +3,7 @@ import {
   "moonbitlang/x/crypto",
   "moonbitlang/x/encoding",
 }
+
+import {
+  "moonbitlang/core/json",
+} for "wbtest"
