@@ -286,6 +286,15 @@ fn rename_directory_noreplace(source : String, destination : String) -> Int {
 }
 
 ///|
+#borrow(path)
+extern "C" fn directory_kind_ffi(path : NativePath) -> Int = "moonhostabi_directory_kind"
+
+///|
+fn directory_kind(path : String) -> Int {
+  directory_kind_ffi(NativePath::from_string(path))
+}
+
+///|
 fn decode_baseline(
   bytes : Bytes,
 ) -> @lockfile.AbiLockfile raise CliExecutionError {
@@ -330,10 +339,26 @@ priv enum GenerationFault {
   FailSecondWrite
   FailAfterBackup
   RetainStaging
+  ReplaceBeforeClaim
 } derive(Eq)
 
 ///|
 priv struct OwnedGenerationDirectory(String)
+
+///|
+priv struct OwnedGenerationSnapshot {
+  adapter_bytes : Bytes
+  contract_bytes : Bytes
+  manifest_bytes : Bytes
+  contract_text : String
+} derive(Eq)
+
+///|
+priv enum UpdateTransactionState {
+  StagingOwned(OwnedGenerationDirectory)
+  TargetClaimed(OwnedGenerationDirectory, OwnedGenerationDirectory)
+  NewOutputPublished(OwnedGenerationDirectory)
+}
 
 ///|
 fn generation_file_names() -> Array[String] {
@@ -348,6 +373,7 @@ fn generation_fault_from_environment() -> GenerationFault? raise CliExecutionErr
     Some("second-write") => Some(FailSecondWrite)
     Some("after-backup") => Some(FailAfterBackup)
     Some("retain-staging") => Some(RetainStaging)
+    Some("replace-before-claim") => Some(ReplaceBeforeClaim)
     Some(_) =>
       raise CliExecutionError(
         MHA_OUTPUT_IO,
@@ -361,6 +387,51 @@ fn generation_file_path(directory : String, name : String) -> String {
   let root : @path.Path = directory
   let child : @path.Path = name
   root.join(child).to_string()
+}
+
+///|
+fn require_absent_output_path(
+  directory : String,
+) -> Unit raise CliExecutionError {
+  match directory_kind(directory) {
+    1 => ()
+    0 | 2 | 3 =>
+      raise CliExecutionError(
+        MHA_OUTPUT_EXISTS,
+        "output directory already exists; choose a new path",
+      )
+    _ =>
+      raise CliExecutionError(
+        MHA_OUTPUT_IO,
+        "failed to inspect output path without following links",
+      )
+  }
+}
+
+///|
+fn require_real_owned_directory(
+  directory : String,
+) -> Unit raise CliExecutionError {
+  match directory_kind(directory) {
+    0 => ()
+    1 =>
+      raise CliExecutionError(MHA_OUTPUT_UNOWNED, "output directory is missing")
+    2 =>
+      raise CliExecutionError(
+        MHA_OUTPUT_UNOWNED,
+        "output path is not a directory",
+      )
+    3 =>
+      raise CliExecutionError(
+        MHA_OUTPUT_UNOWNED,
+        "output path must be a real directory, not a symbolic link or reparse point",
+      )
+    _ =>
+      raise CliExecutionError(
+        MHA_OUTPUT_UNOWNED,
+        "output directory path type is unreadable",
+      )
+  }
 }
 
 ///|
@@ -402,7 +473,15 @@ fn create_staging_directory(
       _ => false
     }
     if created {
-      return OwnedGenerationDirectory(candidate)
+      match directory_kind(candidate) {
+        0 => return OwnedGenerationDirectory(candidate)
+        1 => ()
+        _ =>
+          raise CliExecutionError(
+            MHA_OUTPUT_IO,
+            "created staging path is not a real directory; retained staging path: \{candidate}",
+          )
+      }
     }
   }
   raise CliExecutionError(
@@ -412,31 +491,27 @@ fn create_staging_directory(
 }
 
 ///|
+#borrow(directory)
+extern "C" fn cleanup_generation_directory_ffi(directory : NativePath) -> Int = "moonhostabi_cleanup_generation_directory"
+
+///|
 fn cleanup_owned_generation_directory(
   directory : OwnedGenerationDirectory,
 ) -> Bool {
   let OwnedGenerationDirectory(path) = directory
-  let entries = @fs.read_dir(path) catch { _ => return false }
-  for name in entries {
-    if !generation_file_names().contains(name) {
-      return false
-    }
-    let child = generation_file_path(path, name)
-    let is_file = @fs.is_file(child) catch { _ => false }
-    if !is_file {
-      return false
-    }
-  }
-  for name in entries {
-    @fs.remove_file(generation_file_path(path, name)) catch {
-      _ => return false
-    }
-  }
-  try {
-    @fs.remove_dir(path)
-    true
-  } catch {
-    _ => false
+  cleanup_generation_directory_ffi(NativePath::from_string(path)) == 0
+}
+
+///|
+fn transaction_path_failure_detail(
+  message : String,
+  role : String,
+  path : String,
+) -> String {
+  if directory_kind(path) == 1 {
+    "\{message}; \{role} path disappeared before cleanup: \{path}"
+  } else {
+    "\{message}; retained \{role} path: \{path}"
   }
 }
 
@@ -450,14 +525,32 @@ fn[T] fail_with_staging_cleanup(
   if cleanup_owned_generation_directory(staging) {
     raise CliExecutionError(code, message)
   }
-  raise CliExecutionError(code, "\{message}; retained staging path: \{path}")
+  raise CliExecutionError(
+    code,
+    transaction_path_failure_detail(message, "staging", path),
+  )
+}
+
+///|
+fn read_owned_generation_bytes(
+  directory : String,
+  name : String,
+) -> Bytes raise CliExecutionError {
+  @fs.read_file_to_bytes(generation_file_path(directory, name)) catch {
+    _ =>
+      raise CliExecutionError(
+        MHA_OUTPUT_UNOWNED,
+        "owned output file is missing or unreadable: \{name}",
+      )
+  }
 }
 
 ///|
 fn validate_owned_generation_directory(
   directory : String,
   expected_abi_sha256 : String,
-) -> String raise CliExecutionError {
+) -> OwnedGenerationSnapshot raise CliExecutionError {
+  require_real_owned_directory(directory)
   let entries = @fs.read_dir(directory) catch {
     _ =>
       raise CliExecutionError(
@@ -475,7 +568,14 @@ fn validate_owned_generation_directory(
   let manifest_path = generation_file_path(
     directory, "moonhostabi.manifest.json",
   )
-  let manifest_text = @utf8.decode(@fs.read_file_to_bytes(manifest_path)[:]) catch {
+  let manifest_bytes = @fs.read_file_to_bytes(manifest_path) catch {
+    _ =>
+      raise CliExecutionError(
+        MHA_OUTPUT_UNOWNED,
+        "generation manifest is missing or unreadable",
+      )
+  }
+  let manifest_text = @utf8.decode(manifest_bytes[:]) catch {
     _ =>
       raise CliExecutionError(
         MHA_OUTPUT_UNOWNED,
@@ -491,31 +591,36 @@ fn validate_owned_generation_directory(
       "generation manifest ABI does not match artifact",
     )
   }
-  for name in manifest.owned_file_names() {
-    let bytes = @fs.read_file_to_bytes(generation_file_path(directory, name)) catch {
-      _ =>
-        raise CliExecutionError(
-          MHA_OUTPUT_UNOWNED,
-          "owned output file is missing or unreadable: \{name}",
-        )
-    }
-    if manifest.file_sha256(name) != Some(@lockfile.sha256_hex(bytes)) {
-      raise CliExecutionError(
-        MHA_OUTPUT_UNOWNED,
-        "owned output file hash does not match manifest: \{name}",
-      )
-    }
+  let adapter_bytes = read_owned_generation_bytes(directory, "adapter.ts")
+  let contract_bytes = read_owned_generation_bytes(
+    directory, "moonhostabi.contract.json",
+  )
+  if manifest.file_sha256("adapter.ts") !=
+    Some(@lockfile.sha256_hex(adapter_bytes)) {
+    raise CliExecutionError(
+      MHA_OUTPUT_UNOWNED,
+      "owned output file hash does not match manifest: adapter.ts",
+    )
   }
-  @utf8.decode(
-    @fs.read_file_to_bytes(
-      generation_file_path(directory, "moonhostabi.contract.json"),
-    )[:],
-  ) catch {
+  if manifest.file_sha256("moonhostabi.contract.json") !=
+    Some(@lockfile.sha256_hex(contract_bytes)) {
+    raise CliExecutionError(
+      MHA_OUTPUT_UNOWNED,
+      "owned output file hash does not match manifest: moonhostabi.contract.json",
+    )
+  }
+  let contract_text = @utf8.decode(contract_bytes[:]) catch {
     _ =>
       raise CliExecutionError(
         MHA_OUTPUT_UNOWNED,
         "owned contract is not valid UTF-8",
       )
+  }
+  OwnedGenerationSnapshot::{
+    adapter_bytes,
+    contract_bytes,
+    manifest_bytes,
+    contract_text,
   }
 }
 
@@ -526,6 +631,12 @@ fn write_staged_generation(
   fault : GenerationFault?,
 ) -> Unit raise CliExecutionError {
   let OwnedGenerationDirectory(path) = staging
+  if directory_kind(path) != 0 {
+    raise CliExecutionError(
+      MHA_OUTPUT_IO,
+      "staging path is not a real directory",
+    )
+  }
   write_new_file(
     generation_file_path(path, "moonhostabi.contract.json"),
     @utf8.encode(generated.contract),
@@ -584,6 +695,48 @@ fn write_staged_generation(
 }
 
 ///|
+/// Internal fault seam: replace the prevalidated output with a different,
+/// internally consistent owned snapshot before the atomic claim.
+fn replace_owned_generation_before_claim(
+  directory : String,
+  snapshot : OwnedGenerationSnapshot,
+  expected_abi_sha256 : String,
+) -> Unit raise CliExecutionError {
+  let original_typescript = @utf8.decode(snapshot.adapter_bytes[:]) catch {
+    _ =>
+      raise CliExecutionError(
+        MHA_OUTPUT_IO,
+        "failed to prepare post-validation replacement fault",
+      )
+  }
+  let replacement_typescript = original_typescript +
+    "// internal concurrent replacement\n"
+  let replacement_manifest = @generator.encode_generation_manifest(
+    @generator.create_generation_manifest(
+      expected_abi_sha256,
+      snapshot.contract_text,
+      replacement_typescript,
+    ),
+  )
+  try {
+    @fs.write_bytes_to_file(
+      generation_file_path(directory, "adapter.ts"),
+      @utf8.encode(replacement_typescript),
+    )
+    @fs.write_bytes_to_file(
+      generation_file_path(directory, "moonhostabi.manifest.json"),
+      @utf8.encode(replacement_manifest),
+    )
+  } catch {
+    @fs.IOError(message) =>
+      raise CliExecutionError(
+        MHA_OUTPUT_IO,
+        "failed to inject post-validation replacement: \{message}",
+      )
+  }
+}
+
+///|
 fn move_output_to_unique_backup(
   directory : String,
 ) -> OwnedGenerationDirectory raise CliExecutionError {
@@ -611,6 +764,13 @@ fn publish_fresh_generation(
   staging : OwnedGenerationDirectory,
 ) -> Unit raise CliExecutionError {
   let OwnedGenerationDirectory(staging_path) = staging
+  if directory_kind(staging_path) != 0 {
+    fail_with_staging_cleanup(
+      MHA_OUTPUT_IO,
+      "staging path is not a real directory before publication",
+      staging,
+    )
+  }
   match rename_directory_noreplace(staging_path, directory) {
     0 => ()
     1 =>
@@ -629,68 +789,160 @@ fn publish_fresh_generation(
 }
 
 ///|
-fn restore_backup_after_failure(
+fn[T] restore_backup_after_failure(
   directory : String,
   staging : OwnedGenerationDirectory,
   backup : OwnedGenerationDirectory,
   code : String,
   message : String,
-) -> Unit raise CliExecutionError {
+) -> T raise CliExecutionError {
   let OwnedGenerationDirectory(staging_path) = staging
   let OwnedGenerationDirectory(backup_path) = backup
   let restored = rename_directory_noreplace(backup_path, directory) == 0
   let staging_cleaned = cleanup_owned_generation_directory(staging)
   let mut detail = message
   if !restored {
-    detail = "\{detail}; retained backup path: \{backup_path}"
+    detail = transaction_path_failure_detail(detail, "backup", backup_path)
   }
   if !staging_cleaned {
-    detail = "\{detail}; retained staging path: \{staging_path}"
+    detail = transaction_path_failure_detail(detail, "staging", staging_path)
   }
   raise CliExecutionError(code, detail)
+}
+
+///|
+fn[T] fail_update_transaction(
+  directory : String,
+  state : UpdateTransactionState,
+  code : String,
+  message : String,
+) -> T raise CliExecutionError {
+  match state {
+    StagingOwned(staging) => fail_with_staging_cleanup(code, message, staging)
+    TargetClaimed(staging, backup) =>
+      restore_backup_after_failure(directory, staging, backup, code, message)
+    NewOutputPublished(backup) => {
+      let OwnedGenerationDirectory(backup_path) = backup
+      raise CliExecutionError(
+        code,
+        transaction_path_failure_detail(message, "backup", backup_path),
+      )
+    }
+  }
+}
+
+///|
+fn cleanup_claimed_backup(
+  backup : OwnedGenerationDirectory,
+  expected_snapshot : OwnedGenerationSnapshot,
+  expected_abi_sha256 : String,
+) -> Bool {
+  let OwnedGenerationDirectory(backup_path) = backup
+  let snapshot = validate_owned_generation_directory(
+    backup_path, expected_abi_sha256,
+  ) catch {
+    _ => return false
+  }
+  if snapshot != expected_snapshot {
+    return false
+  }
+  cleanup_owned_generation_directory(backup)
 }
 
 ///|
 fn publish_updated_generation(
   directory : String,
   staging : OwnedGenerationDirectory,
+  expected_snapshot : OwnedGenerationSnapshot,
   expected_abi_sha256 : String,
   fault : GenerationFault?,
 ) -> Unit raise CliExecutionError {
-  ignore(validate_owned_generation_directory(directory, expected_abi_sha256))
-  let backup = move_output_to_unique_backup(directory)
-  if fault == Some(FailAfterBackup) {
-    restore_backup_after_failure(
+  let mut state = StagingOwned(staging)
+  if fault == Some(ReplaceBeforeClaim) {
+    let replacement : Result[Unit, (String, String)] = try {
+      replace_owned_generation_before_claim(
+        directory, expected_snapshot, expected_abi_sha256,
+      )
+      Ok(())
+    } catch {
+      CliExecutionError(code, message) => Err((code, message))
+    }
+    match replacement {
+      Err((code, message)) =>
+        fail_update_transaction(directory, state, code, message)
+      Ok(_) => ()
+    }
+  }
+  let claimed : Result[OwnedGenerationDirectory, (String, String)] = Ok(
+    move_output_to_unique_backup(directory),
+  ) catch {
+    CliExecutionError(code, message) => Err((code, message))
+  }
+  let backup = match claimed {
+    Err((code, message)) =>
+      fail_update_transaction(directory, state, code, message)
+    Ok(backup) => backup
+  }
+  state = TargetClaimed(staging, backup)
+  let OwnedGenerationDirectory(backup_path) = backup
+  let revalidated : Result[OwnedGenerationSnapshot, (String, String)] = Ok(
+    validate_owned_generation_directory(backup_path, expected_abi_sha256),
+  ) catch {
+    CliExecutionError(code, message) => Err((code, message))
+  }
+  let claimed_snapshot = match revalidated {
+    Err((code, message)) =>
+      fail_update_transaction(directory, state, code, message)
+    Ok(snapshot) => snapshot
+  }
+  if claimed_snapshot != expected_snapshot {
+    fail_update_transaction(
       directory,
-      staging,
-      backup,
+      state,
+      MHA_OUTPUT_UNOWNED,
+      "output directory changed after validation",
+    )
+  }
+  if fault == Some(FailAfterBackup) {
+    fail_update_transaction(
+      directory,
+      state,
       MHA_OUTPUT_IO,
       "injected publication failure after backup",
     )
   }
   let OwnedGenerationDirectory(staging_path) = staging
+  if directory_kind(staging_path) != 0 {
+    fail_update_transaction(
+      directory,
+      state,
+      MHA_OUTPUT_IO,
+      "staging path is not a real directory before publication",
+    )
+  }
   match rename_directory_noreplace(staging_path, directory) {
-    0 =>
-      if !cleanup_owned_generation_directory(backup) {
-        let OwnedGenerationDirectory(backup_path) = backup
-        raise CliExecutionError(
+    0 => {
+      state = NewOutputPublished(backup)
+      if !cleanup_claimed_backup(backup, claimed_snapshot, expected_abi_sha256) {
+        fail_update_transaction(
+          directory,
+          state,
           MHA_OUTPUT_IO,
-          "new output was committed; retained backup path: \{backup_path}",
+          "new output was committed but the claimed backup could not be safely cleaned",
         )
       }
+    }
     1 =>
-      restore_backup_after_failure(
+      fail_update_transaction(
         directory,
-        staging,
-        backup,
+        state,
         MHA_OUTPUT_EXISTS,
         "another writer created the output directory during update",
       )
     _ =>
-      restore_backup_after_failure(
+      fail_update_transaction(
         directory,
-        staging,
-        backup,
+        state,
         MHA_OUTPUT_IO,
         "failed to publish updated output directory",
       )
@@ -698,27 +950,11 @@ fn publish_updated_generation(
 }
 
 ///|
-fn publish_generated_directory(
+fn create_written_staging_directory(
   directory : String,
   generated : @generator.GenerationResult,
-  mode : GenerateMode,
   fault : GenerationFault?,
-) -> Unit raise CliExecutionError {
-  if mode == DryRun {
-    raise CliExecutionError(
-      MHA_OUTPUT_IO,
-      "internal error: dry-run cannot publish output",
-    )
-  }
-  if mode == Fresh && @fs.path_exists(directory) {
-    raise CliExecutionError(
-      MHA_OUTPUT_EXISTS,
-      "output directory already exists; choose a new path",
-    )
-  }
-  if mode == Update {
-    ignore(validate_owned_generation_directory(directory, generated.abi_sha256))
-  }
+) -> OwnedGenerationDirectory raise CliExecutionError {
   let staging = create_staging_directory(directory)
   let write_result : Result[Unit, (String, String)] = try {
     write_staged_generation(staging, generated, fault)
@@ -728,18 +964,49 @@ fn publish_generated_directory(
   }
   match write_result {
     Err((code, message)) => fail_with_staging_cleanup(code, message, staging)
-    Ok(_) =>
-      match mode {
-        Fresh => publish_fresh_generation(directory, staging)
-        Update =>
-          publish_updated_generation(
-            directory,
-            staging,
-            generated.abi_sha256,
-            fault,
-          )
-        DryRun => ()
+    Ok(_) => staging
+  }
+}
+
+///|
+fn publish_generated_directory(
+  directory : String,
+  generated : @generator.GenerationResult,
+  mode : GenerateMode,
+  fault : GenerationFault?,
+  expected_snapshot : OwnedGenerationSnapshot?,
+) -> Unit raise CliExecutionError {
+  match mode {
+    DryRun =>
+      raise CliExecutionError(
+        MHA_OUTPUT_IO,
+        "internal error: dry-run cannot publish output",
+      )
+    Fresh => {
+      require_absent_output_path(directory)
+      let staging = create_written_staging_directory(
+        directory, generated, fault,
+      )
+      publish_fresh_generation(directory, staging)
+    }
+    Update => {
+      guard expected_snapshot is Some(snapshot) else {
+        raise CliExecutionError(
+          MHA_OUTPUT_IO,
+          "internal error: update requires a prevalidated output snapshot",
+        )
       }
+      let staging = create_written_staging_directory(
+        directory, generated, fault,
+      )
+      publish_updated_generation(
+        directory,
+        staging,
+        snapshot,
+        generated.abi_sha256,
+        fault,
+      )
+    }
   }
 }
 
@@ -794,7 +1061,7 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       if !analysis.diagnostics.is_empty() {
         return unsupported_result(analysis.diagnostics, "")
       }
-      let contract = match mode {
+      let expected_snapshot = match mode {
         Update =>
           Some(
             validate_owned_generation_directory(
@@ -802,7 +1069,11 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
               @lockfile.host_abi_sha256(analysis.abi),
             ),
           )
-        Fresh | DryRun =>
+        Fresh | DryRun => None
+      }
+      let contract = match expected_snapshot {
+        Some(snapshot) => Some(snapshot.contract_text)
+        None =>
           match contract_path {
             Some(path) => Some(decode_contract_file(path))
             None => None
@@ -813,19 +1084,14 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
         return unsupported_result(generated.diagnostics, "")
       }
       match mode {
-        DryRun =>
-          if @fs.path_exists(output_directory) {
-            raise CliExecutionError(
-              MHA_OUTPUT_EXISTS,
-              "output directory already exists; choose a new path",
-            )
-          }
+        DryRun => require_absent_output_path(output_directory)
         Fresh | Update =>
           publish_generated_directory(
             output_directory,
             generated,
             mode,
             generation_fault_from_environment(),
+            expected_snapshot,
           )
       }
       {

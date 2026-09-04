@@ -207,7 +207,9 @@ not evidence of a GitHub-hosted run.
   behavior. Other host behavior remains an explicit throwing stub.
 - Duplicate `(module, name)` imports are rejected instead of synthesized as
   overloads. Fresh generation never replaces an existing path; updates require
-  an exact manifest-owned file set with matching hashes.
+  a real non-link directory, an exact manifest-owned file set with matching
+  hashes, and an unchanged byte snapshot after the directory is atomically
+  claimed.
 - The lockfile schema remains version 1. Host ABI contracts use canonical
   schema v2 and accept only a strictly validated v1-to-v2 migration; no later
   schema migration is implemented.

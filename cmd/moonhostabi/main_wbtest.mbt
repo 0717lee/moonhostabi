@@ -377,7 +377,16 @@ fn publish_error(
   mode : GenerateMode,
   fault : GenerationFault?,
 ) -> String {
-  try publish_generated_directory(output, generated, mode, fault) catch {
+  try {
+    let expected_snapshot = match mode {
+      Update =>
+        Some(validate_owned_generation_directory(output, generated.abi_sha256))
+      Fresh | DryRun => None
+    }
+    publish_generated_directory(
+      output, generated, mode, fault, expected_snapshot,
+    )
+  } catch {
     CliExecutionError(code, message) => "\{code}:\{message}"
   } noraise {
     _ => "accepted"
@@ -456,6 +465,23 @@ test "native directory publication never replaces an existing target" {
   @fs.remove_file(target_file)
   @fs.remove_dir(source)
   @fs.remove_dir(target)
+}
+
+///|
+test "native directory kind distinguishes real directories without following paths" {
+  let directory = "_build/task12-directory-kind"
+  let file = "_build/task12-directory-kind-file"
+  cleanup_generation_test_directory(directory)
+  if @fs.path_exists(file) {
+    @fs.remove_file(file)
+  }
+  @fs.create_dir(directory)
+  @fs.write_string_to_file(file, "not a directory")
+  inspect(directory_kind(directory), content="0")
+  inspect(directory_kind("_build/task12-directory-kind-missing"), content="1")
+  inspect(directory_kind(file), content="2")
+  @fs.remove_file(file)
+  @fs.remove_dir(directory)
 }
 
 ///|
@@ -560,7 +586,7 @@ test "update recovers from second-write and post-backup failures" {
   let output = "_build/task12-recovery"
   cleanup_generation_test_directory(output)
   let generated = transaction_fixture()
-  publish_generated_directory(output, generated, Fresh, None)
+  publish_generated_directory(output, generated, Fresh, None, None)
   let before = generated_snapshot(output)
   let second_write = publish_error(
     output,
@@ -580,6 +606,43 @@ test "update recovers from second-write and post-backup failures" {
   inspect(after_backup.contains("MHA_OUTPUT_IO"), content="true")
   inspect(generated_snapshot(output) == before, content="true")
   inspect(transaction_siblings("task12-recovery").is_empty(), content="true")
+  cleanup_generation_test_directory(output)
+}
+
+///|
+test "update rejects a valid concurrent replacement after validation" {
+  let output = "_build/task12-snapshot-race"
+  cleanup_generation_test_directory(output)
+  let generated = transaction_fixture()
+  publish_generated_directory(output, generated, Fresh, None, None)
+  let before = generated_snapshot(output)
+  let replaced = publish_error(
+    output,
+    generated,
+    Update,
+    Some(ReplaceBeforeClaim),
+  )
+  inspect(replaced.contains("MHA_OUTPUT_UNOWNED"), content="true")
+  let claimed_replacement = generated_snapshot(output)
+  inspect(claimed_replacement[0] != before[0], content="true")
+  inspect(claimed_replacement[1] == before[1], content="true")
+  inspect(claimed_replacement[2] != before[2], content="true")
+  let replacement_snapshot = validate_owned_generation_directory(
+    output,
+    generated.abi_sha256,
+  )
+  inspect(
+    transaction_siblings("task12-snapshot-race").is_empty(),
+    content="true",
+  )
+  publish_generated_directory(
+    output,
+    generated,
+    Update,
+    None,
+    Some(replacement_snapshot),
+  )
+  inspect(generated_snapshot(output) == before, content="true")
   cleanup_generation_test_directory(output)
 }
 
@@ -606,4 +669,15 @@ test "cleanup never deletes files outside the owned output set" {
   @fs.remove_file("\{output}/adapter.ts")
   @fs.remove_file(unknown)
   @fs.remove_dir(output)
+}
+
+///|
+test "cleanup errors only report transaction paths that remain present" {
+  let missing = "_build/task12-missing-staging"
+  cleanup_generation_test_directory(missing)
+  let message = transaction_path_failure_detail(
+    "injected failure", "staging", missing,
+  )
+  inspect(message.contains("retained staging path"), content="false")
+  inspect(message.contains("staging path disappeared"), content="true")
 }

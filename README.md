@@ -44,9 +44,11 @@ path.
 
 `--dry-run` performs parsing, contract validation, and generation without
 creating filesystem output. `--update` reuses the existing contract and only
-replaces a directory whose manifest, exact file set, and SHA-256 values prove
-MoonHostABI ownership. Edited, missing, or unknown files are refused. There is
-no `--force` mode.
+replaces a real, non-link directory whose manifest, exact file set, and SHA-256
+values prove MoonHostABI ownership. The directory is atomically claimed and its
+exact byte snapshot is revalidated before publication. Edited, missing,
+unknown, concurrently replaced, symbolic-link, and reparse-point outputs are
+refused. There is no `--force` mode.
 
 ## Development setup
 
