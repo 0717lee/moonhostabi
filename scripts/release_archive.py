@@ -127,6 +127,32 @@ def normalized_tar_name(member: tarfile.TarInfo) -> str:
     return member.name.rstrip("/") + ("/" if member.isdir() else "")
 
 
+def assert_canonical_tar_end(decoded: bytes, members: list[tarfile.TarInfo]) -> None:
+    if not members:
+        raise ValueError("tar archive must contain members")
+    for member in members:
+        if (
+            member.offset < 0
+            or member.offset_data < 0
+            or member.size < 0
+            or member.offset % 512 != 0
+            or member.offset_data % 512 != 0
+            or member.offset_data < member.offset + 512
+        ):
+            raise ValueError("tar member offsets are not canonical 512-byte blocks")
+    payload_end = max(member.offset_data + member.size for member in members)
+    aligned_payload_end = ((payload_end + 511) // 512) * 512
+    if len(decoded) < aligned_payload_end + 1024:
+        raise ValueError("tar archive must end with two complete zero blocks")
+    if any(decoded[payload_end:aligned_payload_end]):
+        raise ValueError("tar file payload padding must be zero")
+    end_blocks = decoded[aligned_payload_end:]
+    if len(end_blocks) % 512 != 0 or any(end_blocks):
+        raise ValueError("tar bytes after payload must be zero 512-byte blocks")
+    if len(end_blocks) < 1024:
+        raise ValueError("tar archive must contain two zero end blocks")
+
+
 def read_canonical_gzip(archive_path: Path) -> bytes:
     encoded = archive_path.read_bytes()
     canonical_header = bytes.fromhex("1f8b0800000000000203")
@@ -149,6 +175,7 @@ def validate_tar(archive_path: Path, version: str) -> tuple[list[dict[str, objec
     payloads: dict[str, bytes] = {}
     with tarfile.open(fileobj=io.BytesIO(decoded), mode="r:") as archive:
         members = archive.getmembers()
+        assert_canonical_tar_end(decoded, members)
         names = [normalized_tar_name(member) for member in members]
         assert_exact_names(names, expected)
         root = platform_root(version, "linux")
@@ -298,6 +325,13 @@ def create_mock(archive_path: Path, source_root: Path, version: str, platform: s
         create_mock_tar(archive_path, version, payloads)
 
 
+def append_tar_trailing(archive_path: Path, output_path: Path) -> None:
+    if output_path.exists() or output_path.is_symlink():
+        raise ValueError("tar mutation output already exists")
+    decoded = read_canonical_gzip(archive_path)
+    write_canonical_gzip(output_path, decoded + b"EVIL")
+
+
 def expect_rejected(callback: Callable[[], object], label: str) -> None:
     try:
         callback()
@@ -364,6 +398,19 @@ def self_test() -> None:
             archive = root / f"gzip-{label.replace(' ', '-')}.tar.gz"
             archive.write_bytes(mutated)
             expect_rejected(lambda value=archive: validate_tar(value, "0.1.0"), label)
+        decoded_valid = zlib.decompress(encoded, wbits=31)
+        with tarfile.open(fileobj=io.BytesIO(decoded_valid), mode="r:") as valid_archive:
+            valid_members = valid_archive.getmembers()
+        payload_end = max(member.offset_data + member.size for member in valid_members)
+        aligned_payload_end = ((payload_end + 511) // 512) * 512
+        tar_mutations = {
+            "tar trailing nonzero": decoded_valid + b"EVIL",
+            "tar truncated end blocks": decoded_valid[:aligned_payload_end + 512],
+        }
+        for label, mutated_tar in tar_mutations.items():
+            archive = root / f"{label.replace(' ', '-')}.tar.gz"
+            write_canonical_gzip(archive, mutated_tar)
+            expect_rejected(lambda value=archive: validate_tar(value, "0.1.0"), label)
         for kind in ["symlink", "hardlink", "device", "fifo"]:
             archive = root / f"{kind}.tar.gz"
             create_bad_tar(archive, kind)
@@ -387,6 +434,10 @@ def main() -> int:
     mock.add_argument("--version", required=True)
     mock.add_argument("--source-root", required=True, type=Path)
 
+    mutate = subparsers.add_parser("mutate-tar-trailing")
+    mutate.add_argument("--archive", required=True, type=Path)
+    mutate.add_argument("--output", required=True, type=Path)
+
     subparsers.add_parser("self-test")
 
     args = parser.parse_args()
@@ -396,6 +447,9 @@ def main() -> int:
         return 0
     if args.command == "create-mock":
         create_mock(args.archive, args.source_root, args.version, args.platform)
+        return 0
+    if args.command == "mutate-tar-trailing":
+        append_tar_trailing(args.archive, args.output)
         return 0
 
     records, payloads = validate_archive(

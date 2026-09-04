@@ -877,6 +877,60 @@ try {
     -OutputDirectory (Join-Path $negativeRoot 'tampered-output') `
     -Description 'Tampered archive'
 
+  $tarTamperedInput = Join-Path $negativeRoot 'tar-trailing-input'
+  Copy-FlatDirectory -Source $aggregateInput -Destination $tarTamperedInput
+  $linuxArchiveName = if ($platform -ceq 'linux') { $archiveName } else { $otherArchiveName }
+  $linuxArchive = Join-Path $tarTamperedInput $linuxArchiveName
+  $linuxEvidence = Join-Path $tarTamperedInput 'linux.evidence.json'
+  $linuxEvidenceTextBefore = [IO.File]::ReadAllText($linuxEvidence)
+  $linuxHashBefore = Get-Sha256 -Path $linuxArchive
+  $linuxSizeBefore = (Get-Item -LiteralPath $linuxArchive).Length
+  $mutatedLinuxArchive = Join-Path $tarTamperedInput 'tar-trailing-mutated.tar.gz'
+  $tarMutation = Invoke-CapturedProcess -FilePath $python -Arguments @(
+    (Join-Path $repositoryRoot 'scripts/release_archive.py'),
+    'mutate-tar-trailing',
+    '--archive', $linuxArchive,
+    '--output', $mutatedLinuxArchive
+  )
+  if ($tarMutation.ExitCode -ne 0 -or $tarMutation.Stderr -cne '') {
+    throw "Tar trailing mutation fixture failed: '$($tarMutation.Stderr)'."
+  }
+  $linuxHashAfter = Get-Sha256 -Path $mutatedLinuxArchive
+  $linuxSizeAfter = (Get-Item -LiteralPath $mutatedLinuxArchive).Length
+  [IO.File]::Delete($linuxArchive)
+  [IO.File]::Move($mutatedLinuxArchive, $linuxArchive, $false)
+  $linuxEvidenceTextAfter = $linuxEvidenceTextBefore.Replace(
+    $linuxHashBefore,
+    $linuxHashAfter
+  ).Replace(
+    '"size":' + $linuxSizeBefore.ToString([Globalization.CultureInfo]::InvariantCulture),
+    '"size":' + $linuxSizeAfter.ToString([Globalization.CultureInfo]::InvariantCulture)
+  )
+  if ($linuxEvidenceTextAfter -cne $linuxEvidenceTextBefore) {
+    [IO.File]::WriteAllText(
+      $linuxEvidence,
+      $linuxEvidenceTextAfter,
+      [Text.UTF8Encoding]::new($false, $true)
+    )
+  } else {
+    throw 'Tar trailing mutation could not update Linux evidence identity.'
+  }
+  $directTarMutation = Invoke-CapturedProcess -FilePath $python -Arguments @(
+    (Join-Path $repositoryRoot 'scripts/release_archive.py'),
+    'validate',
+    '--archive', $linuxArchive,
+    '--platform', 'linux',
+    '--version', $version
+  )
+  if ($directTarMutation.ExitCode -eq 0 -or [String]::IsNullOrWhiteSpace($directTarMutation.Stderr)) {
+    throw 'Tar trailing nonzero bytes were accepted by the archive validator.'
+  }
+  Assert-AggregateFailure `
+    -PowerShell $pwsh `
+    -InputDirectory $tarTamperedInput `
+    -OutputDirectory (Join-Path $negativeRoot 'tar-trailing-output') `
+    -Description 'Tar trailing nonzero bytes'
+
   $duplicateInput = Join-Path $negativeRoot 'duplicate-input'
   Copy-FlatDirectory -Source $aggregateInput -Destination $duplicateInput
   [IO.File]::WriteAllBytes(
