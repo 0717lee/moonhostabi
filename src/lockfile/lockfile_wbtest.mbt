@@ -217,3 +217,34 @@ test "reindexed recursive Wasm artifacts have one canonical Host ABI" {
     content="true",
   )
 }
+
+///|
+test "lockfile JSON round-trips and verifies its semantic hash" {
+  let abi = sample_scalar_abi([imported_clock()], [exported_add()])
+  let encoded = encode_lockfile(create_lockfile(abi, b"artifact"))
+  let decoded = decode_lockfile(encoded)
+  inspect(decoded.canonical_abi() == canonicalize_host_abi(abi), content="true")
+  inspect(encode_lockfile(decoded), content=encoded)
+}
+
+///|
+test "lockfile decoder rejects malformed schema and hash tampering" {
+  let abi = sample_scalar_abi([], [exported_add()])
+  let encoded = encode_lockfile(create_lockfile(abi, b"artifact"))
+  let bad_version = encoded.replace(
+    old="\"lockfileVersion\":1",
+    new="\"lockfileVersion\":2",
+  )
+  let bad_hash = encoded.replace(
+    old="\"abiSha256\":\"",
+    new="\"abiSha256\":\"0",
+  )
+  for invalid in ["not json", bad_version, bad_hash] {
+    let rejected = try decode_lockfile(invalid) catch {
+      _ => true
+    } noraise {
+      _ => false
+    }
+    inspect(rejected, content="true")
+  }
+}
