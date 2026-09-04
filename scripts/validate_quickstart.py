@@ -10,10 +10,10 @@ from typing import Iterable
 
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)\s]+)(?:\s+['\"][^)]*)?\)")
 COMMAND_PATH_PATTERN = re.compile(
-    r"(?<![A-Za-z0-9_.-])((?:scripts|fixtures|docs|cmd)/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)"
+    r"(?<![A-Za-z0-9_.\-/])((?:scripts|fixtures|docs|cmd)/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)"
 )
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$", re.MULTILINE)
-CODE_FENCE_PATTERN = re.compile(r"```(?:powershell|pwsh|bash|text)\s*\n(.*?)```", re.DOTALL)
+CODE_FENCE_PATTERN = re.compile(r"```[^\r\n`]*\n(.*?)```", re.DOTALL)
 FORBIDDEN_PATTERN = re.compile(
     r"(?i)(?:\bprivate\b|\binternal\b|\bcredentials?\b|\bsecrets?\b|\.codex|"
     r"GITHUB_TOKEN|GH_TOKEN|\$HOME|\$env:|\$\{\{|[A-Za-z]:[\\/]|/Users/|/home/)"
@@ -22,6 +22,17 @@ STALE_PATTERN = re.compile(
     r"(?i)(?:\b(?:no|without|never)\s+(?:a\s+)?verify\b|"
     r"\b(?:no|without|never)\s+(?:a\s+)?bundle\b|"
     r"\bdoes\s+not\s+verify\b|未(?:校验|验证)[^。\n]{0,20}(?:export|导出))"
+)
+VALIDATION_LEAK_PATTERN = re.compile(
+    r"(?i)(?:"
+    r"[A-Za-z]:[\\/](?:Users|home|Windows|Temp|tmp|var)[\\/]"
+    r"|/(?:Users|home|tmp|var)/"
+    r"|\$(?:HOME|env:)"
+    r"|-----BEGIN(?: [A-Z]+)? PRIVATE KEY-----"
+    r"|\bprivate[-_ ]key\b\s*[:=]"
+    r"|\bBearer\s+[A-Za-z0-9._~+/=-]{16,}"
+    r"|\b(?:token|api[_-]?key|password|secret)\s*[:=]\s*[\"']?[A-Za-z0-9._~+/=-]{8,}"
+    r")"
 )
 
 
@@ -90,6 +101,8 @@ def validate_command_paths(path: Path, text: str, repository: Path) -> None:
     for start, block in code_blocks(text):
         if re.search(r"(?i)(?:[A-Za-z]:[\\/]|/Users/|/home/|\$HOME|\$env:|\$\{\{)", block):
             raise ValueError(f"{path}:{start}: command contains an absolute or hidden path")
+        if re.search(r"(?:\.\./|\.\.\\|/\.\.(?:/|$)|\\\.\.(?:\\|$))", block):
+            raise ValueError(f"{path}:{start}: command contains an upward traversal")
         for match in COMMAND_PATH_PATTERN.finditer(block):
             target = (repository / match.group(1)).resolve(strict=False)
             try:
@@ -100,6 +113,21 @@ def validate_command_paths(path: Path, text: str, repository: Path) -> None:
                 ) from error
             if not target.exists():
                 raise ValueError(f"{path}:{start}: command path does not exist: {match.group(1)}")
+
+
+def validate_validation_leaks(path: Path, text: str) -> None:
+    leak = VALIDATION_LEAK_PATTERN.search(text)
+    if leak:
+        raise ValueError(
+            f"{path}:{line_number(text, leak.start())}: validation document contains a concrete secret/path marker"
+        )
+
+
+def validate_bundle_doc(path: Path, text: str, repository: Path) -> None:
+    validate_links(path, text, repository)
+    validate_command_paths(path, text, repository)
+    if "$absoluteNewArchivePath" in text:
+        raise ValueError(f"{path}: bundle example contains an undefined output variable")
 
 
 def validate_headings(path: Path, text: str) -> None:
@@ -127,16 +155,26 @@ def validate_quickstart(repository: Path) -> None:
     readme_path = repository / "README.md"
     quickstart_path = repository / "docs" / "quickstart.md"
     validation_path = repository / "docs" / "validation.md"
+    bundle_path = repository / "fixtures" / "reproduction" / "README.md"
     readme = read_text(readme_path)
     quickstart = read_text(quickstart_path)
     validation = read_text(validation_path)
+    bundle = read_text(bundle_path)
 
-    for path, text in ((readme_path, readme), (quickstart_path, quickstart), (validation_path, validation)):
+    for path, text in (
+        (readme_path, readme),
+        (quickstart_path, quickstart),
+        (validation_path, validation),
+        (bundle_path, bundle),
+    ):
         validate_links(path, text, repository)
+    validate_command_paths(readme_path, readme, repository)
     validate_command_paths(quickstart_path, quickstart, repository)
+    validate_bundle_doc(bundle_path, bundle, repository)
     validate_headings(quickstart_path, quickstart)
     validate_content(readme_path, readme)
     validate_content(quickstart_path, quickstart)
+    validate_validation_leaks(validation_path, validation)
     stale_validation = STALE_PATTERN.search(validation)
     if stale_validation:
         raise ValueError(
@@ -222,6 +260,44 @@ def self_test(repository: Path) -> None:
                 target / "x.md", "```powershell\npwsh scripts/missing.ps1\n```\n", root
             ),
             "missing command path",
+        )
+        expect_failure(
+            lambda: validate_command_paths(
+                target / "x.md", "```shell\npwsh scripts/missing.ps1\n```\n", root
+            ),
+            "shell fence command path",
+        )
+        expect_failure(
+            lambda: validate_command_paths(
+                target / "x.md", "```cmd\npwsh ../scripts/verify-command.ps1\n```\n", root
+            ),
+            "upward command path",
+        )
+        expect_failure(
+            lambda: validate_command_paths(
+                target / "README.md", "```console\npwsh C:\\Users\\judge\\run.ps1\n```\n", root
+            ),
+            "README absolute command path",
+        )
+        expect_failure(
+            lambda: validate_validation_leaks(
+                target / "validation.md", "Authorization: Bearer abcdefghijklmnop\n"
+            ),
+            "validation bearer leak",
+        )
+        expect_failure(
+            lambda: validate_validation_leaks(
+                target / "validation.md", "token=abcdefghijklmnop\n"
+            ),
+            "validation token leak",
+        )
+        expect_failure(
+            lambda: validate_bundle_doc(
+                target / "bundle.md",
+                "$absoluteNewArchivePath\n",
+                root,
+            ),
+            "undefined bundle output variable",
         )
         expect_failure(lambda: validate_content(target / "x.md", "internal credential\n"), "sensitive words")
         expect_failure(lambda: validate_content(target / "x.md", "There is no verify step.\n"), "stale claim")

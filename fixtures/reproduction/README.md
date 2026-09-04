@@ -8,10 +8,20 @@ fixtures when needed.
 From the repository root:
 
 ```powershell
-pwsh -NoProfile -File scripts/create-reproduction-bundle.ps1 `
-  -Artifact fixtures/artifacts/externref.wasm `
-  -Contract fixtures/contracts/externref.contract.json `
-  -Out $absoluteNewArchivePath
+$ErrorActionPreference = 'Stop'
+$archivePath = Join-Path ([IO.Path]::GetTempPath()) (
+  'moonhostabi-reproduction-' + [Guid]::NewGuid().ToString('N') + '.zip'
+)
+try {
+  & pwsh -NoProfile -File scripts/create-reproduction-bundle.ps1 `
+    -Artifact fixtures/artifacts/externref.wasm `
+    -Contract fixtures/contracts/externref.contract.json `
+    -Out $archivePath
+  if ($LASTEXITCODE -ne 0) { throw "Bundle creation failed: $LASTEXITCODE" }
+}
+finally {
+  if ([IO.File]::Exists($archivePath)) { [IO.File]::Delete($archivePath) }
+}
 ```
 
 `-Contract` is optional. When omitted, the public `generate` command creates a
