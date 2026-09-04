@@ -24,6 +24,16 @@ test "argument parsing is pure and order-sensitive" {
   assert_true(
     parse_command(["inspect", "module.wasm", "json", "--format"]) is None,
   )
+  guard parse_command([
+      "generate", "module.wasm", "--contract", "contract.json", "--out", "generated",
+    ])
+    is Some(Generate(artifact, Some(contract), output)) else {
+    fail("expected generate command")
+  }
+  inspect(artifact, content="module.wasm")
+  inspect(contract, content="contract.json")
+  inspect(output, content="generated")
+  assert_true(parse_command(["generate", "module.wasm"]) is None)
 }
 
 ///|
@@ -173,4 +183,106 @@ test "artifact provenance is evidence rather than compatibility identity" {
     content="true",
   )
   @fs.remove_file(path)
+}
+
+///|
+fn cleanup_generation_test_directory(path : String) -> Unit {
+  for name in ["adapter.ts", "moonhostabi.contract.json"] {
+    let file = "\{path}/\{name}"
+    if @fs.path_exists(file) {
+      @fs.remove_file(file) catch {
+        _ => ()
+      }
+    }
+  }
+  if @fs.path_exists(path) {
+    @fs.remove_dir(path) catch {
+      _ => ()
+    }
+  }
+}
+
+///|
+test "generate writes typed adapter and normalized explicit contract" {
+  let output = "_build/task11-generated-contract"
+  cleanup_generation_test_directory(output)
+  let result = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--contract", "fixtures/contracts/externref.contract.json",
+    "--out", output,
+  ])
+  inspect(result.exit_code, content="0")
+  inspect(@fs.is_file("\{output}/adapter.ts"), content="true")
+  inspect(@fs.is_file("\{output}/moonhostabi.contract.json"), content="true")
+  let source = @fs.read_file_to_string("\{output}/adapter.ts")
+  inspect(source.contains("HostImports<HostToken = unknown>"), content="true")
+  inspect(
+    source.contains("\"add\": (arg0: number, arg1: number) => number"),
+    content="true",
+  )
+  inspect(
+    source.contains("\"roundtrip\": (arg0: HostToken) => HostToken"),
+    content="true",
+  )
+  inspect(source.contains("any"), content="false")
+  let normalized_contract = @fs.read_file_to_string(
+    "\{output}/moonhostabi.contract.json",
+  )
+  inspect(
+    normalized_contract.contains("\"externrefGeneric\":\"HostToken\""),
+    content="true",
+  )
+  inspect(
+    normalized_contract.contains(
+      "ecc9ee29e442515286ed65d66f0b3765c3beb015e086e9022fe641d9e0ccc6d7",
+    ),
+    content="true",
+  )
+  cleanup_generation_test_directory(output)
+}
+
+///|
+test "generate draft is conservative and refuses invalid output boundaries" {
+  let draft_output = "_build/task11-generated-draft"
+  cleanup_generation_test_directory(draft_output)
+  let draft = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--out", draft_output,
+  ])
+  inspect(draft.exit_code, content="0")
+  let draft_source = @fs.read_file_to_string("\{draft_output}/adapter.ts")
+  let draft_contract = @fs.read_file_to_string(
+    "\{draft_output}/moonhostabi.contract.json",
+  )
+  inspect(
+    draft_source.contains("HostImports<TExtern = unknown>"),
+    content="true",
+  )
+  inspect(draft_contract.contains("\"externrefGeneric\":null"), content="true")
+  inspect(draft_contract.contains("\"params[0]\""), content="true")
+  let repeated = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--out", draft_output,
+  ])
+  inspect(repeated.exit_code, content="3")
+  inspect(repeated.stderr.contains("MHA_OUTPUT_EXISTS"), content="true")
+  cleanup_generation_test_directory(draft_output)
+
+  let invalid_contract = "_build/task11-invalid-contract.json"
+  let invalid_output = "_build/task11-invalid-output"
+  @fs.write_bytes_to_file(invalid_contract, b"not json")
+  cleanup_generation_test_directory(invalid_output)
+  let malformed = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--contract", invalid_contract,
+    "--out", invalid_output,
+  ])
+  inspect(malformed.exit_code, content="3")
+  inspect(malformed.stderr.contains("MHA_CONTRACT_INVALID"), content="true")
+  inspect(@fs.path_exists(invalid_output), content="false")
+  @fs.remove_file(invalid_contract)
+
+  let unsupported_output = "_build/task11-unsupported-output"
+  cleanup_generation_test_directory(unsupported_output)
+  let unsupported = dispatch([
+    "generate", "fixtures/artifacts/recursive.wasm", "--out", unsupported_output,
+  ])
+  inspect(unsupported.exit_code, content="3")
+  inspect(@fs.path_exists(unsupported_output), content="false")
 }

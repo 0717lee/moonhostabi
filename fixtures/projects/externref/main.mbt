@@ -10,3 +10,9 @@ fn host_echo(token : HostToken) -> HostToken = "host" "echo"
 pub fn roundtrip(token : HostToken) -> HostToken {
   host_echo(token)
 }
+
+///|
+#export_name("add")
+pub fn add(left : Int, right : Int) -> Int {
+  left + right
+}

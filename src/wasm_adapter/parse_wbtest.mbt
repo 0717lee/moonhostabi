@@ -42,7 +42,7 @@ test "wasm_core parses scalar and externref compiler artifacts" {
     @fs.read_file_to_bytes("fixtures/artifacts/externref.wasm"),
   )
   inspect(externref.imports.length(), content="1")
-  inspect(externref.exports.length(), content="1")
+  inspect(externref.exports.length(), content="2")
 }
 
 ///|

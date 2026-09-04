@@ -30,6 +30,7 @@ pub(all) enum CliCommand {
   Inspect(String)
   Lock(String, String)
   Check(String, String)
+  Generate(String, String?, String)
 } derive(Eq, Debug)
 
 ///|
@@ -57,7 +58,10 @@ const MHA_OUTPUT_EXISTS : String = "MHA_OUTPUT_EXISTS"
 const MHA_LOCKFILE_INVALID : String = "MHA_LOCKFILE_INVALID"
 
 ///|
-const USAGE : String = "usage: moonhostabi inspect <artifact.wasm> --format json | lock <artifact.wasm> --out <lock.json> | check <artifact.wasm> --against <lock.json>"
+const MHA_CONTRACT_INVALID : String = "MHA_CONTRACT_INVALID"
+
+///|
+const USAGE : String = "usage: moonhostabi inspect <artifact.wasm> --format json | lock <artifact.wasm> --out <lock.json> | check <artifact.wasm> --against <lock.json> | generate <artifact.wasm> [--contract <contract.json>] --out <directory>"
 
 ///|
 fn parse_command(args : Array[String]) -> CliCommand? {
@@ -79,6 +83,20 @@ fn parse_command(args : Array[String]) -> CliCommand? {
     args[2] == "--against" &&
     !args[3].is_empty() {
     Some(Check(args[1], args[3]))
+  } else if args.length() == 4 &&
+    args[0] == "generate" &&
+    !args[1].is_empty() &&
+    args[2] == "--out" &&
+    !args[3].is_empty() {
+    Some(Generate(args[1], None, args[3]))
+  } else if args.length() == 6 &&
+    args[0] == "generate" &&
+    !args[1].is_empty() &&
+    args[2] == "--contract" &&
+    !args[3].is_empty() &&
+    args[4] == "--out" &&
+    !args[5].is_empty() {
+    Some(Generate(args[1], Some(args[3]), args[5]))
   } else {
     None
   }
@@ -218,12 +236,12 @@ fn write_new_file(path : String, bytes : Bytes) -> Unit raise CliExecutionError 
     1 =>
       raise CliExecutionError(
         MHA_OUTPUT_EXISTS,
-        "lock output already exists; choose a new path",
+        "output already exists; choose a new path",
       )
     _ =>
       raise CliExecutionError(
         MHA_OUTPUT_IO,
-        "failed to create complete lock output",
+        "failed to create complete output file",
       )
   }
 }
@@ -234,6 +252,81 @@ fn decode_baseline(
 ) -> @lockfile.AbiLockfile raise CliExecutionError {
   @lockfile.decode_lockfile(@utf8.decode(bytes[:])) catch {
     error => raise CliExecutionError(MHA_LOCKFILE_INVALID, error.to_string())
+  }
+}
+
+///|
+fn decode_contract_file(path : String) -> String raise CliExecutionError {
+  @utf8.decode(read_bytes(path)[:]) catch {
+    _ =>
+      raise CliExecutionError(
+        MHA_CONTRACT_INVALID,
+        "contract is not valid UTF-8",
+      )
+  }
+}
+
+///|
+fn generate_adapter(
+  abi : @model.HostAbi,
+  contract : String?,
+) -> @generator.GenerationResult raise CliExecutionError {
+  @generator.generate_typescript_adapter(abi, contract) catch {
+    @generator.InvalidContract(message) =>
+      raise CliExecutionError(MHA_CONTRACT_INVALID, message)
+  }
+}
+
+///|
+fn cleanup_generated_directory(directory : String) -> Unit {
+  for name in ["adapter.ts", "moonhostabi.contract.json"] {
+    let path = "\{directory}/\{name}"
+    if @fs.path_exists(path) {
+      @fs.remove_file(path) catch {
+        _ => ()
+      }
+    }
+  }
+  if @fs.path_exists(directory) {
+    @fs.remove_dir(directory) catch {
+      _ => ()
+    }
+  }
+}
+
+///|
+fn write_generated_directory(
+  directory : String,
+  generated : @generator.GenerationResult,
+) -> Unit raise CliExecutionError {
+  if @fs.path_exists(directory) {
+    raise CliExecutionError(
+      MHA_OUTPUT_EXISTS,
+      "output directory already exists; choose a new path",
+    )
+  }
+  @fs.create_dir(directory) catch {
+    @fs.IOError(message) => raise CliExecutionError(MHA_OUTPUT_IO, message)
+  }
+  let write_result : Result[Unit, (String, String)] = try {
+    write_new_file(
+      "\{directory}/adapter.ts",
+      @utf8.encode(generated.typescript),
+    )
+    write_new_file(
+      "\{directory}/moonhostabi.contract.json",
+      @utf8.encode(generated.contract),
+    )
+    Ok(())
+  } catch {
+    CliExecutionError(code, message) => Err((code, message))
+  }
+  match write_result {
+    Ok(_) => ()
+    Err((code, message)) => {
+      cleanup_generated_directory(directory)
+      raise CliExecutionError(code, message)
+    }
   }
 }
 
@@ -282,6 +375,26 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
         @compat.Unknown => exit_code_for_failure(InvalidArtifact)
       }
       { exit_code, stdout: encode_report(report), stderr: "" }
+    }
+    Generate(artifact_path, contract_path, output_directory) => {
+      let analysis = analyze_artifact(read_bytes(artifact_path))
+      if !analysis.diagnostics.is_empty() {
+        return unsupported_result(analysis.diagnostics, "")
+      }
+      let contract = match contract_path {
+        Some(path) => Some(decode_contract_file(path))
+        None => None
+      }
+      let generated = generate_adapter(analysis.abi, contract)
+      if !generated.diagnostics.is_empty() {
+        return unsupported_result(generated.diagnostics, "")
+      }
+      write_generated_directory(output_directory, generated)
+      {
+        exit_code: 0,
+        stdout: "{\"abiSha256\":\{json_string(generated.abi_sha256)},\"files\":[\"adapter.ts\",\"moonhostabi.contract.json\"]}",
+        stderr: "",
+      }
     }
   }
 }

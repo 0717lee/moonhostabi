@@ -1,13 +1,20 @@
 (module $moonhostabi-fixtures/externref@0.1.0
   (type (;0;) (func (param externref) (result externref)))
+  (type (;1;) (func (param i32 i32) (result i32)))
   (import "host" "echo" (func (;0;) (type 0)))
   (memory (;0;) 1)
-  (export "roundtrip" (func 1))
-  (func (;1;) (type 0) (param externref) (result externref)
+  (export "add" (func 1))
+  (export "roundtrip" (func 2))
+  (func (;1;) (type 1) (param i32 i32) (result i32)
     local.get 0
-    call 2
+    local.get 1
+    i32.add
   )
   (func (;2;) (type 0) (param externref) (result externref)
+    local.get 0
+    call 3
+  )
+  (func (;3;) (type 0) (param externref) (result externref)
     local.get 0
     call 0
   )

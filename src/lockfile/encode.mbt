@@ -101,6 +101,11 @@ pub fn encode_canonical_abi(abi : @model.HostAbi) -> String {
 }
 
 ///|
+pub fn host_abi_sha256(abi : @model.HostAbi) -> String {
+  sha256_text(encode_canonical_abi(abi))
+}
+
+///|
 pub fn create_lockfile(abi : @model.HostAbi, artifact : Bytes) -> AbiLockfile {
   let canonical_abi = canonicalize_host_abi(abi)
   let encoded_abi = encode_canonical_host_abi(canonical_abi)

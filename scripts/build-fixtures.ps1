@@ -128,8 +128,10 @@ $projects = @(
     ) },
   @{ Name = 'externref'; Patterns = @(
       @{ Regex = '(?m)^  \(import "host" "echo" \(func \(;\d+;\) \(type \d+\)\)\)$'; Description = 'host.echo import' },
+      @{ Regex = '(?m)^  \(export "add" \(func \d+\)\)$'; Description = 'add export' },
       @{ Regex = '(?m)^  \(export "roundtrip" \(func \d+\)\)$'; Description = 'roundtrip export' },
-      @{ Regex = '(?m)^  \(type \(;\d+;\) \(func \(param externref\) \(result externref\)\)\)$'; Description = 'externref signature' }
+      @{ Regex = '(?m)^  \(type \(;\d+;\) \(func \(param externref\) \(result externref\)\)\)$'; Description = 'externref signature' },
+      @{ Regex = '(?m)^  \(type \(;\d+;\) \(func \(param i32 i32\) \(result i32\)\)\)$'; Description = 'add signature' }
     ) },
   @{ Name = 'recursive'; Patterns = @(
       @{ Regex = '(?m)^  \(type \(;(?<recursiveId>\d+);\) \(struct \(field i32\) \(field \(mut \(ref null \k<recursiveId>\)\)\)\)\)$'; Description = 'complete self-recursive mutable struct type' },

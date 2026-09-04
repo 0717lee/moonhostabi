@@ -6,3 +6,7 @@ target
 .moonagent/
 .tools/
 fixtures/.build/
+runtime/node_modules/
+runtime/dist/
+runtime/playwright-report/
+runtime/test-results/

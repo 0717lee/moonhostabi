@@ -5,7 +5,7 @@ This corpus is authored specifically for MoonHostABI. It does not reuse source o
 | Fixture | Purpose | Expected public surface |
 |---|---|---|
 | `scalar` | Scalar code generation and runtime smoke test | `add(i32,i32)->i32`, `answer()->i64` |
-| `externref` | Opaque host-object import and identity round-trip | import `host.echo(externref)->externref`, export `roundtrip` |
+| `externref` | Opaque host-object import plus one-artifact runtime demo | import `host.echo(externref)->externref`; exports `roundtrip` and `add` |
 | `recursive` | Real MoonBit compiler Wasm-GC output | exports `new_node` and `node_value` over a recursive `Node` |
 | `breaking_v1` | Compatibility baseline | `add(i32,i32)->i32` |
 | `breaking_v2` | Seeded breaking candidate | `add(i32)->i32` |
