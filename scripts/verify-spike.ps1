@@ -183,6 +183,7 @@ try {
   Invoke-Checked -FilePath $moonExecutable -Arguments @('fmt', '--check') -Description 'moon fmt --check'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('check') -Description 'moon check'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('test', '--target', 'native') -Description 'moon test'
+  Invoke-Checked -FilePath $pwshExecutable -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-generate-transactions.ps1'), '-RepositoryRoot', $repositoryRoot) -Description 'transactional generate concurrency verification'
   Invoke-Checked `
     -FilePath $pwshExecutable `
     -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/build-fixtures.ps1')) `
@@ -254,7 +255,11 @@ try {
       '--out', $freshGeneratedRoot
     ) `
     -Description 'fresh TypeScript adapter generation'
-  foreach ($generatedName in @('adapter.ts', 'moonhostabi.contract.json')) {
+  foreach ($generatedName in @(
+    'adapter.ts',
+    'moonhostabi.contract.json',
+    'moonhostabi.manifest.json'
+  )) {
     $trackedPath = Join-Path $runtimeRoot "generated/$generatedName"
     $freshPath = Join-Path $freshGeneratedRoot $generatedName
     $trackedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $trackedPath).Hash.ToLowerInvariant()

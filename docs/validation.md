@@ -200,12 +200,14 @@ not evidence of a GitHub-hosted run.
   memories, globals and tags fail closed.
 - Typed GC references and `v128` are modeled for ABI comparison but are not
   represented by the default JavaScript adapter.
-- One optional contract generic names all public `externref` positions;
-  per-position semantic aliases are not implemented.
+- Contract v2 names each public `externref` position independently; positions
+  share one TypeScript parameter only when the contract repeats an alias.
+  Aliases do not add runtime brand checks.
 - Only the exact known `moonbit:ffi.make_closure` signature receives generated
   behavior. Other host behavior remains an explicit throwing stub.
 - Duplicate `(module, name)` imports are rejected instead of synthesized as
-  overloads. Generate output directories must be new; there is no update flow.
+  overloads. Fresh generation never replaces an existing path; updates require
+  an exact manifest-owned file set with matching hashes.
 - The lockfile schema remains version 1. Host ABI contracts use canonical
   schema v2 and accept only a strictly validated v1-to-v2 migration; no later
   schema migration is implemented.

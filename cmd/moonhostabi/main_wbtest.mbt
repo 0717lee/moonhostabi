@@ -27,12 +27,45 @@ test "argument parsing is pure and order-sensitive" {
   guard parse_command([
       "generate", "module.wasm", "--contract", "contract.json", "--out", "generated",
     ])
-    is Some(Generate(artifact, Some(contract), output)) else {
+    is Some(Generate(artifact, Some(contract), output, Fresh)) else {
     fail("expected generate command")
   }
   inspect(artifact, content="module.wasm")
   inspect(contract, content="contract.json")
   inspect(output, content="generated")
+  guard parse_command([
+      "generate", "module.wasm", "--out", "generated", "--update",
+    ])
+    is Some(Generate(_, None, _, Update)) else {
+    fail("expected update command")
+  }
+  guard parse_command([
+      "generate", "module.wasm", "--out", "generated", "--dry-run",
+    ])
+    is Some(Generate(_, None, _, DryRun)) else {
+    fail("expected dry-run command")
+  }
+  assert_true(
+    parse_command(["generate", "module.wasm", "--update", "--out", "generated"])
+    is None,
+  )
+  assert_true(
+    parse_command(["generate", "module.wasm", "--out", "generated", "--force"])
+    is None,
+  )
+  assert_true(
+    parse_command([
+      "generate", "module.wasm", "--contract", "contract.json", "--out", "generated",
+      "--update",
+    ])
+    is None,
+  )
+  assert_true(
+    parse_command([
+      "generate", "module.wasm", "--out", "generated", "--update", "--dry-run",
+    ])
+    is None,
+  )
   assert_true(parse_command(["generate", "module.wasm"]) is None)
 }
 
@@ -187,7 +220,10 @@ test "artifact provenance is evidence rather than compatibility identity" {
 
 ///|
 fn cleanup_generation_test_directory(path : String) -> Unit {
-  for name in ["adapter.ts", "moonhostabi.contract.json"] {
+  for
+    name in [
+      "adapter.ts", "moonhostabi.contract.json", "moonhostabi.manifest.json",
+    ] {
     let file = "\{path}/\{name}"
     if @fs.path_exists(file) {
       @fs.remove_file(file) catch {
@@ -213,6 +249,18 @@ test "generate writes typed adapter and normalized explicit contract" {
   inspect(result.exit_code, content="0")
   inspect(@fs.is_file("\{output}/adapter.ts"), content="true")
   inspect(@fs.is_file("\{output}/moonhostabi.contract.json"), content="true")
+  inspect(@fs.is_file("\{output}/moonhostabi.manifest.json"), content="true")
+  let manifest = @generator.decode_generation_manifest(
+    @fs.read_file_to_string("\{output}/moonhostabi.manifest.json"),
+  )
+  inspect(
+    manifest.abi_fingerprint(),
+    content="ecc9ee29e442515286ed65d66f0b3765c3beb015e086e9022fe641d9e0ccc6d7",
+  )
+  inspect(
+    result.stdout.contains("\"moonhostabi.manifest.json\""),
+    content="true",
+  )
   let source = @fs.read_file_to_string("\{output}/adapter.ts")
   inspect(source.contains("HostImports<HostToken = unknown>"), content="true")
   inspect(
@@ -300,4 +348,262 @@ test "generate draft is conservative and refuses invalid output boundaries" {
   ])
   inspect(unsupported.exit_code, content="3")
   inspect(@fs.path_exists(unsupported_output), content="false")
+}
+
+///|
+fn generated_snapshot(path : String) -> Array[Bytes] raise {
+  [
+    @fs.read_file_to_bytes("\{path}/adapter.ts"),
+    @fs.read_file_to_bytes("\{path}/moonhostabi.contract.json"),
+    @fs.read_file_to_bytes("\{path}/moonhostabi.manifest.json"),
+  ]
+}
+
+///|
+fn transaction_fixture() -> @generator.GenerationResult raise {
+  let analysis = analyze_artifact(
+    @fs.read_file_to_bytes("fixtures/artifacts/externref.wasm"),
+  )
+  generate_adapter(
+    analysis.abi,
+    Some(@fs.read_file_to_string("fixtures/contracts/externref.contract.json")),
+  )
+}
+
+///|
+fn publish_error(
+  output : String,
+  generated : @generator.GenerationResult,
+  mode : GenerateMode,
+  fault : GenerationFault?,
+) -> String {
+  try publish_generated_directory(output, generated, mode, fault) catch {
+    CliExecutionError(code, message) => "\{code}:\{message}"
+  } noraise {
+    _ => "accepted"
+  }
+}
+
+///|
+fn transaction_siblings(output_leaf : String) -> Array[String] raise {
+  @fs.read_dir("_build").filter(fn(name) {
+    name.has_prefix("\{output_leaf}.moonhostabi-")
+  })
+}
+
+///|
+test "generate dry-run performs no filesystem writes" {
+  let output = "_build/task12-dry-run"
+  cleanup_generation_test_directory(output)
+  let result = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--out", output, "--dry-run",
+  ])
+  inspect(result.exit_code, content="0")
+  inspect(
+    result.stdout.contains("\"moonhostabi.manifest.json\""),
+    content="true",
+  )
+  inspect(@fs.path_exists(output), content="false")
+  inspect(transaction_siblings("task12-dry-run").is_empty(), content="true")
+}
+
+///|
+test "fresh generate refuses an existing unrelated directory" {
+  let output = "_build/task12-unrelated"
+  let user_file = "\{output}/user.txt"
+  cleanup_generation_test_directory(output)
+  if @fs.path_exists(user_file) {
+    @fs.remove_file(user_file)
+  }
+  if @fs.path_exists(output) {
+    @fs.remove_dir(output)
+  }
+  @fs.create_dir(output)
+  @fs.write_string_to_file(user_file, "user-owned")
+  let result = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--out", output,
+  ])
+  inspect(result.exit_code, content="3")
+  inspect(result.stderr.contains("MHA_OUTPUT_EXISTS"), content="true")
+  inspect(@fs.read_file_to_string(user_file), content="user-owned")
+  @fs.remove_file(user_file)
+  @fs.remove_dir(output)
+}
+
+///|
+test "native directory publication never replaces an existing target" {
+  let source = "_build/task12-noreplace-source"
+  let target = "_build/task12-noreplace-target"
+  let source_file = "\{source}/source.txt"
+  let target_file = "\{target}/target.txt"
+  for file in [source_file, target_file] {
+    if @fs.path_exists(file) {
+      @fs.remove_file(file)
+    }
+  }
+  for directory in [source, target] {
+    if @fs.path_exists(directory) {
+      @fs.remove_dir(directory)
+    }
+    @fs.create_dir(directory)
+  }
+  @fs.write_string_to_file(source_file, "source")
+  @fs.write_string_to_file(target_file, "target")
+  inspect(rename_directory_noreplace(source, target), content="1")
+  inspect(@fs.read_file_to_string(source_file), content="source")
+  inspect(@fs.read_file_to_string(target_file), content="target")
+  @fs.remove_file(source_file)
+  @fs.remove_file(target_file)
+  @fs.remove_dir(source)
+  @fs.remove_dir(target)
+}
+
+///|
+test "update requires an exact owned directory and preserves rejected bytes" {
+  let output = "_build/task12-update"
+  cleanup_generation_test_directory(output)
+  let created = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--contract", "fixtures/contracts/externref.contract.json",
+    "--out", output,
+  ])
+  inspect(created.exit_code, content="0")
+  let before = generated_snapshot(output)
+  let updated = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--out", output, "--update",
+  ])
+  inspect(updated.exit_code, content="0")
+  inspect(generated_snapshot(output) == before, content="true")
+
+  @fs.write_string_to_file("\{output}/adapter.ts", "user edit")
+  let edited = @fs.read_file_to_bytes("\{output}/adapter.ts")
+  let rejected_edit = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--out", output, "--update",
+  ])
+  inspect(rejected_edit.exit_code, content="3")
+  inspect(rejected_edit.stderr.contains("MHA_OUTPUT_UNOWNED"), content="true")
+  inspect(
+    @fs.read_file_to_bytes("\{output}/adapter.ts") == edited,
+    content="true",
+  )
+  cleanup_generation_test_directory(output)
+
+  let recreated = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--contract", "fixtures/contracts/externref.contract.json",
+    "--out", output,
+  ])
+  inspect(recreated.exit_code, content="0")
+  let complete_before_manifest_removal = generated_snapshot(output)
+  @fs.remove_file("\{output}/moonhostabi.manifest.json")
+  let without_manifest = complete_before_manifest_removal[:2].to_owned()
+  let rejected_missing = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--out", output, "--update",
+  ])
+  inspect(rejected_missing.exit_code, content="3")
+  inspect(
+    rejected_missing.stderr.contains("MHA_OUTPUT_UNOWNED"),
+    content="true",
+  )
+  inspect(
+    [
+      @fs.read_file_to_bytes("\{output}/adapter.ts"),
+      @fs.read_file_to_bytes("\{output}/moonhostabi.contract.json"),
+    ] ==
+    without_manifest,
+    content="true",
+  )
+  cleanup_generation_test_directory(output)
+
+  let recreated_again = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--contract", "fixtures/contracts/externref.contract.json",
+    "--out", output,
+  ])
+  inspect(recreated_again.exit_code, content="0")
+  let unknown = "\{output}/notes.txt"
+  @fs.write_string_to_file(unknown, "keep me")
+  let rejected_unknown = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--out", output, "--update",
+  ])
+  inspect(rejected_unknown.exit_code, content="3")
+  inspect(
+    rejected_unknown.stderr.contains("MHA_OUTPUT_UNOWNED"),
+    content="true",
+  )
+  inspect(@fs.read_file_to_string(unknown), content="keep me")
+  @fs.remove_file(unknown)
+  cleanup_generation_test_directory(output)
+
+  let recreated_for_manifest = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--contract", "fixtures/contracts/externref.contract.json",
+    "--out", output,
+  ])
+  inspect(recreated_for_manifest.exit_code, content="0")
+  let manifest_path = "\{output}/moonhostabi.manifest.json"
+  let wrong_abi_manifest = @fs.read_file_to_string(manifest_path).replace(
+    old="ecc9ee29e442515286ed65d66f0b3765c3beb015e086e9022fe641d9e0ccc6d7",
+    new="0000000000000000000000000000000000000000000000000000000000000000",
+  )
+  @fs.write_string_to_file(manifest_path, wrong_abi_manifest)
+  let rejected_manifest = dispatch([
+    "generate", "fixtures/artifacts/externref.wasm", "--out", output, "--update",
+  ])
+  inspect(rejected_manifest.exit_code, content="3")
+  inspect(
+    rejected_manifest.stderr.contains("MHA_OUTPUT_UNOWNED"),
+    content="true",
+  )
+  inspect(@fs.read_file_to_string(manifest_path), content=wrong_abi_manifest)
+  cleanup_generation_test_directory(output)
+}
+
+///|
+test "update recovers from second-write and post-backup failures" {
+  let output = "_build/task12-recovery"
+  cleanup_generation_test_directory(output)
+  let generated = transaction_fixture()
+  publish_generated_directory(output, generated, Fresh, None)
+  let before = generated_snapshot(output)
+  let second_write = publish_error(
+    output,
+    generated,
+    Update,
+    Some(FailSecondWrite),
+  )
+  inspect(second_write.contains("MHA_OUTPUT_IO"), content="true")
+  inspect(generated_snapshot(output) == before, content="true")
+  inspect(transaction_siblings("task12-recovery").is_empty(), content="true")
+  let after_backup = publish_error(
+    output,
+    generated,
+    Update,
+    Some(FailAfterBackup),
+  )
+  inspect(after_backup.contains("MHA_OUTPUT_IO"), content="true")
+  inspect(generated_snapshot(output) == before, content="true")
+  inspect(transaction_siblings("task12-recovery").is_empty(), content="true")
+  cleanup_generation_test_directory(output)
+}
+
+///|
+test "cleanup never deletes files outside the owned output set" {
+  let output = "_build/task12-cleanup-safety"
+  let unknown = "\{output}/notes.txt"
+  cleanup_generation_test_directory(output)
+  if @fs.path_exists(unknown) {
+    @fs.remove_file(unknown)
+  }
+  if @fs.path_exists(output) {
+    @fs.remove_dir(output)
+  }
+  @fs.create_dir(output)
+  @fs.write_string_to_file("\{output}/adapter.ts", "owned")
+  @fs.write_string_to_file(unknown, "user-owned")
+  let cleaned = cleanup_owned_generation_directory(
+    OwnedGenerationDirectory(output),
+  )
+  inspect(cleaned, content="false")
+  inspect(@fs.read_file_to_string("\{output}/adapter.ts"), content="owned")
+  inspect(@fs.read_file_to_string(unknown), content="user-owned")
+  @fs.remove_file("\{output}/adapter.ts")
+  @fs.remove_file(unknown)
+  @fs.remove_dir(output)
 }

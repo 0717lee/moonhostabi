@@ -30,11 +30,23 @@ moon run cmd/moonhostabi --target native inspect <artifact.wasm> --format json
 moon run cmd/moonhostabi --target native lock <artifact.wasm> --out <lock.json>
 moon run cmd/moonhostabi --target native check <artifact.wasm> --against <lock.json>
 moon run cmd/moonhostabi --target native generate <artifact.wasm> --out <new-directory>
+moon run cmd/moonhostabi --target native generate <artifact.wasm> --out <owned-directory> --update
+moon run cmd/moonhostabi --target native generate <artifact.wasm> --out <new-directory> --dry-run
 ```
 
 `generate` also accepts `--contract <contract.json>` before `--out`. Generated
 defaults throw for user-owned imports; they never invent host business logic.
-Unsupported JavaScript boundaries fail closed with structured diagnostics.
+Unsupported JavaScript boundaries fail closed with structured diagnostics. A
+successful fresh generation publishes `adapter.ts`,
+`moonhostabi.contract.json`, and canonical `moonhostabi.manifest.json`
+together from a unique sibling staging directory without replacing an existing
+path.
+
+`--dry-run` performs parsing, contract validation, and generation without
+creating filesystem output. `--update` reuses the existing contract and only
+replaces a directory whose manifest, exact file set, and SHA-256 values prove
+MoonHostABI ownership. Edited, missing, or unknown files are refused. There is
+no `--force` mode.
 
 ## Development setup
 

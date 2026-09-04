@@ -2,6 +2,7 @@
 pub(all) struct GenerationResult {
   typescript : String
   contract : String
+  manifest : String
   abi_sha256 : String
   diagnostics : Array[@model.Diagnostic]
 } derive(Eq, Debug)
@@ -521,5 +522,18 @@ pub fn generate_typescript_adapter(
   } else {
     ""
   }
-  { typescript, contract: normalized_contract, abi_sha256, diagnostics }
+  let manifest = if diagnostics.is_empty() {
+    encode_generation_manifest(
+      create_generation_manifest(abi_sha256, normalized_contract, typescript),
+    )
+  } else {
+    ""
+  }
+  {
+    typescript,
+    contract: normalized_contract,
+    manifest,
+    abi_sha256,
+    diagnostics,
+  }
 }

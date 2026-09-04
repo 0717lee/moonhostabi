@@ -53,6 +53,15 @@ test "generator emits exact deterministic v2 contract draft" {
   inspect(generated.abi_sha256, content=hash)
   inspect(generated.contract, content=expected)
   inspect(generated.diagnostics.length(), content="0")
+  let manifest = decode_generation_manifest(generated.manifest)
+  inspect(manifest.abi_fingerprint(), content=hash)
+  inspect(
+    manifest.file_sha256("moonhostabi.contract.json") ==
+    Some(
+      @lockfile.sha256_hex(@encoding.encode(@encoding.UTF8, generated.contract)),
+    ),
+    content="true",
+  )
   inspect(generate_draft(abi).contract, content=expected)
 }
 
@@ -206,6 +215,7 @@ test "typed GC refs and v128 produce diagnostics instead of TypeScript fiction" 
   }
   let generated = generate_draft(abi)
   inspect(generated.typescript, content="")
+  inspect(generated.manifest, content="")
   inspect(generated.diagnostics.length(), content="2")
   inspect(generated.diagnostics[0].code, content="MHA_PROJECT_UNREPRESENTABLE")
   inspect(
