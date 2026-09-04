@@ -75,16 +75,47 @@ fn validate_generator_abi(abi : @model.HostAbi) -> Array[@model.Diagnostic] {
   let diagnostics : Array[@model.Diagnostic] = []
   let imports = @model.sort_abi_functions(abi.imports)
   let exports = @model.sort_abi_functions(abi.exports)
-  for function in imports {
+  for index, function in imports {
     let module_name = function.module_name.unwrap_or("")
     validate_function(
       function,
       "imports[\{module_name}.\{function.name}]",
       diagnostics,
     )
+    let mut duplicate = false
+    for previous in 0..<index {
+      if imports[previous].module_name.unwrap_or("") == module_name &&
+        imports[previous].name == function.name {
+        duplicate = true
+      }
+    }
+    if duplicate {
+      diagnostics.push(@model.Diagnostic::{
+        code: @model.MHA_ADAPTER_MISMATCH,
+        severity: @model.Error,
+        path: "imports[\{module_name}.\{function.name}]",
+        message: "duplicate Wasm imports cannot be represented by one JavaScript property",
+        byte_offset: None,
+      })
+    }
   }
-  for function in exports {
+  for index, function in exports {
     validate_function(function, "exports[\{function.name}]", diagnostics)
+    let mut duplicate = false
+    for previous in 0..<index {
+      if exports[previous].name == function.name {
+        duplicate = true
+      }
+    }
+    if duplicate {
+      diagnostics.push(@model.Diagnostic::{
+        code: @model.MHA_ADAPTER_MISMATCH,
+        severity: @model.Error,
+        path: "exports[\{function.name}]",
+        message: "duplicate Wasm exports cannot be represented by one TypeScript property",
+        byte_offset: None,
+      })
+    }
   }
   diagnostics
 }
@@ -158,6 +189,16 @@ fn has_make_closure(imports : Array[@model.AbiFunction]) -> Bool {
 }
 
 ///|
+fn typescript_object_literal_key(value : String) -> String {
+  let quoted = contract_json_string(value)
+  if value == "__proto__" {
+    "[\{quoted}]"
+  } else {
+    quoted
+  }
+}
+
+///|
 fn append_host_import_type(
   lines : Array[String],
   imports : Array[@model.AbiFunction],
@@ -212,7 +253,7 @@ fn throwing_stub(function : @model.AbiFunction) -> Array[String] {
   let module_name = function.module_name.unwrap_or("")
   let message = "MHA_ADAPTER_MISMATCH: missing host import \{module_name}.\{function.name} \{function_signature(function)}"
   [
-    "\{contract_json_string(function.name)}: (\{params.join(", ")}) => {",
+    "\{typescript_object_literal_key(function.name)}: (\{params.join(", ")}) => {",
     "  throw new Error(\{contract_json_string(message)});",
     "},",
   ]
@@ -234,12 +275,12 @@ fn append_host_import_factory(
   }
   lines.push("  return {")
   for module_name in sorted_import_modules(imports) {
-    lines.push("    \{contract_json_string(module_name)}: {")
+    lines.push("    \{typescript_object_literal_key(module_name)}: {")
     for function in imports {
       if function.module_name.unwrap_or("") == module_name {
         if is_make_closure(function) {
           lines.push(
-            "      \{contract_json_string(function.name)}: (fn, context) => makeMoonBitClosure(fn, context),",
+            "      \{typescript_object_literal_key(function.name)}: (fn, context) => makeMoonBitClosure(fn, context),",
           )
         } else {
           let stub = throwing_stub(function)

@@ -195,3 +195,74 @@ test "TypeScript-only keywords cannot become externref generic names" {
   }
   inspect(is_safe_typescript_identifier("HostToken"), content="true")
 }
+
+///|
+test "special JavaScript property keys are emitted as computed own properties" {
+  let abi = @model.HostAbi::{
+    schema_version: 1,
+    imports: [
+      @model.AbiFunction::{
+        module_name: Some("__proto__"),
+        name: "__proto__",
+        params: [],
+        results: [],
+      },
+    ],
+    exports: [],
+    types: [],
+    features: [],
+  }
+  let generated = generate_typescript_adapter(abi, None)
+  inspect(generated.diagnostics.length(), content="0")
+  inspect(
+    generated.typescript.contains("    [\"__proto__\"]: {"),
+    content="true",
+  )
+  inspect(
+    generated.typescript.contains("      [\"__proto__\"]: () => {"),
+    content="true",
+  )
+}
+
+///|
+test "duplicate JavaScript import and export keys fail closed" {
+  let abi = @model.HostAbi::{
+    schema_version: 1,
+    imports: [
+      @model.AbiFunction::{
+        module_name: Some("host"),
+        name: "same",
+        params: [@model.I32],
+        results: [],
+      },
+      @model.AbiFunction::{
+        module_name: Some("host"),
+        name: "same",
+        params: [@model.F64],
+        results: [],
+      },
+    ],
+    exports: [
+      @model.AbiFunction::{
+        module_name: None,
+        name: "same",
+        params: [],
+        results: [@model.I32],
+      },
+      @model.AbiFunction::{
+        module_name: None,
+        name: "same",
+        params: [],
+        results: [@model.I64],
+      },
+    ],
+    types: [],
+    features: [],
+  }
+  let generated = generate_typescript_adapter(abi, None)
+  inspect(generated.typescript, content="")
+  inspect(generated.diagnostics.length(), content="2")
+  inspect(generated.diagnostics[0].code, content="MHA_ADAPTER_MISMATCH")
+  inspect(generated.diagnostics[0].path, content="imports[host.same]")
+  inspect(generated.diagnostics[1].path, content="exports[same]")
+}

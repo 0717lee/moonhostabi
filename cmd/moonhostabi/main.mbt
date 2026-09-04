@@ -278,23 +278,6 @@ fn generate_adapter(
 }
 
 ///|
-fn cleanup_generated_directory(directory : String) -> Unit {
-  for name in ["adapter.ts", "moonhostabi.contract.json"] {
-    let path = "\{directory}/\{name}"
-    if @fs.path_exists(path) {
-      @fs.remove_file(path) catch {
-        _ => ()
-      }
-    }
-  }
-  if @fs.path_exists(directory) {
-    @fs.remove_dir(directory) catch {
-      _ => ()
-    }
-  }
-}
-
-///|
 fn write_generated_directory(
   directory : String,
   generated : @generator.GenerationResult,
@@ -310,12 +293,12 @@ fn write_generated_directory(
   }
   let write_result : Result[Unit, (String, String)] = try {
     write_new_file(
-      "\{directory}/adapter.ts",
-      @utf8.encode(generated.typescript),
-    )
-    write_new_file(
       "\{directory}/moonhostabi.contract.json",
       @utf8.encode(generated.contract),
+    )
+    write_new_file(
+      "\{directory}/adapter.ts",
+      @utf8.encode(generated.typescript),
     )
     Ok(())
   } catch {
@@ -323,10 +306,12 @@ fn write_generated_directory(
   }
   match write_result {
     Ok(_) => ()
-    Err((code, message)) => {
-      cleanup_generated_directory(directory)
-      raise CliExecutionError(code, message)
-    }
+    Err((code, message)) =>
+      raise CliExecutionError(
+        code,
+        message +
+        "; generation did not complete and the output directory was left intact",
+      )
   }
 }
 
