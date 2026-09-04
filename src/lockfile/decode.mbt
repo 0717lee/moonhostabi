@@ -11,6 +11,9 @@ pub impl Show for LockfileError with fn output(self, logger) {
 }
 
 ///|
+const MAX_LOCKFILE_LENGTH : Int = 8 * 1024 * 1024
+
+///|
 fn[T] invalid_lockfile(message : String) -> T raise LockfileError {
   raise InvalidLockfile(message)
 }
@@ -341,6 +344,9 @@ fn is_lower_hex_sha256(value : String) -> Bool {
 
 ///|
 pub fn decode_lockfile(text : String) -> AbiLockfile raise LockfileError {
+  if text.length() > MAX_LOCKFILE_LENGTH {
+    invalid_lockfile("lockfile: input exceeds 8 MiB limit")
+  }
   let root : Json = @json.parse(text) catch {
     _ => invalid_lockfile("lockfile: invalid JSON")
   }
@@ -382,11 +388,15 @@ pub fn decode_lockfile(text : String) -> AbiLockfile raise LockfileError {
   if computed_abi_sha256 != abi_sha256 {
     invalid_lockfile("lockfile.abiSha256: ABI fingerprint mismatch")
   }
-  AbiLockfile::{
+  let lockfile = AbiLockfile::{
     lockfile_version: 1,
     schema_sha256,
     artifact_sha256,
     abi_sha256,
     abi,
   }
+  if encode_lockfile(lockfile) != text {
+    invalid_lockfile("lockfile: expected canonical byte representation")
+  }
+  lockfile
 }

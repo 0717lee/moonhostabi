@@ -33,6 +33,30 @@ pub(all) enum CliCommand {
 } derive(Eq, Debug)
 
 ///|
+suberror CliExecutionError {
+  CliExecutionError(String, String)
+} derive(Debug)
+
+///|
+pub impl Show for CliExecutionError with fn output(self, logger) {
+  match self {
+    CliExecutionError(_, message) => logger.write_string(message)
+  }
+}
+
+///|
+const MHA_INPUT_IO : String = "MHA_INPUT_IO"
+
+///|
+const MHA_OUTPUT_IO : String = "MHA_OUTPUT_IO"
+
+///|
+const MHA_OUTPUT_EXISTS : String = "MHA_OUTPUT_EXISTS"
+
+///|
+const MHA_LOCKFILE_INVALID : String = "MHA_LOCKFILE_INVALID"
+
+///|
 const USAGE : String = "usage: moonhostabi inspect <artifact.wasm> --format json | lock <artifact.wasm> --out <lock.json> | check <artifact.wasm> --against <lock.json>"
 
 ///|
@@ -108,11 +132,20 @@ fn encode_report(report : @compat.CompatibilityReport) -> String {
 }
 
 ///|
-fn invalid_result(message : String) -> CommandResult {
+fn invalid_result(code : String, message : String) -> CommandResult {
   {
     exit_code: exit_code_for_failure(InvalidArtifact),
     stdout: "",
-    stderr: "{\"code\":\{json_string(@model.MHA_PARSE_MALFORMED)},\"message\":\{json_string(message)}}",
+    stderr: "{\"code\":\{json_string(code)},\"message\":\{json_string(message)}}",
+  }
+}
+
+///|
+fn unexpected_result(message : String) -> CommandResult {
+  {
+    exit_code: exit_code_for_failure(RuntimeFailure),
+    stdout: "",
+    stderr: "{\"code\":\{json_string(@model.MHA_RUNTIME_FAILURE)},\"message\":\{json_string(message)}}",
   }
 }
 
@@ -129,19 +162,88 @@ fn unsupported_result(
 }
 
 ///|
-fn analyze_artifact(bytes : Bytes) -> @projector.ProjectionAnalysis raise {
-  let wasm_module = @wasm_adapter.parse_artifact(bytes)
-  @projector.analyze_host_abi(
-    wasm_module,
-    @projector.default_js_capability_policy(),
-  )
+fn read_bytes(path : String) -> Bytes raise CliExecutionError {
+  @fs.read_file_to_bytes(path) catch {
+    @fs.IOError(message) => raise CliExecutionError(MHA_INPUT_IO, message)
+  }
+}
+
+///|
+fn analyze_artifact(
+  bytes : Bytes,
+) -> @projector.ProjectionAnalysis raise CliExecutionError {
+  try {
+    let wasm_module = @wasm_adapter.parse_artifact(bytes)
+    @projector.analyze_host_abi(
+      wasm_module,
+      @projector.default_js_capability_policy(),
+    )
+  } catch {
+    error =>
+      raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
+  }
+}
+
+///|
+#cfg(platform="windows")
+priv struct NativePath(String)
+
+///|
+#cfg(not(platform="windows"))
+priv struct NativePath(Bytes)
+
+///|
+#cfg(platform="windows")
+fn NativePath::from_string(path : String) -> NativePath {
+  NativePath(path)
+}
+
+///|
+#cfg(not(platform="windows"))
+fn NativePath::from_string(path : String) -> NativePath {
+  NativePath(@utf8.encode(path) + b"\x00")
+}
+
+///|
+#borrow(path, bytes)
+extern "C" fn write_new_file_ffi(
+  path : NativePath,
+  bytes : Bytes,
+  length : Int,
+) -> Int = "moonhostabi_write_new_file"
+
+///|
+fn write_new_file(path : String, bytes : Bytes) -> Unit raise CliExecutionError {
+  match
+    write_new_file_ffi(NativePath::from_string(path), bytes, bytes.length()) {
+    0 => ()
+    1 =>
+      raise CliExecutionError(
+        MHA_OUTPUT_EXISTS,
+        "lock output already exists; choose a new path",
+      )
+    _ =>
+      raise CliExecutionError(
+        MHA_OUTPUT_IO,
+        "failed to create complete lock output",
+      )
+  }
+}
+
+///|
+fn decode_baseline(
+  bytes : Bytes,
+) -> @lockfile.AbiLockfile raise CliExecutionError {
+  @lockfile.decode_lockfile(@utf8.decode(bytes[:])) catch {
+    error => raise CliExecutionError(MHA_LOCKFILE_INVALID, error.to_string())
+  }
 }
 
 ///|
 fn execute_command(command : CliCommand) -> CommandResult raise {
   match command {
     Inspect(artifact_path) => {
-      let analysis = analyze_artifact(@fs.read_file_to_bytes(artifact_path))
+      let analysis = analyze_artifact(read_bytes(artifact_path))
       let encoded_abi = @lockfile.encode_canonical_abi(analysis.abi)
       if analysis.diagnostics.is_empty() {
         { exit_code: 0, stdout: encoded_abi, stderr: "" }
@@ -150,10 +252,7 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       }
     }
     Lock(artifact_path, output_path) => {
-      if @fs.path_exists(output_path) {
-        return invalid_result("lock output already exists; choose a new path")
-      }
-      let artifact = @fs.read_file_to_bytes(artifact_path)
+      let artifact = read_bytes(artifact_path)
       let analysis = analyze_artifact(artifact)
       if !analysis.diagnostics.is_empty() {
         return unsupported_result(analysis.diagnostics, "")
@@ -161,7 +260,7 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       let encoded = @lockfile.encode_lockfile(
         @lockfile.create_lockfile(analysis.abi, artifact),
       )
-      @fs.write_bytes_to_file(output_path, @utf8.encode(encoded))
+      write_new_file(output_path, @utf8.encode(encoded))
       {
         exit_code: 0,
         stdout: "{\"written\":\{json_string(output_path)}}",
@@ -169,9 +268,10 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       }
     }
     Check(artifact_path, baseline_path) => {
-      let baseline_text = @utf8.decode(@fs.read_file_to_bytes(baseline_path)[:])
-      let baseline = @lockfile.decode_lockfile(baseline_text)
-      let current = analyze_artifact(@fs.read_file_to_bytes(artifact_path))
+      let baseline = decode_baseline(read_bytes(baseline_path))
+      let current = analyze_artifact(read_bytes(artifact_path))
+      // artifactSha256 records where the baseline came from. Compatibility is
+      // intentionally semantic, so different bytes with the same ABI pass.
       let report = @compat.compare_host_abi_with_diagnostics(
         baseline.canonical_abi(),
         current.abi,
@@ -195,9 +295,20 @@ pub fn dispatch(args : Array[String]) -> CommandResult {
       { exit_code: exit_code_for_failure(Usage), stdout: "", stderr: USAGE }
     Some(command) =>
       execute_command(command) catch {
-        error => invalid_result(error.to_string())
+        CliExecutionError(code, message) => invalid_result(code, message)
+        error => unexpected_result(error.to_string())
       }
   }
+}
+
+///|
+#borrow(bytes)
+extern "C" fn write_stderr_bytes(bytes : Bytes, length : Int) -> Int = "moonhostabi_write_stderr"
+
+///|
+fn write_stderr(text : String) -> Unit {
+  let bytes = @utf8.encode(text + "\n")
+  ignore(write_stderr_bytes(bytes, bytes.length()))
 }
 
 ///|
@@ -213,7 +324,7 @@ fn main {
     println(result.stdout)
   }
   if !result.stderr.is_empty() {
-    println(result.stderr)
+    write_stderr(result.stderr)
   }
   @sys.exit(result.exit_code)
 }

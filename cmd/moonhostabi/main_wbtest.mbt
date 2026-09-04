@@ -132,3 +132,45 @@ test "malformed and unsupported artifacts exit three" {
     content="true",
   )
 }
+
+///|
+test "I/O errors are not mislabeled as malformed Wasm" {
+  let missing = dispatch([
+    "inspect", "_build/definitely-missing-task10.wasm", "--format", "json",
+  ])
+  inspect(missing.exit_code, content="3")
+  inspect(missing.stderr.contains("MHA_INPUT_IO"), content="true")
+  inspect(missing.stderr.contains("MHA_PARSE_MALFORMED"), content="false")
+}
+
+///|
+test "artifact provenance is evidence rather than compatibility identity" {
+  let path = "_build/task10-provenance.lock.json"
+  if @fs.path_exists(path) {
+    @fs.remove_file(path)
+  }
+  let wasm_module = @wasm_adapter.parse_artifact(
+    @fs.read_file_to_bytes("fixtures/artifacts/breaking_v1.wasm"),
+  )
+  let analysis = @projector.analyze_host_abi(
+    wasm_module,
+    @projector.default_js_capability_policy(),
+  )
+  let different_provenance = @lockfile.create_lockfile(
+    analysis.abi,
+    b"not-the-current-artifact",
+  )
+  @fs.write_bytes_to_file(
+    path,
+    @utf8.encode(@lockfile.encode_lockfile(different_provenance)),
+  )
+  let result = dispatch([
+    "check", "fixtures/artifacts/breaking_v1.wasm", "--against", path,
+  ])
+  inspect(result.exit_code, content="0")
+  inspect(
+    result.stdout.contains("\"classification\":\"compatible\""),
+    content="true",
+  )
+  @fs.remove_file(path)
+}

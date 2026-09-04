@@ -239,7 +239,11 @@ test "lockfile decoder rejects malformed schema and hash tampering" {
     old="\"abiSha256\":\"",
     new="\"abiSha256\":\"0",
   )
-  for invalid in ["not json", bad_version, bad_hash] {
+  let duplicate_key = encoded.replace(
+    old="\"lockfileVersion\":1",
+    new="\"lockfileVersion\":1,\"lockfileVersion\":1",
+  )
+  for invalid in ["not json", bad_version, bad_hash, duplicate_key] {
     let rejected = try decode_lockfile(invalid) catch {
       _ => true
     } noraise {
