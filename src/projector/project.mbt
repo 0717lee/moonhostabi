@@ -176,6 +176,6 @@ pub fn project_host_abi(wasm_module : @wasm_types.Module) -> @model.HostAbi {
     imports: @model.sort_abi_functions(imports),
     exports: @model.sort_abi_functions(exports),
     types: [],
-    features: [],
+    features: detect_moonbit_features(wasm_module),
   }
 }

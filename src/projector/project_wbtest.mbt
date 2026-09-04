@@ -145,3 +145,139 @@ test "all typed refs preserve canonical identity and nullability" {
     content="unknown(types[1])",
   )
 }
+
+///|
+test "MoonBit make_closure import is recorded as a feature" {
+  let wasm_module = @wasm_types.Module::Module()
+  wasm_module.types.push(
+    @wasm_types.SubType::func([FuncRef, ExternRef], [FuncRef]),
+  )
+  wasm_module.imports.push({
+    mod_name: "moonbit:ffi",
+    name: "make_closure",
+    desc: @wasm_types.ImportDesc::Func(0),
+  })
+
+  let abi = project_host_abi(wasm_module)
+
+  debug_inspect(abi.features, content="[\"moonbit.make_closure\"]")
+}
+
+///|
+test "MoonBit make_closure feature requires a function import" {
+  let wasm_module = @wasm_types.Module::Module()
+  wasm_module.imports.push({
+    mod_name: "moonbit:ffi",
+    name: "make_closure",
+    desc: @wasm_types.ImportDesc::Global(@wasm_types.GlobalType::{
+      value_type: I32,
+      mutable: false,
+    }),
+  })
+
+  let abi = project_host_abi(wasm_module)
+
+  debug_inspect(abi.features, content="[]")
+}
+
+///|
+test "MoonBit externref remains opaque and uses an explicit symbolic name" {
+  let default_policy = default_js_capability_policy()
+  let (unnamed, unnamed_diagnostic) = classify_js_value_type(
+    @model.ExternRef,
+    "imports[host.echo].params[0]",
+    default_policy,
+  )
+  debug_inspect(unnamed, content="Opaque(\"unknown\")")
+  assert_true(unnamed_diagnostic is None)
+
+  let named_policy = JsCapabilityPolicy::{
+    allow_typed_gc_refs: false,
+    allow_v128: false,
+    externref_symbol: Some("HostToken"),
+  }
+  let (named, named_diagnostic) = classify_js_value_type(
+    @model.ExternRef,
+    "imports[host.echo].params[0]",
+    named_policy,
+  )
+  debug_inspect(named, content="Opaque(\"HostToken\")")
+  assert_true(named_diagnostic is None)
+}
+
+///|
+test "MoonBit typed GC refs and v128 fail JavaScript representation by default" {
+  let policy = default_js_capability_policy()
+  let (_, typed_ref_diagnostic) = classify_js_value_type(
+    @model.TypedRef("type[4]", false),
+    "imports[host.consume].params[0]",
+    policy,
+  )
+  let (_, v128_diagnostic) = classify_js_value_type(
+    @model.V128,
+    "imports[host.consume].params[1]",
+    policy,
+  )
+  guard typed_ref_diagnostic is Some(typed_ref_error) else {
+    fail("expected typed GC ref diagnostic")
+  }
+  guard v128_diagnostic is Some(v128_error) else {
+    fail("expected v128 diagnostic")
+  }
+  inspect(typed_ref_error.code, content="MHA_PROJECT_UNREPRESENTABLE")
+  inspect(typed_ref_error.path, content="imports[host.consume].params[0]")
+  inspect(v128_error.code, content="MHA_PROJECT_UNREPRESENTABLE")
+  inspect(v128_error.path, content="imports[host.consume].params[1]")
+}
+
+///|
+test "MoonBit analysis diagnoses unrepresentable public boundary values" {
+  let wasm_module = @wasm_types.Module::Module()
+  wasm_module.types.push(
+    @wasm_types.SubType::simple(
+      @wasm_types.CompositeType::Struct(@wasm_types.StructType::{ fields: [] }),
+    ),
+  )
+  wasm_module.types.push(@wasm_types.SubType::func([RefStruct(0), V128], []))
+  wasm_module.imports.push({
+    mod_name: "host",
+    name: "consume",
+    desc: @wasm_types.ImportDesc::Func(1),
+  })
+
+  let analysis = analyze_host_abi(wasm_module, default_js_capability_policy())
+
+  inspect(analysis.abi.imports.length(), content="1")
+  inspect(analysis.diagnostics.length(), content="2")
+  inspect(
+    analysis.diagnostics[0].path,
+    content="imports[host.consume].params[0]",
+  )
+  inspect(
+    analysis.diagnostics[1].path,
+    content="imports[host.consume].params[1]",
+  )
+}
+
+///|
+test "MoonBit capability policy can explicitly allow typed refs and v128" {
+  let policy = JsCapabilityPolicy::{
+    allow_typed_gc_refs: true,
+    allow_v128: true,
+    externref_symbol: None,
+  }
+  let (typed_ref, typed_ref_diagnostic) = classify_js_value_type(
+    @model.TypedRef("type[4]", true),
+    "exports.value.results[0]",
+    policy,
+  )
+  let (v128, v128_diagnostic) = classify_js_value_type(
+    @model.V128,
+    "exports.vector.results[0]",
+    policy,
+  )
+  debug_inspect(typed_ref, content="Opaque(\"type[4]\")")
+  debug_inspect(v128, content="Opaque(\"v128\")")
+  assert_true(typed_ref_diagnostic is None)
+  assert_true(v128_diagnostic is None)
+}
