@@ -141,7 +141,7 @@ actual calls:
 
 ```json
 {"result":42,"externrefIdentity":true,"traceCount":1,"traceArgumentIdentity":true}
-{"code":"MHA_ADAPTER_MISMATCH","path":"imports[host.echo]","observed":true}
+{"code":"MHA_ADAPTER_MISMATCH","paths":["imports[host.echo]","exports[roundtrip]","exports[add]","exports[add]"],"observed":true}
 ```
 
 Chromium 151 executed the same compiled adapter and fixture. Playwright 1.62.1
@@ -153,7 +153,11 @@ observed:
 - `#trace` = `{"count":1,"argumentIdentity":true}` from the Wasm-triggered
   `host.echo` call;
 - the intentional missing-import case contained both
-  `MHA_ADAPTER_MISMATCH` and `imports[host.echo]`.
+  `MHA_ADAPTER_MISMATCH` and `imports[host.echo]`;
+- real Wasm modules with a missing `roundtrip`, a renamed `add`, and an `add`
+  global in place of a function failed at `exports[roundtrip]`, `exports[add]`,
+  and `exports[add]`, respectively. The positive result, identity, and trace
+  observations remained unchanged.
 
 The browser server exposes only the page, compiled adapter and Wasm fixture,
 binds to `127.0.0.1`, and had zero listeners after the run.
@@ -213,9 +217,12 @@ not evidence of a GitHub-hosted run.
 - The lockfile schema remains version 1. Host ABI contracts use canonical
   schema v2 and accept only a strictly validated v1-to-v2 migration; no later
   schema migration is implemented.
-- Runtime preflight validates required imports, but the returned Wasm exports
-  are currently type-asserted rather than shape-validated. Supplying unrelated
-  bytes can therefore defer an export mismatch to the first call.
+- Runtime preflight validates required imports and, immediately after
+  instantiation, verifies every required export is an own property whose value
+  is a function. Failures report `MHA_ADAPTER_MISMATCH` with an `exports[...]`
+  path. JavaScript does not repeat Wasm parameter and result signature checks;
+  artifact ABI analysis and the generated contract remain authoritative for
+  those signatures.
 - The proof covers native CLI execution on Windows locally and configures Linux
   CI, but no remote Linux result is claimed yet.
 - MoonBit's CI installer is content-hash pinned and the installed binaries are
