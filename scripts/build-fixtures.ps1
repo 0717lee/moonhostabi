@@ -121,30 +121,28 @@ foreach ($directory in @($stagedArtifactsRoot, $stagedOracleRoot)) {
 
 $projects = @(
   @{ Name = 'scalar'; Patterns = @(
-      @{ Regex = '\(export "add"'; Description = 'add export' },
-      @{ Regex = '\(export "answer"'; Description = 'answer export' },
-      @{ Regex = '\(type \(;\d+;\) \(func \(param i32 i32\) \(result i32\)\)\)'; Description = 'i32 add signature' },
-      @{ Regex = '\(type \(;\d+;\) \(func \(result i64\)\)\)'; Description = 'i64 answer signature' }
+      @{ Regex = '(?m)^  \(export "add" \(func \d+\)\)$'; Description = 'add export' },
+      @{ Regex = '(?m)^  \(export "answer" \(func \d+\)\)$'; Description = 'answer export' },
+      @{ Regex = '(?m)^  \(type \(;\d+;\) \(func \(param i32 i32\) \(result i32\)\)\)$'; Description = 'i32 add signature' },
+      @{ Regex = '(?m)^  \(type \(;\d+;\) \(func \(result i64\)\)\)$'; Description = 'i64 answer signature' }
     ) },
   @{ Name = 'externref'; Patterns = @(
-      @{ Regex = '\(import "host" "echo"'; Description = 'host.echo import' },
-      @{ Regex = '\(export "roundtrip"'; Description = 'roundtrip export' },
-      @{ Regex = '\(param externref\) \(result externref\)'; Description = 'externref signature' }
+      @{ Regex = '(?m)^  \(import "host" "echo" \(func \(;\d+;\) \(type \d+\)\)\)$'; Description = 'host.echo import' },
+      @{ Regex = '(?m)^  \(export "roundtrip" \(func \d+\)\)$'; Description = 'roundtrip export' },
+      @{ Regex = '(?m)^  \(type \(;\d+;\) \(func \(param externref\) \(result externref\)\)\)$'; Description = 'externref signature' }
     ) },
   @{ Name = 'recursive'; Patterns = @(
-      @{ Regex = '\(type \(;(?<recursiveId>\d+);\) \(struct .*\(ref null \k<recursiveId>\)'; Description = 'self-recursive struct type' },
-      @{ Regex = '\(ref null (?:\$[A-Za-z][A-Za-z0-9_-]*|\d+)\)'; Description = 'nullable typed reference' },
-      @{ Regex = '\(field \(mut \(ref null \d+\)\)\)'; Description = 'mutable recursive field' },
-      @{ Regex = '\(export "new_node"'; Description = 'new_node export' },
-      @{ Regex = '\(export "node_value"'; Description = 'node_value export' }
+      @{ Regex = '(?m)^  \(type \(;(?<recursiveId>\d+);\) \(struct \(field i32\) \(field \(mut \(ref null \k<recursiveId>\)\)\)\)\)$'; Description = 'complete self-recursive mutable struct type' },
+      @{ Regex = '(?m)^  \(export "new_node" \(func \d+\)\)$'; Description = 'new_node export' },
+      @{ Regex = '(?m)^  \(export "node_value" \(func \d+\)\)$'; Description = 'node_value export' }
     ) },
   @{ Name = 'breaking_v1'; Patterns = @(
-      @{ Regex = '\(export "add"'; Description = 'add export' },
-      @{ Regex = '\(param i32 i32\) \(result i32\)'; Description = 'v1 add signature' }
+      @{ Regex = '(?m)^  \(export "add" \(func \d+\)\)$'; Description = 'add export' },
+      @{ Regex = '(?m)^  \(type \(;\d+;\) \(func \(param i32 i32\) \(result i32\)\)\)$'; Description = 'v1 add signature' }
     ) },
   @{ Name = 'breaking_v2'; Patterns = @(
-      @{ Regex = '\(export "add"'; Description = 'add export' },
-      @{ Regex = '\(param i32\) \(result i32\)'; Description = 'v2 add signature' }
+      @{ Regex = '(?m)^  \(export "add" \(func \d+\)\)$'; Description = 'add export' },
+      @{ Regex = '(?m)^  \(type \(;\d+;\) \(func \(param i32\) \(result i32\)\)\)$'; Description = 'v2 add signature' }
     ) }
 )
 
@@ -208,10 +206,10 @@ foreach ($name in $watFixtures) {
   Invoke-Checked -FilePath $wasmTools -Arguments @('validate', $stagedArtifact) -Description "validation for $name"
   $wat = Get-PrintedWat -Artifact $stagedArtifact
   foreach ($expectation in @(
-      @{ Regex = '\(rec'; Description = 'recursive type group' },
-      @{ Regex = '\(ref null (?:\$[A-Za-z][A-Za-z0-9_-]*|\d+)\)'; Description = 'nullable typed reference' },
-      @{ Regex = '\(mut i16\)'; Description = 'packed mutable i16 field' },
-      @{ Regex = '\(export "node-null"'; Description = 'node-null export' }
+      @{ Regex = '(?m)^  \(rec$'; Description = 'recursive type group' },
+      @{ Regex = '(?m)^    \(type \$Node \(;\d+;\) \(struct \(field \(mut \(ref null \$Node\)\)\) \(field \(ref null \$Bag\)\) \(field \(mut i16\)\)\)\)$'; Description = 'complete recursive Node definition' },
+      @{ Regex = '(?m)^    \(type \$Bag \(;\d+;\) \(array \(mut \(ref null \$Node\)\)\)\)$'; Description = 'complete recursive Bag definition' },
+      @{ Regex = '(?m)^  \(export "node-null" \(func \$node-null\)\)$'; Description = 'node-null export' }
     )) {
     Assert-WatPattern -Wat $wat -Pattern $expectation.Regex -Fixture $name -Description $expectation.Description
   }
