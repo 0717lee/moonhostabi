@@ -41,10 +41,10 @@ if ($LASTEXITCODE -ne 0) {
   throw "moon version --all failed with exit code $LASTEXITCODE"
 }
 $moonVersionText = $moonVersionOutput -join "`n"
-if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20260819 \(fc2a4ee 2026-08-19\)') {
+if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20260819 \(fc2a4ee 2026-08-19\)\s+.+$') {
   throw "Expected moon 0.1.20260819 (fc2a4ee), got '$($moonVersionOutput -join ' ')'."
 }
-if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.9\+6e6c44045 \(2026-08-19\)') {
+if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.9\+6e6c44045 \(2026-08-19\)\s+.+$') {
   throw "Expected moonc v0.10.9+6e6c44045, got '$($moonVersionOutput -join ' ')'."
 }
 
@@ -110,6 +110,7 @@ $runRoot = [IO.Path]::GetFullPath(
   (Join-Path $buildRoot ([Guid]::NewGuid().ToString('N')))
 )
 Assert-ChildPath -Path $runRoot -Parent $buildRoot
+try {
 [IO.Directory]::CreateDirectory($runRoot) | Out-Null
 $stagedArtifactsRoot = [IO.Path]::GetFullPath((Join-Path $runRoot 'artifacts'))
 $stagedOracleRoot = [IO.Path]::GetFullPath((Join-Path $runRoot 'oracle'))
@@ -118,7 +119,6 @@ foreach ($directory in @($stagedArtifactsRoot, $stagedOracleRoot)) {
   [IO.Directory]::CreateDirectory($directory) | Out-Null
 }
 
-try {
 $projects = @(
   @{ Name = 'scalar'; Patterns = @(
       @{ Regex = '\(export "add"'; Description = 'add export' },
