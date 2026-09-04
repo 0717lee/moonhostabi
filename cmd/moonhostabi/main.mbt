@@ -172,16 +172,14 @@ fn read_bytes(path : String) -> Bytes raise CliExecutionError {
 fn analyze_artifact(
   bytes : Bytes,
 ) -> @projector.ProjectionAnalysis raise CliExecutionError {
-  try {
-    let wasm_module = @wasm_adapter.parse_artifact(bytes)
-    @projector.analyze_host_abi(
-      wasm_module,
-      @projector.default_js_capability_policy(),
-    )
-  } catch {
+  let wasm_module = @wasm_adapter.parse_artifact(bytes) catch {
     error =>
       raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
   }
+  @projector.analyze_host_abi(
+    wasm_module,
+    @projector.default_js_capability_policy(),
+  )
 }
 
 ///|
