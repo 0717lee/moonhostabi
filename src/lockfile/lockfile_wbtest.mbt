@@ -193,3 +193,27 @@ test "lockfile JSON escapes names and stays byte-identical" {
   inspect(@json.valid(first), content="true")
   inspect(first.contains("quote\\\"slash\\\\line\\n"), content="true")
 }
+
+///|
+test "reindexed recursive Wasm artifacts have one canonical Host ABI" {
+  let first_module = @wasm_adapter.parse_artifact(
+    @fs.read_file_to_bytes("fixtures/artifacts/rec-a.wasm"),
+  )
+  let reindexed_module = @wasm_adapter.parse_artifact(
+    @fs.read_file_to_bytes("fixtures/artifacts/rec-reindexed.wasm"),
+  )
+  let gc_policy = @projector.JsCapabilityPolicy::{
+    allow_typed_gc_refs: true,
+    allow_v128: false,
+    externref_symbol: None,
+  }
+  let first = @projector.analyze_host_abi(first_module, gc_policy)
+  let reindexed = @projector.analyze_host_abi(reindexed_module, gc_policy)
+  inspect(first.diagnostics.length(), content="0")
+  inspect(reindexed.diagnostics.length(), content="0")
+  inspect(first.abi == reindexed.abi, content="false")
+  inspect(
+    encode_canonical_abi(first.abi) == encode_canonical_abi(reindexed.abi),
+    content="true",
+  )
+}

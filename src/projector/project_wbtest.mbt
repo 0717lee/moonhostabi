@@ -438,3 +438,38 @@ test "non-function public ABI items produce explicit diagnostics" {
   inspect(analysis.diagnostics[4].path, content="exports[table]")
   inspect(analysis.diagnostics[7].path, content="exports[tag]")
 }
+
+///|
+test "wasm_core projects the real MoonBit recursive GC artifact" {
+  let wasm_module = @wasm_adapter.parse_artifact(
+    @fs.read_file_to_bytes("fixtures/artifacts/recursive.wasm"),
+  )
+  let analysis = analyze_host_abi(wasm_module, JsCapabilityPolicy::{
+    allow_typed_gc_refs: true,
+    allow_v128: false,
+    externref_symbol: None,
+  })
+  inspect(analysis.diagnostics.length(), content="0")
+  inspect(analysis.abi.exports.length(), content="2")
+  inspect(
+    analysis.abi.exports[0].stable_text(),
+    content="func export new_node(i32)->(ref type[0])",
+  )
+  inspect(
+    analysis.abi.exports[1].stable_text(),
+    content="func export node_value(ref type[0])->(i32)",
+  )
+  inspect(analysis.abi.types.length(), content="1")
+  guard analysis.abi.types[0] is @model.Struct(node) else {
+    fail("expected the recursive Node struct")
+  }
+  inspect(node.id, content="type[0]")
+  inspect(node.fields.length(), content="2")
+  debug_inspect(node.fields[0].storage, content="Value(I32)")
+  inspect(node.fields[0].mutable, content="false")
+  debug_inspect(
+    node.fields[1].storage,
+    content="Value(TypedRef(\"type[0]\", true))",
+  )
+  inspect(node.fields[1].mutable, content="true")
+}

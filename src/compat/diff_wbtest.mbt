@@ -349,3 +349,29 @@ test "compatible typed export addition cannot reindex an existing surface" {
     "exports[aaa_new]",
   )
 }
+
+///|
+test "compiled breaking fixtures report the seeded signature path" {
+  let baseline_module = @wasm_adapter.parse_artifact(
+    @fs.read_file_to_bytes("fixtures/artifacts/breaking_v1.wasm"),
+  )
+  let current_module = @wasm_adapter.parse_artifact(
+    @fs.read_file_to_bytes("fixtures/artifacts/breaking_v2.wasm"),
+  )
+  let baseline = @projector.analyze_host_abi(
+    baseline_module,
+    @projector.default_js_capability_policy(),
+  )
+  let current = @projector.analyze_host_abi(
+    current_module,
+    @projector.default_js_capability_policy(),
+  )
+  inspect(baseline.diagnostics.length(), content="0")
+  inspect(current.diagnostics.length(), content="0")
+  assert_single_change(
+    compare_host_abi(baseline.abi, current.abi, semantic_policy()),
+    Breaking,
+    @model.MHA_SIGNATURE_CHANGED,
+    "exports[add].params",
+  )
+}

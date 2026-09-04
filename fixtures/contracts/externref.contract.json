@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "externrefs": {
+    "HostToken": {
+      "typescriptType": "HostToken",
+      "description": "Opaque host-owned token; identity must survive round-trip."
+    }
+  },
+  "imports": [
+    {
+      "module": "host",
+      "name": "echo",
+      "signature": "(externref)->(externref)",
+      "implementation": "required"
+    }
+  ]
+}

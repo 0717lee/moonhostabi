@@ -6,4 +6,7 @@ import {
 
 import {
   "moonbitlang/core/json",
+  "0717lee/moonhostabi/src/projector",
+  "0717lee/moonhostabi/src/wasm_adapter",
+  "moonbitlang/x/fs",
 } for "wbtest"

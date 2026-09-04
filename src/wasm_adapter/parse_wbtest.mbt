@@ -29,3 +29,18 @@ test "wasm_core parser rejects truncated module" {
   }
   inspect(err.to_string(), content="unexpected end of input")
 }
+
+///|
+test "wasm_core parses scalar and externref compiler artifacts" {
+  let scalar = parse_artifact(
+    @fs.read_file_to_bytes("fixtures/artifacts/scalar.wasm"),
+  )
+  inspect(scalar.imports.length(), content="0")
+  inspect(scalar.exports.length(), content="2")
+
+  let externref = parse_artifact(
+    @fs.read_file_to_bytes("fixtures/artifacts/externref.wasm"),
+  )
+  inspect(externref.imports.length(), content="1")
+  inspect(externref.exports.length(), content="1")
+}
