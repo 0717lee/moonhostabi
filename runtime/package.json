@@ -4,8 +4,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "test:node": "node dist/node/verify.js && node dist/node/verify-negative.js",
-    "test:browser": "playwright test --config playwright.config.ts browser/verify.spec.ts"
+    "test:node": "npm run build && node dist/node/verify.js && node dist/node/verify-negative.js",
+    "test:browser": "npm run build && playwright test --config playwright.config.ts browser/verify.spec.ts"
   },
   "devDependencies": {
     "@types/node": "24.12.0",

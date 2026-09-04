@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MoonHostABI Chromium verification</title>
+  </head>
+  <body>
+    <main>
+      <output id="result" aria-label="scalar result"></output>
+      <output id="externref-identity" aria-label="externref identity"></output>
+      <pre id="trace" aria-label="host import trace"></pre>
+      <output id="error" aria-label="adapter error"></output>
+    </main>
+    <script type="module">
+      import {
+        createHostImports,
+        instantiate,
+      } from "/dist/generated/adapter.js";
+
+      const resultElement = document.querySelector("#result");
+      const identityElement = document.querySelector("#externref-identity");
+      const traceElement = document.querySelector("#trace");
+      const errorElement = document.querySelector("#error");
+      const testCase = new URLSearchParams(location.search).get("case");
+
+      try {
+        const response = await fetch("/fixtures/artifacts/externref.wasm");
+        if (!response.ok) {
+          throw new Error(`fixture request failed with HTTP ${response.status}`);
+        }
+        const bytes = await response.arrayBuffer();
+
+        if (testCase === "negative") {
+          await instantiate(bytes, { host: {} });
+          throw new Error("missing host.echo was unexpectedly accepted");
+        }
+
+        const token = Object.freeze({ marker: "moonhostabi-browser-token" });
+        const trace = [];
+        const imports = createHostImports();
+        imports.host.echo = (argument) => {
+          trace.push(argument);
+          return argument;
+        };
+
+        const exports = await instantiate(bytes, imports);
+        const sum = exports.add(20, 22);
+        const returned = exports.roundtrip(token);
+        resultElement.textContent = String(sum);
+        identityElement.textContent = String(returned === token);
+        traceElement.textContent = JSON.stringify({
+          count: trace.length,
+          argumentIdentity: trace[0] === token,
+        });
+      } catch (error) {
+        errorElement.textContent =
+          error instanceof Error ? error.message : String(error);
+        if (testCase !== "negative") {
+          throw error;
+        }
+      }
+    </script>
+  </body>
+</html>
