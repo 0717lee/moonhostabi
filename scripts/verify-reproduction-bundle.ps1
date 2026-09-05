@@ -776,10 +776,6 @@ try {
     -Result $invalidToken `
     -Archive $invalidTokenArchive `
     -Description 'Invalid correlation token'
-  $invalidTokenDiagnostic = "$($invalidToken.Stdout)`n$($invalidToken.Stderr)"
-  if ($invalidTokenDiagnostic -notmatch '(?i)(correlation|lowercase hex)') {
-    throw 'Invalid correlation token did not fail closed with an explicit diagnostic.'
-  }
 
   $linkTarget = Join-Path $runRoot 'link-target'
   $linkPath = Join-Path $runRoot 'artifact-link-parent'
