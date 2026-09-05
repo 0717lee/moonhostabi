@@ -332,9 +332,10 @@ function Copy-ReleaseFile {
       throw "Release text contains a UTF-8 BOM: '$Source'."
     }
     $decoded = $script:utf8NoBom.GetString($bytes)
-    if ($decoded.Contains("`r")) {
-      throw "Release text contains non-LF line endings: '$Source'."
+    if ($decoded.Contains("`r") -and $decoded -notmatch "`r`n") {
+      throw "Release text contains an invalid carriage return: '$Source'."
     }
+    $bytes = $script:utf8NoBom.GetBytes($decoded.Replace("`r`n", "`n"))
   }
   [IO.File]::WriteAllBytes($Destination, $bytes)
 }
@@ -559,7 +560,7 @@ try {
 
   if ($IsLinux) {
     [IO.File]::SetUnixFileMode(
-      (Join-Path $packageRoot 'bin/moonhostabi'),
+       (Join-Path $packageRoot "bin/$executableName"),
       [IO.UnixFileMode]::UserRead -bor
         [IO.UnixFileMode]::UserWrite -bor
         [IO.UnixFileMode]::UserExecute -bor
