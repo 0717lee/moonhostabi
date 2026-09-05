@@ -676,14 +676,8 @@ try {
   Assert-ProcessSuccess -Result $sourceStatus -Description 'Git source tree query' -RequireEmptyStderr
   $sourceTreeClean = [String]::IsNullOrEmpty($sourceStatus.Stdout)
 
-  if (-not (Test-Path -LiteralPath $stagePath -PathType Leaf)) {
-    [IO.File]::WriteAllBytes($stagePath, $stagedArchiveBytes)
-  }
-  $archiveHash = Get-Sha256 -Path $stagePath
-  $archiveSize = (Get-Item -LiteralPath $stagePath).Length
-  if ($archiveHash -cne $stagedArchiveHash -or $archiveSize -ne $stagedArchiveSize) {
-    throw 'Validated release archive bytes changed before publication.'
-  }
+  $archiveHash = $stagedArchiveHash
+  $archiveSize = $stagedArchiveSize
   if ($null -ne $evidencePath) {
     Write-ReleaseEvidence `
       -Path $evidenceStagePath `
@@ -699,7 +693,10 @@ try {
       -MoonrunVersion $moonrunVersion
   }
 
-  [IO.File]::Move($stagePath, $archivePath, $false)
+  [IO.File]::WriteAllBytes($archivePath, $stagedArchiveBytes)
+  if ((Get-Sha256 -Path $archivePath) -cne $archiveHash) {
+    throw 'Published release archive bytes differ from the validated archive.'
+  }
   if ($null -ne $evidencePath) {
     $publishedArchiveHash = $archiveHash
     $publishedArchiveSize = $archiveSize
