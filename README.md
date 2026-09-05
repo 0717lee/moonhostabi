@@ -29,9 +29,13 @@ in the walkthrough and validation record.
 
 ## Reproduce the Spike
 
-Prerequisites are PowerShell 7, MoonBit `0.1.20260819`, Node.js `24.12.0` with
-npm `11.6.2`, and `wasm-tools 1.258.0`. The command below installs locked npm
-dependencies and the pinned Playwright Chromium build as part of the gate:
+Prerequisites are PowerShell 7, a MoonBit toolchain reporting `moon
+0.1.20260819` / `moonc v0.10.9+6e6c44045` / `moonrun 0.1.20260819`, Node.js
+`24.12.0` with npm `11.6.2`, and `wasm-tools 1.258.0`. CI obtains that
+toolchain from the official installer snapshot `0.10.9+6e6c44045`; the
+snapshot selector is distinct from the reported `moon` version. The command
+below installs locked npm dependencies and the pinned Playwright Chromium
+build as part of the gate:
 
 ```powershell
 pwsh -NoProfile -File scripts/verify-spike.ps1

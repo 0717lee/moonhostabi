@@ -51,7 +51,9 @@ credential, workflow log, or self-hash.
 ## Local dry run
 
 Prerequisites are PowerShell 7+, Python 3.11, the pinned MoonBit toolchain, and
-the repository setup described in the main README. Workflow validation uses
+the repository setup described in the main README. The remote workflow selects
+MoonBit installer snapshot `0.10.9+6e6c44045` and verifies the reported `moon`,
+`moonc`, and `moonrun` identities separately. Workflow validation uses
 PyYAML 6.0.3; CI installs it from
 `scripts/requirements-workflow-validation.txt` with platform wheel hashes.
 
@@ -107,8 +109,9 @@ the same hash.
 
 `.github/workflows/release.yml` has only `workflow_dispatch`, top-level
 `contents: read`, no secrets, and no GitHub Release API. With explicit
-authorization to run remote CI, it installs the pinned dated MoonBit toolchain
-and rejects a moon/moonc/moonrun version mismatch before building. This workflow
+authorization to run remote CI, it preflights the fixed Linux/Windows MoonBit
+binary archives, installs the pinned snapshot, and rejects a moon/moonc/moonrun
+version mismatch before building. This workflow
 has not yet been run remotely; the following steps are its acceptance procedure:
 
 1. Open **Actions → Release dry run → Run workflow**.

@@ -20,6 +20,31 @@ ACTION_PINS = {
 ACTION_PATTERN = re.compile(r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@([0-9a-f]{40})\Z")
 
 
+# The installer/archive selector and the identities printed by the installed
+# tools are different contracts. Keep both explicit so a build-tool version
+# cannot accidentally be passed to the official installer.
+MOONBIT_CONTRACT_ENV = {
+    "MOONBIT_SNAPSHOT": "0.10.9+6e6c44045",
+    "MOONBIT_SNAPSHOT_URL": "0.10.9%2B6e6c44045",
+    "MOONBIT_LINUX_ARCHIVE_SHA256": (
+        "0e81deb35eca29e892415cf954ea42b48a43bcf277ad36a3ae1e97d2d1dfe732"
+    ),
+    "MOONBIT_WINDOWS_ARCHIVE_SHA256": (
+        "a4c9af8bcfbf4e5bca84e6175cce09d6d88910c478d2c0d71bf0c3f2202e06ae"
+    ),
+    "MOONBIT_VERSION": "0.1.20260819",
+    "MOONBIT_COMMIT": "fc2a4ee",
+    "MOONC_VERSION": "v0.10.9+6e6c44045",
+    "MOONBIT_RELEASE_DATE": "2026-08-19",
+    "MOONBIT_UNIX_INSTALLER_SHA256": (
+        "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
+    ),
+    "MOONBIT_WINDOWS_INSTALLER_SHA256": (
+        "a5101e91ffa9905fb25cd009b9a4aa942971a294bd055c89836e3af89b710c64"
+    ),
+}
+
+
 class UniqueKeyLoader(yaml.BaseLoader):
     pass
 
@@ -187,6 +212,68 @@ def run_text(steps: list[dict[str, Any]]) -> str:
     return "\n".join(str(step.get("run", "")) for step in steps)
 
 
+def assert_moonbit_contract(job: dict[str, Any], text: str, label: str) -> None:
+    """Require the pinned installer snapshot and all three reported identities."""
+    env = job.get("env")
+    if not isinstance(env, dict):
+        raise ValueError(f"{label}: MoonBit contract must be declared at job level")
+    for key, expected in MOONBIT_CONTRACT_ENV.items():
+        if env.get(key) != expected:
+            raise ValueError(
+                f"{label}: {key} must be the fixed MoonBit contract value {expected!r}"
+            )
+
+    required_fragments = (
+        'MOONBIT_INSTALL_VERSION="$MOONBIT_SNAPSHOT" bash "$installer"',
+        "$env:MOONBIT_INSTALL_VERSION = $env:MOONBIT_SNAPSHOT",
+        "https://cli.moonbitlang.com/install/unix.sh",
+        'echo "$MOONBIT_UNIX_INSTALLER_SHA256  $installer" | sha256sum -c -',
+        "binaries/$MOONBIT_SNAPSHOT_URL/moonbit-linux-x86_64.tar.gz",
+        "binaries/$env:MOONBIT_SNAPSHOT_URL/moonbit-windows-x86_64.zip",
+        'echo "$MOONBIT_LINUX_ARCHIVE_SHA256  $snapshot_archive" | sha256sum -c -',
+        "https://cli.moonbitlang.com/install/powershell.ps1",
+        "Get-FileHash -Algorithm SHA256 -LiteralPath $installer",
+        "$env:MOONBIT_WINDOWS_INSTALLER_SHA256",
+        "if ($actual -cne $env:MOONBIT_WINDOWS_INSTALLER_SHA256)",
+        "Get-FileHash -Algorithm SHA256 -LiteralPath $snapshotArchive",
+        "$env:MOONBIT_WINDOWS_ARCHIVE_SHA256",
+        "if ($snapshotActual -cne $env:MOONBIT_WINDOWS_ARCHIVE_SHA256)",
+        "moon version --all",
+        "$identityLines = @(",
+        "$moonVersion | Where-Object { $_ -cmatch '^(?:moon|moonc|moonrun) ' }",
+        "$identityLines.Count -ne 3",
+        "StartsWith($prefix, [StringComparison]::Ordinal)",
+    )
+    for fragment in required_fragments:
+        if fragment not in text:
+            raise ValueError(f"{label}: MoonBit contract fragment is missing: {fragment}")
+
+    forbidden_fragments = (
+        'MOONBIT_INSTALL_VERSION="$MOONBIT_VERSION"',
+        "$env:MOONBIT_INSTALL_VERSION = $env:MOONBIT_VERSION",
+    )
+    for fragment in forbidden_fragments:
+        if fragment in text:
+            raise ValueError(f"{label}: installer must receive MOONBIT_SNAPSHOT, not MOONBIT_VERSION")
+    if re.search(r"MOONBIT_INSTALL_VERSION\s*=\s*['\"]?latest\b", text, re.IGNORECASE):
+        raise ValueError(f"{label}: mutable MoonBit installer versions are forbidden")
+
+    prefix_match = re.search(
+        r"\$expectedPrefixes\s*=\s*@\((.*?)\n\s*\)", text, re.DOTALL
+    )
+    if prefix_match is None:
+        raise ValueError(f"{label}: three-line MoonBit identity prefix block is required")
+    expected_prefixes = (
+        '"moon $env:MOONBIT_VERSION ($env:MOONBIT_COMMIT $env:MOONBIT_RELEASE_DATE) "',
+        '"moonc $env:MOONC_VERSION ($env:MOONBIT_RELEASE_DATE) "',
+        '"moonrun $env:MOONBIT_VERSION ($env:MOONBIT_COMMIT $env:MOONBIT_RELEASE_DATE) "',
+    )
+    prefix_block = prefix_match.group(1)
+    for prefix in expected_prefixes:
+        if prefix not in prefix_block:
+            raise ValueError(f"{label}: expected MoonBit identity prefix is missing: {prefix}")
+
+
 def validate_ci(document: dict[str, Any]) -> None:
     label = "ci.yml"
     triggers = document.get("on")
@@ -213,15 +300,7 @@ def validate_ci(document: dict[str, Any]) -> None:
         raise ValueError(f"{label}: pinned Python/YAML validation setup is required")
     if not step_uses(steps, "actions/upload-artifact"):
         raise ValueError(f"{label}: failure diagnostics upload is required")
-    if (
-        "MOONBIT_INSTALL_VERSION=latest" in text
-        or "$env:MOONBIT_INSTALL_VERSION = 'latest'" in text
-        or 'MOONBIT_INSTALL_VERSION="$MOONBIT_VERSION"' not in text
-        or "$env:MOONBIT_INSTALL_VERSION = $env:MOONBIT_VERSION" not in text
-        or "moon version --all" not in text
-        or "MOONC_VERSION" not in text
-    ):
-        raise ValueError(f"{label}: exact MoonBit install and version checks are required")
+    assert_moonbit_contract(job, text, label)
     if "--index-url=https://pypi.org/simple --require-hashes" not in text:
         raise ValueError(f"{label}: workflow validator must install from hashed official PyPI")
 
@@ -257,15 +336,7 @@ def validate_release(document: dict[str, Any]) -> None:
         raise ValueError(f"{label}: raw workflow input must enter through env, not run interpolation")
     if not step_uses(package_steps, "actions/upload-artifact"):
         raise ValueError(f"{label}: package job must upload immutable handoff artifacts")
-    if (
-        "MOONBIT_INSTALL_VERSION=latest" in package_text
-        or "$env:MOONBIT_INSTALL_VERSION = 'latest'" in package_text
-        or 'MOONBIT_INSTALL_VERSION="$MOONBIT_VERSION"' not in package_text
-        or "$env:MOONBIT_INSTALL_VERSION = $env:MOONBIT_VERSION" not in package_text
-        or "moon version --all" not in package_text
-        or "MOONC_VERSION" not in package_text
-    ):
-        raise ValueError(f"{label}: release package job must pin and verify MoonBit")
+    assert_moonbit_contract(package, package_text, label)
     package_uploads = action_steps(package_steps, "actions/upload-artifact")
     if len(package_uploads) != 1:
         raise ValueError(f"{label}: package job must have exactly one upload handoff")
@@ -366,11 +437,45 @@ def self_test(ci: dict[str, Any], release: dict[str, Any]) -> None:
     mutable_toolchain = copy.deepcopy(release)
     mutable_toolchain["jobs"]["package"]["steps"][2]["run"] = (
         mutable_toolchain["jobs"]["package"]["steps"][2]["run"].replace(
+            'MOONBIT_INSTALL_VERSION="$MOONBIT_SNAPSHOT"',
             'MOONBIT_INSTALL_VERSION="$MOONBIT_VERSION"',
-            "MOONBIT_INSTALL_VERSION=latest",
         )
     )
     expect_failure(lambda: validate_release(mutable_toolchain), "mutable toolchain install")
+
+    wrong_snapshot = copy.deepcopy(release)
+    wrong_snapshot["jobs"]["package"]["env"]["MOONBIT_SNAPSHOT"] = (
+        MOONBIT_CONTRACT_ENV["MOONBIT_VERSION"]
+    )
+    expect_failure(lambda: validate_release(wrong_snapshot), "snapshot/build identity mix-up")
+
+    wrong_archive_hash = copy.deepcopy(release)
+    wrong_archive_hash["jobs"]["package"]["env"]["MOONBIT_WINDOWS_ARCHIVE_SHA256"] = "0" * 64
+    expect_failure(lambda: validate_release(wrong_archive_hash), "wrong MoonBit archive hash")
+
+    missing_moonc_identity = copy.deepcopy(release)
+    verify_step = next(
+        step
+        for step in missing_moonc_identity["jobs"]["package"]["steps"]
+        if step.get("name") == "Verify exact MoonBit toolchain"
+    )
+    verify_step["run"] = verify_step["run"].replace(
+        '"moonc $env:MOONC_VERSION ($env:MOONBIT_RELEASE_DATE) "',
+        '"moonc $env:MOONC_VERSION (wrong-date) "',
+    )
+    expect_failure(lambda: validate_release(missing_moonc_identity), "missing moonc identity")
+
+    first_line_only = copy.deepcopy(release)
+    verify_step = next(
+        step
+        for step in first_line_only["jobs"]["package"]["steps"]
+        if step.get("name") == "Verify exact MoonBit toolchain"
+    )
+    verify_step["run"] = verify_step["run"].replace(
+        "$moonVersion | Where-Object { $_ -cmatch '^(?:moon|moonc|moonrun) ' }",
+        "$moonVersion[0]",
+    )
+    expect_failure(lambda: validate_release(first_line_only), "first-line-only identity check")
 
     wrong_handoff = copy.deepcopy(release)
     upload = action_steps(

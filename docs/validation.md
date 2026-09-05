@@ -8,8 +8,11 @@ this document because the repository has not been pushed by this workflow.
 
 ## Reproduce the local gate
 
-The host must provide PowerShell 7, the exact MoonBit snapshot, Node.js
-`24.12.0` with npm `11.6.2`, and `wasm-tools 1.258.0`. The script resolves dependencies, applies the guarded
+The host must provide PowerShell 7, a MoonBit toolchain reporting the exact
+identities below, Node.js `24.12.0` with npm `11.6.2`, and `wasm-tools 1.258.0`.
+CI obtains those identities from the official MoonBit installer snapshot
+`0.10.9+6e6c44045`; the snapshot selector is not the same value as the
+reported `moon` version. The script resolves dependencies, applies the guarded
 `wasm_core` patch, rebuilds all fixtures, installs the locked npm graph and
 Chromium, and stops at the first unexpected result.
 
@@ -54,6 +57,13 @@ that verification does not instantiate or execute the artifact.
 | Playwright | `1.62.1` |
 | Chromium used by Playwright | `151.0.7922.34` |
 
+The official installer/archive snapshot is `0.10.9+6e6c44045` (URL-encoded as
+`0.10.9%2B6e6c44045`). It is deliberately recorded separately from the
+reported tool identities: `moon` and `moonrun` report `0.1.20260819`, while
+`moonc` reports `v0.10.9+6e6c44045`. CI preflights the platform binary archive
+for that snapshot, then passes the unencoded snapshot selector to the official
+installer and checks all three identities after installation.
+
 The module graph pins `Milky2018/wasm_core@0.14.0` and
 `moonbitlang/x@0.5.1`. The npm lockfile pins `@types/node@24.12.0`,
 TypeScript 7.0.2, and Playwright 1.62.1 with package integrity values and
@@ -67,13 +77,22 @@ release-published SHA-256 before extraction:
 | `wasm-tools-1.258.0-x86_64-linux.tar.gz` | `b52d14eb74a4852cc249369bd4480c2b2fdd876145f41db51ff52269ded240ce` |
 | `wasm-tools-1.258.0-x86_64-windows.zip` | `527fe5c3ef5363c58888548827bb44c87fcbf17bb2a2df295055788d82c72081` |
 
+The MoonBit binary archives are also preflighted against the fixed snapshot
+hashes before installation:
+
+| Platform archive | Official URL path | SHA-256 |
+| --- | --- | --- |
+| Linux x86_64 | `/binaries/0.10.9%2B6e6c44045/moonbit-linux-x86_64.tar.gz` | `0e81deb35eca29e892415cf954ea42b48a43bcf277ad36a3ae1e97d2d1dfe732` |
+| Windows x86_64 | `/binaries/0.10.9%2B6e6c44045/moonbit-windows-x86_64.zip` | `a4c9af8bcfbf4e5bca84e6175cce09d6d88910c478d2c0d71bf0c3f2202e06ae` |
+
 CI also downloads the official MoonBit installers as files rather than piping
-them directly into a shell. The pinned installer SHA-256 values are
+them directly into a shell. The installer SHA-256 values are
 `46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe`
 (Unix) and
 `a5101e91ffa9905fb25cd009b9a4aa942971a294bd055c89836e3af89b710c64`
-(Windows). After installation, both the workflow and final gate reject any
-toolchain other than the exact versions listed above.
+(Windows). The installer selects the matching core archive from the same
+snapshot; the post-install identity check is the guard for the combined
+`moon`/`moonc`/`moonrun` toolchain.
 
 ## Fresh fixture provenance
 
@@ -381,11 +400,12 @@ not evidence of a GitHub-hosted run.
   those signatures.
 - The proof covers native CLI execution on Windows locally and configures Linux
   CI, but no remote Linux result is claimed yet.
-- MoonBit's CI installer is content-hash pinned, receives the explicit dated
-  `0.1.20260819` version, and the installed moon/moonc/moonrun binaries are
-  version-gated. The downloaded toolchain archives are not independently
-  checksum-pinned, so recording and pinning those archive hashes remains a
-  prerequisite for any future public release.
+- MoonBit's CI installer is content-hash pinned and receives the official
+  installer snapshot `0.10.9+6e6c44045` (not the reported `moon` identity
+  `0.1.20260819`). The Linux and Windows binary archives are preflighted with
+  the hashes recorded above, and the installed `moon`/`moonc`/`moonrun`
+  identities are version-gated. The installer-selected core archives share the
+  snapshot selector but do not currently have independent recorded hashes.
 - The browser verifier uses fixed loopback port 4173 with one worker; concurrent
   verifier processes intentionally contend rather than reuse an unknown server.
 - `verify` currently accepts canonical JSON output only and uses the semantic
