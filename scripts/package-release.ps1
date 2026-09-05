@@ -535,11 +535,14 @@ try {
     '-C', $repositoryRoot, 'build', 'cmd/moonhostabi', '--target', 'native', '--release'
   )
   Assert-ProcessSuccess -Result $build -Description 'MoonHostABI native release build'
-  $builtExecutableName = 'moonhostabi.exe'
   $executableName = if ($IsWindows) { 'moonhostabi.exe' } else { 'moonhostabi' }
-  $builtExecutable = Get-StrictFile `
-    -Path (Join-Path $repositoryRoot "_build/native/release/build/cmd/moonhostabi/$builtExecutableName") `
-    -Description 'Built release executable'
+  $builtCandidates = @(
+    (Join-Path $repositoryRoot '_build/native/release/build/cmd/moonhostabi/moonhostabi.exe'),
+    (Join-Path $repositoryRoot '_build/native/release/build/cmd/moonhostabi/moonhostabi')
+  )
+  $existingBuilt = @($builtCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
+  if ($existingBuilt.Count -ne 1) { throw "Expected exactly one built release executable candidate, found $($existingBuilt.Count)." }
+  $builtExecutable = Get-StrictFile -Path $existingBuilt[0] -Description 'Built release executable'
   Copy-ReleaseFile `
     -Source $builtExecutable `
     -Destination (Join-Path $packageRoot "bin/$executableName")

@@ -1,3 +1,4 @@
 *.contract.json text eol=lf
 *.manifest.json text eol=lf
 *.ts text eol=lf
+*.wat text eol=lf
