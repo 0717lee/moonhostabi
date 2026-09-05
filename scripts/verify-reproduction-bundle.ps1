@@ -776,7 +776,8 @@ try {
     -Result $invalidToken `
     -Archive $invalidTokenArchive `
     -Description 'Invalid correlation token'
-  if ($invalidToken.Stderr -notmatch '32 lowercase hex characters') {
+  $invalidTokenDiagnostic = "$($invalidToken.Stdout)`n$($invalidToken.Stderr)"
+  if ($invalidTokenDiagnostic -notmatch '32 lowercase hex characters') {
     throw 'Invalid correlation token did not fail closed with an explicit diagnostic.'
   }
 
