@@ -116,8 +116,13 @@ from MoonBit 0.10.9. Apply it after dependency resolution:
 
 ```powershell
 moon update
+moon check
 pwsh -NoProfile -File scripts/apply-wasm-core-patch.ps1
 ```
+
+On a clean runner, `moon update` refreshes dependency metadata while `moon check`
+materializes the source under `.mooncakes`; the guarded patch runs after that
+resolution step.
 
 The patch only teaches the upstream parser to resolve self-references in an
 implicit singleton recursive type. It is kept separate from MoonHostABI's own

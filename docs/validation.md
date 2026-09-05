@@ -14,7 +14,9 @@ CI obtains those identities from the official MoonBit installer snapshot
 `0.10.9+6e6c44045`; the snapshot selector is not the same value as the
 reported `moon` version. The script resolves dependencies, applies the guarded
 `wasm_core` patch, rebuilds all fixtures, installs the locked npm graph and
-Chromium, and stops at the first unexpected result.
+Chromium, and stops at the first unexpected result. On a clean runner, the
+dependency sequence is `moon update`, `moon check`, then the guarded patch;
+`moon check` materializes `.mooncakes/Milky2018/wasm_core` before patching.
 
 ```powershell
 pwsh -NoProfile -File scripts/verify-spike.ps1

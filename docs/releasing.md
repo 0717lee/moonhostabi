@@ -110,8 +110,9 @@ the same hash.
 `.github/workflows/release.yml` has only `workflow_dispatch`, top-level
 `contents: read`, no secrets, and no GitHub Release API. With explicit
 authorization to run remote CI, it preflights the fixed Linux/Windows MoonBit
-binary archives, installs the pinned snapshot, and rejects a moon/moonc/moonrun
-version mismatch before building. This workflow
+binary archives, installs the pinned snapshot, resolves dependencies with
+`moon check` before applying the guarded parser patch, and rejects a
+moon/moonc/moonrun version mismatch before building. This workflow
 has not yet been run remotely; the following steps are its acceptance procedure:
 
 1. Open **Actions → Release dry run → Run workflow**.

@@ -212,6 +212,28 @@ def run_text(steps: list[dict[str, Any]]) -> str:
     return "\n".join(str(step.get("run", "")) for step in steps)
 
 
+def assert_dependency_resolution_order(
+    text: str,
+    label: str,
+    update_marker: str = "moon update",
+    check_marker: str = "moon check",
+    patch_marker: str = "apply-wasm-core-patch.ps1",
+) -> None:
+    update_index = text.find(update_marker)
+    check_index = text.find(check_marker)
+    patch_index = text.find(patch_marker)
+    if (
+        update_index < 0
+        or check_index < 0
+        or patch_index < 0
+        or not update_index < check_index < patch_index
+    ):
+        raise ValueError(
+            f"{label}: dependency resolution must run moon update, moon check, "
+            "then the guarded wasm_core patch"
+        )
+
+
 def assert_moonbit_contract(job: dict[str, Any], text: str, label: str) -> None:
     """Require the pinned installer snapshot and all three reported identities."""
     env = job.get("env")
@@ -337,6 +359,7 @@ def validate_release(document: dict[str, Any]) -> None:
     if not step_uses(package_steps, "actions/upload-artifact"):
         raise ValueError(f"{label}: package job must upload immutable handoff artifacts")
     assert_moonbit_contract(package, package_text, label)
+    assert_dependency_resolution_order(package_text, label)
     package_uploads = action_steps(package_steps, "actions/upload-artifact")
     if len(package_uploads) != 1:
         raise ValueError(f"{label}: package job must have exactly one upload handoff")
@@ -402,7 +425,7 @@ def expect_failure(callback: Any, label: str) -> None:
     raise AssertionError(f"negative workflow self-test unexpectedly passed: {label}")
 
 
-def self_test(ci: dict[str, Any], release: dict[str, Any]) -> None:
+def self_test(ci: dict[str, Any], release: dict[str, Any], repository: Path) -> None:
     duplicate = "name: first\nname: second\non:\n  workflow_dispatch:\n"
     expect_failure(lambda: yaml.load(duplicate, Loader=UniqueKeyLoader), "duplicate key")
 
@@ -465,6 +488,18 @@ def self_test(ci: dict[str, Any], release: dict[str, Any]) -> None:
     )
     expect_failure(lambda: validate_release(missing_moonc_identity), "missing moonc identity")
 
+    missing_dependency_check = copy.deepcopy(release)
+    resolve_step = next(
+        step
+        for step in missing_dependency_check["jobs"]["package"]["steps"]
+        if step.get("name") == "Resolve dependencies and guarded parser patch"
+    )
+    resolve_step["run"] = resolve_step["run"].replace(
+        "moon check\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\n",
+        "",
+    )
+    expect_failure(lambda: validate_release(missing_dependency_check), "patch before dependency resolution")
+
     first_line_only = copy.deepcopy(release)
     verify_step = next(
         step
@@ -492,6 +527,27 @@ def self_test(ci: dict[str, Any], release: dict[str, Any]) -> None:
     ]
     expect_failure(lambda: validate_release(missing_download), "missing artifact download")
 
+    verify_spike = (repository / "scripts" / "verify-spike.ps1").read_text(encoding="utf-8")
+    assert_dependency_resolution_order(
+        verify_spike,
+        "verify-spike.ps1",
+        update_marker="Arguments @('update')",
+        check_marker="Arguments @('check') -Description 'moon check (dependency resolution)'",
+    )
+    missing_verify_check = verify_spike.replace(
+        "  Invoke-Checked -FilePath $moonExecutable -Arguments @('check') -Description 'moon check (dependency resolution)'\n",
+        "",
+    )
+    expect_failure(
+        lambda: assert_dependency_resolution_order(
+            missing_verify_check,
+            "verify-spike.ps1",
+            update_marker="Arguments @('update')",
+            check_marker="Arguments @('check') -Description 'moon check (dependency resolution)'",
+        ),
+        "verify-spike patch before dependency resolution",
+    )
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -501,12 +557,20 @@ def main() -> int:
     if yaml.__version__ != "6.0.3":
         raise ValueError(f"expected PyYAML 6.0.3, received {yaml.__version__}")
     workflow_root = args.repository.resolve() / ".github" / "workflows"
+    repository = args.repository.resolve()
+    verify_spike = (repository / "scripts" / "verify-spike.ps1").read_text(encoding="utf-8")
+    assert_dependency_resolution_order(
+        verify_spike,
+        "verify-spike.ps1",
+        update_marker="Arguments @('update')",
+        check_marker="Arguments @('check') -Description 'moon check (dependency resolution)'",
+    )
     ci = load_workflow(workflow_root / "ci.yml")
     release = load_workflow(workflow_root / "release.yml")
     validate_ci(ci)
     validate_release(release)
     if args.self_test:
-        self_test(ci, release)
+        self_test(ci, release, repository)
     print("MOONHOSTABI_WORKFLOW_VALIDATION=GO")
     return 0
 

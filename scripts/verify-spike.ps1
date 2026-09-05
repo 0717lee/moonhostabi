@@ -176,6 +176,7 @@ try {
   }
 
   Invoke-Checked -FilePath $moonExecutable -Arguments @('update') -Description 'moon update'
+  Invoke-Checked -FilePath $moonExecutable -Arguments @('check') -Description 'moon check (dependency resolution)'
   Invoke-Checked `
     -FilePath $pwshExecutable `
     -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/apply-wasm-core-patch.ps1')) `
