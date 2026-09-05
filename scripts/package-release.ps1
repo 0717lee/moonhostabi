@@ -622,6 +622,9 @@ try {
     [IO.File]::WriteAllBytes($stagePath, [IO.File]::ReadAllBytes($gzipPath))
   }
 
+  $stagedArchiveBytes = [IO.File]::ReadAllBytes($stagePath)
+  $stagedArchiveHash = Get-Sha256 -Path $stagePath
+  $stagedArchiveSize = $stagedArchiveBytes.Length
   $extractRoot = Join-Path $workRoot 'extracted'
   $archiveValidation = Invoke-CapturedProcess -FilePath $python -Arguments @(
     (Join-Path $repositoryRoot 'scripts/release_archive.py'),
@@ -673,8 +676,14 @@ try {
   Assert-ProcessSuccess -Result $sourceStatus -Description 'Git source tree query' -RequireEmptyStderr
   $sourceTreeClean = [String]::IsNullOrEmpty($sourceStatus.Stdout)
 
+  if (-not (Test-Path -LiteralPath $stagePath -PathType Leaf)) {
+    [IO.File]::WriteAllBytes($stagePath, $stagedArchiveBytes)
+  }
   $archiveHash = Get-Sha256 -Path $stagePath
   $archiveSize = (Get-Item -LiteralPath $stagePath).Length
+  if ($archiveHash -cne $stagedArchiveHash -or $archiveSize -ne $stagedArchiveSize) {
+    throw 'Validated release archive bytes changed before publication.'
+  }
   if ($null -ne $evidencePath) {
     Write-ReleaseEvidence `
       -Path $evidenceStagePath `
