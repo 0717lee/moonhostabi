@@ -237,11 +237,15 @@ try {
   if ($LASTEXITCODE -ne 0) {
     throw "MoonHostABI build failed with exit code $LASTEXITCODE."
   }
-  $executableName = if ($IsWindows) { 'moonhostabi.exe' } else { 'moonhostabi' }
-  $cliPath = Join-Path $repositoryRoot "_build/native/debug/build/cmd/moonhostabi/$executableName"
-  if (-not (Test-Path -LiteralPath $cliPath -PathType Leaf)) {
-    throw "Built MoonHostABI executable was not found at '$cliPath'."
+  $cliCandidates = @(
+    (Join-Path $repositoryRoot '_build/native/debug/build/cmd/moonhostabi/moonhostabi.exe'),
+    (Join-Path $repositoryRoot '_build/native/debug/build/cmd/moonhostabi/moonhostabi')
+  )
+  $existingCli = @($cliCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
+  if ($existingCli.Count -ne 1) {
+    throw "Expected exactly one MoonHostABI executable candidate, found $($existingCli.Count)."
   }
+  $cliPath = $existingCli[0]
 
   $moduleManifestPath = Join-Path $repositoryRoot 'moon.mod'
   $moduleVersion = Get-StrictModuleVersion -Path $moduleManifestPath

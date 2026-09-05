@@ -51,11 +51,11 @@ if ($sourceSha256 -ne $baselineSha256) {
 $gitCommand = Get-Command git -ErrorAction Stop
 Push-Location $repoRoot
 try {
-  & $gitCommand.Source apply --check --directory=$moduleDirectory $patchPath
+  & $gitCommand.Source apply --check --ignore-whitespace --directory=$moduleDirectory $patchPath
   if ($LASTEXITCODE -ne 0) {
     throw "wasm_core patch preflight failed with exit code $LASTEXITCODE"
   }
-  & $gitCommand.Source apply --directory=$moduleDirectory $patchPath
+  & $gitCommand.Source apply --ignore-whitespace --directory=$moduleDirectory $patchPath
   if ($LASTEXITCODE -ne 0) {
     throw "wasm_core patch application failed with exit code $LASTEXITCODE"
   }
