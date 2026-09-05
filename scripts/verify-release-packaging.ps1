@@ -497,10 +497,11 @@ try {
   $extension = if ($IsWindows) { '.zip' } else { '.tar.gz' }
   $archiveName = "moonhostabi-v$version-$platform-x86_64$extension"
   $rootName = "moonhostabi-v$version-$platform-x86_64"
+  $packageExecutableName = if ($IsWindows) { 'moonhostabi.exe' } else { 'moonhostabi' }
   $expectedFiles = [string[]]@(
     "$rootName/LICENSE",
     "$rootName/README.md",
-    "$rootName/bin/$(if ($IsWindows) { 'moonhostabi.exe' } else { 'moonhostabi' })",
+    "$rootName/bin/$packageExecutableName",
     "$rootName/docs/report-schema.md",
     "$rootName/docs/validation.md",
     "$rootName/examples/artifact.wasm",
@@ -612,6 +613,7 @@ try {
   }
   foreach ($file in $expectedFiles) {
     $relative = $file.Substring($rootName.Length + 1)
+    if ($relative -ceq "bin/$packageExecutableName") { continue }
     $path = Join-Path $extractedRoot ([IO.Path]::Combine([string[]]$relative.Split('/')))
     $text = [Text.UTF8Encoding]::new($false, $false).GetString(
       [IO.File]::ReadAllBytes($path)
