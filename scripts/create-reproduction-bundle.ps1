@@ -506,11 +506,13 @@ try {
     '-C', $repositoryRoot, 'build', 'cmd/moonhostabi', '--target', 'native'
   )
   Assert-ProcessSuccess -Result $build -Description 'MoonHostABI native build'
-  $executableName = if ($IsWindows) { 'moonhostabi.exe' } else { 'moonhostabi' }
-  $cliPath = Join-Path $repositoryRoot "_build/native/debug/build/cmd/moonhostabi/$executableName"
-  if (-not (Test-Path -LiteralPath $cliPath -PathType Leaf)) {
-    throw "Built MoonHostABI executable was not found at '$cliPath'."
-  }
+  $cliCandidates = @(
+    (Join-Path $repositoryRoot '_build/native/debug/build/cmd/moonhostabi/moonhostabi.exe'),
+    (Join-Path $repositoryRoot '_build/native/debug/build/cmd/moonhostabi/moonhostabi')
+  )
+  $existingCli = @($cliCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
+  if ($existingCli.Count -ne 1) { throw "Expected exactly one MoonHostABI executable candidate, found $($existingCli.Count)." }
+  $cliPath = $existingCli[0]
 
   $moonVersions = Invoke-CapturedProcess -FilePath $moon -Arguments @('version', '--all')
   Assert-ProcessSuccess -Result $moonVersions -Description 'MoonBit version query'

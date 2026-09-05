@@ -534,7 +534,7 @@ try {
     '-C', $repositoryRoot, 'build', 'cmd/moonhostabi', '--target', 'native', '--release'
   )
   Assert-ProcessSuccess -Result $build -Description 'MoonHostABI native release build'
-  $executableName = if ($IsWindows) { 'moonhostabi.exe' } else { 'moonhostabi' }
+  $executableName = 'moonhostabi.exe'
   $builtExecutable = Get-StrictFile `
     -Path (Join-Path $repositoryRoot "_build/native/release/build/cmd/moonhostabi/$executableName") `
     -Description 'Built release executable'

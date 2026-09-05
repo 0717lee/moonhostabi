@@ -575,7 +575,7 @@ try {
   ) {
     throw 'Independent archive validation returned an unexpected file layout.'
   }
-  $executableName = if ($IsWindows) { 'moonhostabi.exe' } else { 'moonhostabi' }
+  $executableName = 'moonhostabi.exe'
   $extractedRoot = Join-Path $extractRoot $rootName
   $extractedCli = Join-Path $extractedRoot "bin/$executableName"
   $versionSmoke = Invoke-CapturedProcess -FilePath $extractedCli -Arguments @('--version')
