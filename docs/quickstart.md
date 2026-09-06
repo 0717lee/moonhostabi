@@ -129,6 +129,8 @@ The committed local evidence is deliberately split:
 - **Remote Linux native:** covered by successful public Verification matrix run
   `33965007322` (see the repository's Actions history). No tag or published
   release is implied by local markers.
+- **Release dry run:** pending a deliberate `workflow_dispatch`; it is separate
+  from the Verification matrix and does not publish a release.
 
 The quickstart commands do not invoke a remote service or require a hidden
 checkout setting. A green local marker is evidence for the named local check
