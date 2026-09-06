@@ -126,8 +126,9 @@ The committed local evidence is deliberately split:
   package negatives are observed and marked `GO`.
 - **Linux archive path:** tar/gzip metadata and aggregate behavior are checked by
   the local static/mock path; this is not a Linux native-binary result.
-- **Remote Linux native:** still pending an authorized Ubuntu workflow run. No
-  remote run URL, tag, or published release is implied by local markers.
+- **Remote Linux native:** covered by the successful public Verification matrix
+  run [`33965007322`](https://github.com/0717lee/moonhostabi/actions/runs/33965007322).
+  No tag or published release is implied by local markers.
 
 The quickstart commands do not invoke a remote service or require a hidden
 checkout setting. A green local marker is evidence for the named local check
@@ -163,8 +164,8 @@ Chromium versions in [validation.md](validation.md), then run the full gate:
 pwsh -NoProfile -File scripts/verify-spike.ps1
 ```
 
-The full gate should end with `MOONHOSTABI_SPIKE_STATUS=GO`; a local result does
-not change the remote Linux status above.
+The full gate should end with `MOONHOSTABI_SPIKE_STATUS=GO`; the remote matrix
+result is recorded separately from this local command.
 
 ## 🔗 References
 

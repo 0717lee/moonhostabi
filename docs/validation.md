@@ -281,8 +281,10 @@ workflow and existing CI action references are pinned to official full commit
 SHAs and are checked by a PyYAML semantic validator with negative self-tests.
 See [the release dry-run guide](releasing.md).
 
-This is local automation evidence, not a remote run. No workflow was triggered,
-no tag or GitHub Release exists, and no run URL is recorded.
+This is local release-automation evidence. The public Verification workflow is
+green for both matrix jobs (run
+`https://github.com/0717lee/moonhostabi/actions/runs/33965007322`); the separate
+Release dry-run workflow has not been triggered. No tag or GitHub Release exists.
 
 ## Task 8 judge quickstart evidence
 
@@ -299,9 +301,9 @@ the focused commands produced these observed local markers:
 The quickstart also points to the six-section report schema and explains how
 `validation.json` connects that report to the bundle's artifact, lock, contract,
 adapter, commands, and manifest files. Its document validator checks links,
-relative command paths, encoding, and stale claims. The Linux archive metadata or
-mock path remains local-only evidence, and the remote Linux native run is still
-pending; no remote run URL is claimed here.
+relative command paths, encoding, and stale claims. The Verification matrix
+provides the remote Linux native result; the Release dry-run workflow remains the
+separate packaging gate and has not yet been triggered.
 
 ## Runtime observations
 

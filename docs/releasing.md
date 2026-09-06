@@ -86,8 +86,9 @@ checks the GNU tar/gzip contract and uses an explicitly simulated Linux archive
 only to test aggregate success and failure paths. The simulation is marked in
 evidence, cannot claim smoke success, and is rejected by production aggregation
 unless the test-only switch is explicit. The workflow is configured to perform
-the real Linux package path on Ubuntu, but no authorized remote run has supplied
-that evidence yet.
+the real Linux package path on Ubuntu. The Verification matrix is already green;
+the dispatch-only Release dry run is still required to collect release-package
+evidence.
 
 ## Deterministic archive rules
 

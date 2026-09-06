@@ -23,9 +23,9 @@ repository root, run the three focused checks below and look for their exact
 | Reproduction bundle | `pwsh -NoProfile -File scripts/verify-reproduction-bundle.ps1` | `MOONHOSTABI_BUNDLE_STATUS=GO` |
 | Platform package | `pwsh -NoProfile -File scripts/verify-release-packaging.ps1` | `MOONHOSTABI_PACKAGE_STATUS=GO` |
 
-The package check is the locally observed Windows native path; its Linux archive
-metadata/mock path and the still-pending remote Linux native run are separated
-in the walkthrough and validation record.
+The package check is locally observed on Windows, while the public Verification
+matrix exercises the native CLI path on both Linux and Windows. Release archive
+aggregation remains a separate dispatch-only dry run documented below.
 
 ## Reproduce the Spike
 
