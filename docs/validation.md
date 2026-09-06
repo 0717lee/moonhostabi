@@ -374,8 +374,10 @@ that today's Node/Chromium adapter can exchange typed GC references.
 | Malformed/unsupported values fail closed | parser, projector, decoder, generator and CLI tests | GO |
 
 Local Spike decision: **GO**. The public Verification matrix decision is also
-**GO** for both Linux and Windows. The separate dispatch-only Release dry run
-has not been executed, and no Mooncakes publication is claimed here.
+**GO** for both Linux and Windows. The dispatch-only Release dry run also passed
+for both platform packages and aggregate
+(`https://github.com/0717lee/moonhostabi/actions/runs/34009238880`). No Mooncakes
+publication is claimed here.
 
 ## Current limitations
 
@@ -403,8 +405,8 @@ has not been executed, and no Mooncakes publication is claimed here.
   artifact ABI analysis and the generated contract remain authoritative for
   those signatures.
 - The proof covers native CLI execution on Windows locally and on both Linux and
-  Windows in the public Verification matrix. The separate Release dry run still
-  needs an explicit dispatch before release artifacts are accepted.
+  Windows in the public Verification matrix. The separate Release dry run passed
+  for this commit; future release commits must repeat that dispatch.
 - MoonBit's CI installer is content-hash pinned and receives the official
   installer snapshot `0.10.9+6e6c44045` (not the reported `moon` identity
   `0.1.20260819`). The Linux and Windows binary archives are preflighted with
@@ -418,12 +420,11 @@ has not been executed, and no Mooncakes publication is claimed here.
   are not implemented.
 - The deterministic ZIP result above is locally observed with the tool/runtime
   versions recorded inside its manifest. Fixed metadata minimizes platform
-  variation; the Verification matrix is green, while the Release dry run remains
-  the explicit gate for cross-platform release artifacts.
+  variation; the Verification matrix and the recorded Release dry run are green.
 - The Windows release ZIP path is locally executed and deterministic. Linux
   tar/gzip flags, modes, entry types, and aggregate behavior have local static or
-  simulated coverage; the dispatch-only Release dry run is the remaining remote
-  release-packaging check.
+  simulated coverage; the dispatch-only Release dry run passed for this commit
+  and remains a required gate for future release commits.
 
 ## `wasm_core` parser patch and upstream status
 
