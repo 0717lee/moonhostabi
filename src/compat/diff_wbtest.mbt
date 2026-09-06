@@ -16,7 +16,7 @@ fn scalar_function(
   params : Array[@model.AbiValueType],
   results : Array[@model.AbiValueType],
 ) -> @model.AbiFunction {
-  @model.AbiFunction::{ module_name, name, params, results }
+  @model.AbiFunction::{ module_name, name, params, results, }
 }
 
 ///|
@@ -165,7 +165,7 @@ test "ref nullability and heap type changes are breaking" {
     id: "array",
     supertypes: [],
     final_: true,
-    element: { storage: @model.PackedI8, mutable: false },
+    element: { storage: @model.PackedI8, mutable: false, },
   })
   for policy in [semantic_policy(), strict_policy()] {
     assert_single_change(
@@ -183,7 +183,7 @@ fn field_abi(storage : @model.AbiStorageType) -> @model.HostAbi {
     id: "node",
     supertypes: [],
     final_: false,
-    fields: [{ storage, mutable: false }],
+    fields: [{ storage, mutable: false, }],
   })
   ref_abi("node", false, definition)
 }
@@ -216,7 +216,7 @@ test "unreachable private type changes are compatible in both policies" {
       id: "private-new",
       supertypes: [],
       final_: false,
-      element: { storage: @model.PackedI16, mutable: true },
+      element: { storage: @model.PackedI16, mutable: true, },
     }),
   )
   for policy in [semantic_policy(), strict_policy()] {
@@ -339,7 +339,7 @@ test "compatible typed export addition cannot reindex an existing surface" {
       id: "added",
       supertypes: [],
       final_: true,
-      element: { storage: @model.PackedI8, mutable: false },
+      element: { storage: @model.PackedI8, mutable: false, },
     }),
   )
   assert_single_change(

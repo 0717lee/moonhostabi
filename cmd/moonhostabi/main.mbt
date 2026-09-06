@@ -1066,7 +1066,7 @@ fn publish_generated_directory(
 ///|
 fn execute_command(command : CliCommand) -> CommandResult raise {
   match command {
-    Help => { exit_code: 0, stdout: USAGE, stderr: "" }
+    Help => { exit_code: 0, stdout: USAGE, stderr: "", }
     Version =>
       {
         exit_code: 0,
@@ -1077,7 +1077,7 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       let analysis = analyze_artifact(read_bytes(artifact_path))
       let encoded_abi = @lockfile.encode_canonical_abi(analysis.abi)
       if analysis.diagnostics.is_empty() {
-        { exit_code: 0, stdout: encoded_abi, stderr: "" }
+        { exit_code: 0, stdout: encoded_abi, stderr: "", }
       } else {
         unsupported_result(analysis.diagnostics, encoded_abi)
       }
@@ -1114,7 +1114,7 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
         @compat.Breaking => exit_code_for_failure(BreakingAbi)
         @compat.Unknown => exit_code_for_failure(InvalidArtifact)
       }
-      { exit_code, stdout: encode_report(report), stderr: "" }
+      { exit_code, stdout: encode_report(report), stderr: "", }
     }
     Verify(artifact_path, baseline_path, contract_path) => {
       let artifact = read_bytes(artifact_path)
@@ -1183,7 +1183,7 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
 pub fn dispatch(args : Array[String]) -> CommandResult {
   match parse_command(args) {
     None =>
-      { exit_code: exit_code_for_failure(Usage), stdout: "", stderr: USAGE }
+      { exit_code: exit_code_for_failure(Usage), stdout: "", stderr: USAGE, }
     Some(command) =>
       execute_command(command) catch {
         CliExecutionError(code, message) => invalid_result(code, message)

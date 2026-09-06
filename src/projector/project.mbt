@@ -186,7 +186,7 @@ fn project_field(
     Packed(I8) => @model.PackedI8
     Packed(I16) => @model.PackedI16
   }
-  { storage, mutable: field.mutable }
+  { storage, mutable: field.mutable, }
 }
 
 ///|

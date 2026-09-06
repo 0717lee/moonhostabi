@@ -11,7 +11,7 @@ Linux (`https://github.com/0717lee/moonhostabi/actions/runs/33965007322`).
 The host must provide PowerShell 7, a MoonBit toolchain reporting the exact
 identities below, Node.js `24.12.0` with npm `11.6.2`, and `wasm-tools 1.258.0`.
 CI obtains those identities from the official MoonBit installer snapshot
-`0.10.9+6e6c44045`; the snapshot selector is not the same value as the
+`0.10.11+6ff76a5f9`; the snapshot selector is not the same value as the
 reported `moon` version. The script resolves dependencies, applies the guarded
 `wasm_core` patch, rebuilds all fixtures, installs the locked npm graph and
 Chromium, and stops at the first unexpected result. On a clean checkout, the
@@ -49,9 +49,9 @@ that verification does not instantiate or execute the artifact.
 
 | Tool | Locally verified version |
 | --- | --- |
-| `moon` | `0.1.20260819 (fc2a4ee 2026-08-19)` |
-| `moonc` | `v0.10.9+6e6c44045 (2026-08-19)` |
-| `moonrun` | `0.1.20260819 (fc2a4ee 2026-08-19)` |
+| `moon` | `0.1.20260827 (d0aaa07 2026-08-27)` |
+| `moonc` | `v0.10.11+6ff76a5f9 (2026-08-27)` |
+| `moonrun` | `0.1.20260827 (d0aaa07 2026-08-27)` |
 | `wasm-tools` | `1.258.0 (5c6d31c78 2026-08-24)` |
 | Node.js | `v24.12.0` |
 | npm | `11.6.2` |
@@ -59,10 +59,10 @@ that verification does not instantiate or execute the artifact.
 | Playwright | `1.62.1` |
 | Chromium used by Playwright | `151.0.7922.34` |
 
-The official installer/archive snapshot is `0.10.9+6e6c44045` (URL-encoded as
-`0.10.9%2B6e6c44045`). It is deliberately recorded separately from the
-reported tool identities: `moon` and `moonrun` report `0.1.20260819`, while
-`moonc` reports `v0.10.9+6e6c44045`. CI preflights the platform binary archive
+The official installer/archive snapshot is `0.10.11+6ff76a5f9` (URL-encoded as
+`0.10.11%2B6ff76a5f9`). It is deliberately recorded separately from the
+reported tool identities: `moon` and `moonrun` report `0.1.20260827`, while
+`moonc` reports `v0.10.11+6ff76a5f9`. CI preflights the platform binary archive
 for that snapshot, then passes the unencoded snapshot selector to the official
 installer and checks all three identities after installation.
 
@@ -84,8 +84,8 @@ hashes before installation:
 
 | Platform archive | Official URL path | SHA-256 |
 | --- | --- | --- |
-| Linux x86_64 | `/binaries/0.10.9%2B6e6c44045/moonbit-linux-x86_64.tar.gz` | `0e81deb35eca29e892415cf954ea42b48a43bcf277ad36a3ae1e97d2d1dfe732` |
-| Windows x86_64 | `/binaries/0.10.9%2B6e6c44045/moonbit-windows-x86_64.zip` | `a4c9af8bcfbf4e5bca84e6175cce09d6d88910c478d2c0d71bf0c3f2202e06ae` |
+| Linux x86_64 | `/binaries/0.10.11%2B6ff76a5f9/moonbit-linux-x86_64.tar.gz` | `9573f4df56ff7fe99aa200ddeabc379919e80203c37986642d8e74add1a7e7be` |
+| Windows x86_64 | `/binaries/0.10.11%2B6ff76a5f9/moonbit-windows-x86_64.zip` | `f08e1d54efff3a99319f686b11ceb1a1454288e460e7f20a77219f8d4e08f538` |
 
 CI also downloads the official MoonBit installers as files rather than piping
 them directly into a shell. The installer SHA-256 values are
@@ -106,11 +106,11 @@ seven artifacts with `wasm-tools` before publishing them.
 
 | Fixture | Primary source | Source SHA-256 | Artifact SHA-256 |
 | --- | --- | --- | --- |
-| scalar | `fixtures/projects/scalar/main.mbt` | `b5ae50108cd0cf9947ac672a14a68da85e0cb0eb866d40a85f3558372100be99` | `46def89a242695003f1585278be7df97a7d47e9f026a96b769a756f3a7670dc3` |
-| externref | `fixtures/projects/externref/main.mbt` | `9cd011eefe6c70c4dcd1fede619b8164826be810a2e428eccb9c91a65f2a6773` | `11042a0924422795ad178f36c8cea79bc3225e3e5aa7ee63dfc55e5a50450a76` |
-| recursive | `fixtures/projects/recursive/main.mbt` | `2ab36bc8823e415b7750e6ca79098373f21d9694a4c742a2301595c1adf77d2c` | `91174cb447d067743a996a5bad0f567f4c4b9615bc7e116db857d6ebd728b303` |
-| breaking v1 | `fixtures/projects/breaking_v1/main.mbt` | `9f121a57617f5f17965f50f81d840f829244e1ee2a38c2a5b413408f8f1da314` | `798b207cae77584dca5fb7cbafd04b75fe341850892c85d4c6c275c208d96e2b` |
-| breaking v2 | `fixtures/projects/breaking_v2/main.mbt` | `08f71cff1f32ede8d4842abb29bd3b1ad2ee795859578bf65ae4b8b8b8771c8f` | `c8acfa9ebf99c7c36401de96958d1b5f23ef93eb6d6d0941b97fba040fb8a420` |
+| scalar | `fixtures/projects/scalar/main.mbt` | `b5ae50108cd0cf9947ac672a14a68da85e0cb0eb866d40a85f3558372100be99` | `04904560d0bd1289fe93858d96c4692a4865ba138e4f4db335478f3263cdcfbd` |
+| externref | `fixtures/projects/externref/main.mbt` | `9cd011eefe6c70c4dcd1fede619b8164826be810a2e428eccb9c91a65f2a6773` | `a748ac44370fd11670fc00d3a1a540809823b2370bc734518cbfc849a88da057` |
+| recursive | `fixtures/projects/recursive/main.mbt` | `2ab36bc8823e415b7750e6ca79098373f21d9694a4c742a2301595c1adf77d2c` | `d50b38d7d2aaae48688c94f35344fd78a4b831473750095806957e5743b99b3c` |
+| breaking v1 | `fixtures/projects/breaking_v1/main.mbt` | `9f121a57617f5f17965f50f81d840f829244e1ee2a38c2a5b413408f8f1da314` | `8b5ab1fb29df82f4183412accb55c6baaa969126fd08ec67c46c9c99f3fa1a8e` |
+| breaking v2 | `fixtures/projects/breaking_v2/main.mbt` | `08f71cff1f32ede8d4842abb29bd3b1ad2ee795859578bf65ae4b8b8b8771c8f` | `317eebbf2a61bafa96b2ad5be8c20a9fe82e0c31b75806ac156ebc8aa25e9d5c` |
 | recursive layout A | `fixtures/wat/rec-a.wat` | `edce02ba59eb680db518ac4b980b293ea06b461e3de0a1d20b1464396fb64b7a` | `885ebd2fa3c5f4cadb67905569e1566ef84a53bc9a9b6a4cea77a7187fe873cc` |
 | recursive reindexed | `fixtures/wat/rec-reindexed.wat` | `185536211967ff0c970e9e3055cf7b0b1251744a143f20ae0e37ec6bdb39e36c` | `c860e7e7fbdb91b8558a20bc5bc94f3a4fcbe71dd5036b3c6d32ac96a878cda5` |
 
@@ -408,8 +408,8 @@ publication is claimed here.
   Windows in the public Verification matrix. The separate Release dry run passed
   for this commit; future release commits must repeat that dispatch.
 - MoonBit's CI installer is content-hash pinned and receives the official
-  installer snapshot `0.10.9+6e6c44045` (not the reported `moon` identity
-  `0.1.20260819`). The Linux and Windows binary archives are preflighted with
+  installer snapshot `0.10.11+6ff76a5f9` (not the reported `moon` identity
+  `0.1.20260827`). The Linux and Windows binary archives are preflighted with
   the hashes recorded above, and the installed `moon`/`moonc`/`moonrun`
   identities are version-gated. The installer-selected core archives share the
   snapshot selector but do not currently have independent recorded hashes.
@@ -428,7 +428,7 @@ publication is claimed here.
 
 ## `wasm_core` parser patch and upstream status
 
-MoonBit 0.10.9 emits a valid implicit singleton recursive type whose typed
+MoonBit 0.10.11 emits a valid implicit singleton recursive type whose typed
 self-reference exposes an ordering defect in `Milky2018/wasm_core@0.14.0`.
 MoonHostABI carries `patches/wasm_core-0.14.0-singleton-rec.patch` plus an
 idempotent, version- and source-hash-guarded application script.

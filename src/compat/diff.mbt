@@ -58,7 +58,7 @@ fn append_change(
   path : String,
   message : String,
 ) -> Unit {
-  changes.push({ classification, code, path, message })
+  changes.push({ classification, code, path, message, })
 }
 
 ///|
@@ -623,7 +623,7 @@ fn finalize_report(changes : Array[AbiChange]) -> CompatibilityReport {
       classification = change.classification
     }
   }
-  { classification, changes }
+  { classification, changes, }
 }
 
 ///|

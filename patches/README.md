@@ -2,7 +2,7 @@
 
 ## `wasm_core-0.14.0-singleton-rec.patch`
 
-MoonBit 0.10.9 emits a self-recursive struct as an implicit singleton recursive
+MoonBit 0.10.11 emits a self-recursive struct as an implicit singleton recursive
 type. The artifact is valid according to `wasm-tools 1.258.0`, but
 `Milky2018/wasm_core@0.14.0` resolves the field's typed self-reference before
 inserting the current type into its parser table and raises `invalid heap type`.

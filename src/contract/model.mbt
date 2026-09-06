@@ -190,9 +190,9 @@ fn make_contract(
   for index, path in paths {
     let name = names[index]
     validate_semantic_name(path, name)
-    bindings.push({ path, semantic_name: name })
+    bindings.push({ path, semantic_name: name, })
   }
-  Contract::{ abi_sha256: @lockfile.host_abi_sha256(canonical), bindings }
+  Contract::{ abi_sha256: @lockfile.host_abi_sha256(canonical), bindings, }
 }
 
 ///|

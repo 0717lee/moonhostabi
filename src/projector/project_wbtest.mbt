@@ -235,7 +235,7 @@ test "MoonBit analysis diagnoses unrepresentable public boundary values" {
   let wasm_module = @wasm_types.Module::Module()
   wasm_module.types.push(
     @wasm_types.SubType::simple(
-      @wasm_types.CompositeType::Struct(@wasm_types.StructType::{ fields: [] }),
+      @wasm_types.CompositeType::Struct(@wasm_types.StructType::{ fields: [], }),
     ),
   )
   wasm_module.types.push(@wasm_types.SubType::func([RefStruct(0), V128], []))
@@ -324,7 +324,7 @@ test "recursive GC projection preserves fields supertypes and finite edges" {
     }),
   )
   let private_struct = @wasm_types.SubType::simple(
-    @wasm_types.CompositeType::Struct(@wasm_types.StructType::{ fields: [] }),
+    @wasm_types.CompositeType::Struct(@wasm_types.StructType::{ fields: [], }),
   )
   let exported_function = @wasm_types.SubType::func([], [RefArray(2)])
   wasm_module.types.push(base_struct)
@@ -381,7 +381,7 @@ test "recursive GC projection preserves fields supertypes and finite edges" {
 ///|
 test "non-function public ABI items produce explicit diagnostics" {
   let wasm_module = @wasm_types.Module::Module()
-  let limits = @wasm_types.Limits::{ min: 1L, max: None }
+  let limits = @wasm_types.Limits::{ min: 1L, max: None, }
   let table = @wasm_types.TableType::{
     elem_type: ExternRef,
     limits,
@@ -392,7 +392,7 @@ test "non-function public ABI items produce explicit diagnostics" {
     is_memory64: false,
     page_size_log2: 16,
   }
-  let global = @wasm_types.GlobalType::{ value_type: I32, mutable: false }
+  let global = @wasm_types.GlobalType::{ value_type: I32, mutable: false, }
   wasm_module.imports.push({
     mod_name: "env",
     name: "table",
@@ -425,7 +425,10 @@ test "non-function public ABI items produce explicit diagnostics" {
     name: "global",
     desc: @wasm_types.ExportDesc::Global(0),
   })
-  wasm_module.exports.push({ name: "tag", desc: @wasm_types.ExportDesc::Tag(0) })
+  wasm_module.exports.push({
+    name: "tag",
+    desc: @wasm_types.ExportDesc::Tag(0),
+  })
 
   let analysis = analyze_host_abi(wasm_module, default_js_capability_policy())
 

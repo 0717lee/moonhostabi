@@ -57,7 +57,10 @@ fn reindexed_recursive_abi(
         storage: @model.Value(@model.TypedRef(struct_id, true)),
         mutable: false,
       },
-      { storage: @model.Value(@model.TypedRef(array_id, false)), mutable: true },
+      {
+        storage: @model.Value(@model.TypedRef(array_id, false)),
+        mutable: true,
+      },
     ],
   })
   let array = @model.Array(@model.AbiArrayType::{
@@ -144,7 +147,7 @@ test "private unreachable type changes do not change canonical ABI" {
       id: "private-type",
       supertypes: [],
       final_: true,
-      fields: [{ storage: @model.PackedI8, mutable: true }],
+      fields: [{ storage: @model.PackedI8, mutable: true, }],
     }),
   )
   inspect(

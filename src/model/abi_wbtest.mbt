@@ -85,8 +85,8 @@ test "GC type definitions preserve graph metadata" {
     supertypes: ["type[0]"],
     final_: false,
     fields: [
-      { storage: Value(TypedRef("type[1]", true)), mutable: false },
-      { storage: PackedI16, mutable: true },
+      { storage: Value(TypedRef("type[1]", true)), mutable: false, },
+      { storage: PackedI16, mutable: true, },
     ],
   })
   guard definition is Struct(struct_type) else {

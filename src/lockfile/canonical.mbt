@@ -135,7 +135,7 @@ fn remap_field(
     PackedI16 => @model.PackedI16
     Value(value_type) => @model.Value(remap_value_type(value_type, assigned))
   }
-  { storage, mutable: field.mutable }
+  { storage, mutable: field.mutable, }
 }
 
 ///|

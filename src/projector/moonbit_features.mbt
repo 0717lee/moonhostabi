@@ -7,7 +7,7 @@ pub(all) struct JsCapabilityPolicy {
 
 ///|
 pub fn default_js_capability_policy() -> JsCapabilityPolicy {
-  { allow_typed_gc_refs: false, allow_v128: false, externref_symbol: None }
+  { allow_typed_gc_refs: false, allow_v128: false, externref_symbol: None, }
 }
 
 ///|
@@ -184,7 +184,7 @@ pub fn analyze_host_abi(
       diagnostics,
     )
   }
-  { abi, diagnostics }
+  { abi, diagnostics, }
 }
 
 ///|

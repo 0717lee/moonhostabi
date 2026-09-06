@@ -30,9 +30,9 @@ aggregation remains a separate dispatch-only dry run documented below.
 ## Reproduce the Spike
 
 Prerequisites are PowerShell 7, a MoonBit toolchain reporting `moon
-0.1.20260819` / `moonc v0.10.9+6e6c44045` / `moonrun 0.1.20260819`, Node.js
+0.1.20260827` / `moonc v0.10.11+6ff76a5f9` / `moonrun 0.1.20260827`, Node.js
 `24.12.0` with npm `11.6.2`, and `wasm-tools 1.258.0`. CI obtains that
-toolchain from the official installer snapshot `0.10.9+6e6c44045`; the
+toolchain from the official installer snapshot `0.10.11+6ff76a5f9`; the
 snapshot selector is distinct from the reported `moon` version. The command
 below installs locked npm dependencies and the pinned Playwright Chromium
 build as part of the gate:
@@ -112,7 +112,7 @@ refused. There is no `--force` mode.
 
 MoonHostABI currently carries a minimal, version-checked patch for a
 `Milky2018/wasm_core@0.14.0` parser defect exposed by recursive Wasm-GC output
-from MoonBit 0.10.9. Apply it after dependency resolution:
+from MoonBit 0.10.11. Apply it after dependency resolution:
 
 ```powershell
 moon update

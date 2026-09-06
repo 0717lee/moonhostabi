@@ -147,11 +147,11 @@ try {
   }
   $moonVersionText = $moonVersionLines -join "`n"
   $moonVersionLines | Write-Output
-  if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20260819 \(fc2a4ee 2026-08-19\)') {
-    throw 'Expected moon 0.1.20260819 (fc2a4ee).'
+  if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20260827 \(d0aaa07 2026-08-27\)') {
+    throw 'Expected moon 0.1.20260827 (d0aaa07).'
   }
-  if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.9\+6e6c44045 \(2026-08-19\)') {
-    throw 'Expected moonc v0.10.9+6e6c44045.'
+  if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.11\+6ff76a5f9 \(2026-08-28\)') {
+    throw 'Expected moonc v0.10.11+6ff76a5f9.'
   }
 
   $nodeVersion = (& $nodeExecutable --version) -join "`n"
@@ -194,13 +194,13 @@ try {
     -Description 'fixture rebuild and validation'
 
   $expectedArtifactHashes = [ordered]@{
-    'breaking_v1.wasm' = '798b207cae77584dca5fb7cbafd04b75fe341850892c85d4c6c275c208d96e2b'
-    'breaking_v2.wasm' = 'c8acfa9ebf99c7c36401de96958d1b5f23ef93eb6d6d0941b97fba040fb8a420'
-    'externref.wasm' = '11042a0924422795ad178f36c8cea79bc3225e3e5aa7ee63dfc55e5a50450a76'
+    'breaking_v1.wasm' = '8b5ab1fb29df82f4183412accb55c6baaa969126fd08ec67c46c9c99f3fa1a8e'
+    'breaking_v2.wasm' = '317eebbf2a61bafa96b2ad5be8c20a9fe82e0c31b75806ac156ebc8aa25e9d5c'
+    'externref.wasm' = 'a748ac44370fd11670fc00d3a1a540809823b2370bc734518cbfc849a88da057'
     'rec-a.wasm' = '885ebd2fa3c5f4cadb67905569e1566ef84a53bc9a9b6a4cea77a7187fe873cc'
     'rec-reindexed.wasm' = 'c860e7e7fbdb91b8558a20bc5bc94f3a4fcbe71dd5036b3c6d32ac96a878cda5'
-    'recursive.wasm' = '91174cb447d067743a996a5bad0f567f4c4b9615bc7e116db857d6ebd728b303'
-    'scalar.wasm' = '46def89a242695003f1585278be7df97a7d47e9f026a96b769a756f3a7670dc3'
+    'recursive.wasm' = 'd50b38d7d2aaae48688c94f35344fd78a4b831473750095806957e5743b99b3c'
+    'scalar.wasm' = '04904560d0bd1289fe93858d96c4692a4865ba138e4f4db335478f3263cdcfbd'
   }
   foreach ($entry in $expectedArtifactHashes.GetEnumerator()) {
     $artifactPath = Join-Path $repositoryRoot "fixtures/artifacts/$($entry.Key)"

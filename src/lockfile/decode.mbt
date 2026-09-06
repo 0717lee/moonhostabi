@@ -194,7 +194,7 @@ fn decode_field(
     "i16" => @model.PackedI16
     _ => @model.Value(decode_value_type(storage_text, "\{path}.storage"))
   }
-  @model.AbiField::{ storage, mutable: required_bool(object, "mutable", path) }
+  @model.AbiField::{ storage, mutable: required_bool(object, "mutable", path), }
 }
 
 ///|

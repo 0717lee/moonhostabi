@@ -196,7 +196,7 @@ The reproduction-bundle gate compares this exact line with a fresh public CLI
 
 <!-- BEGIN VERIFIED REPORT EXAMPLE -->
 ```json
-{"schemaVersion":1,"outcome":"compatible","artifact":{"status":"valid","sha256":"11042a0924422795ad178f36c8cea79bc3225e3e5aa7ee63dfc55e5a50450a76","abiSha256":"ecc9ee29e442515286ed65d66f0b3765c3beb015e086e9022fe641d9e0ccc6d7","diagnostics":[]},"baseline":{"status":"valid","artifactSha256":"11042a0924422795ad178f36c8cea79bc3225e3e5aa7ee63dfc55e5a50450a76","abiSha256":"ecc9ee29e442515286ed65d66f0b3765c3beb015e086e9022fe641d9e0ccc6d7","diagnostic":null},"provenance":{"artifactMatchesBaseline":true,"abiMatchesBaseline":true},"compatibility":{"status":"evaluated","classification":"compatible","changes":[]},"contract":{"status":"valid","diagnostic":null},"generator":{"status":"representable","diagnostics":[]}}
+{"schemaVersion":1,"outcome":"compatible","artifact":{"status":"valid","sha256":"a748ac44370fd11670fc00d3a1a540809823b2370bc734518cbfc849a88da057","abiSha256":"ecc9ee29e442515286ed65d66f0b3765c3beb015e086e9022fe641d9e0ccc6d7","diagnostics":[]},"baseline":{"status":"valid","artifactSha256":"a748ac44370fd11670fc00d3a1a540809823b2370bc734518cbfc849a88da057","abiSha256":"ecc9ee29e442515286ed65d66f0b3765c3beb015e086e9022fe641d9e0ccc6d7","diagnostic":null},"provenance":{"artifactMatchesBaseline":true,"abiMatchesBaseline":true},"compatibility":{"status":"evaluated","classification":"compatible","changes":[]},"contract":{"status":"valid","diagnostic":null},"generator":{"status":"representable","diagnostics":[]}}
 ```
 <!-- END VERIFIED REPORT EXAMPLE -->
 

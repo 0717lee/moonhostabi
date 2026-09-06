@@ -24,18 +24,18 @@ ACTION_PATTERN = re.compile(r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@([0-9a-f]{40})\Z
 # tools are different contracts. Keep both explicit so a build-tool version
 # cannot accidentally be passed to the official installer.
 MOONBIT_CONTRACT_ENV = {
-    "MOONBIT_SNAPSHOT": "0.10.9+6e6c44045",
-    "MOONBIT_SNAPSHOT_URL": "0.10.9%2B6e6c44045",
+    "MOONBIT_SNAPSHOT": "0.10.11+6ff76a5f9",
+    "MOONBIT_SNAPSHOT_URL": "0.10.11%2B6ff76a5f9",
     "MOONBIT_LINUX_ARCHIVE_SHA256": (
-        "0e81deb35eca29e892415cf954ea42b48a43bcf277ad36a3ae1e97d2d1dfe732"
+        "9573f4df56ff7fe99aa200ddeabc379919e80203c37986642d8e74add1a7e7be"
     ),
     "MOONBIT_WINDOWS_ARCHIVE_SHA256": (
-        "a4c9af8bcfbf4e5bca84e6175cce09d6d88910c478d2c0d71bf0c3f2202e06ae"
+        "f08e1d54efff3a99319f686b11ceb1a1454288e460e7f20a77219f8d4e08f538"
     ),
-    "MOONBIT_VERSION": "0.1.20260819",
-    "MOONBIT_COMMIT": "fc2a4ee",
-    "MOONC_VERSION": "v0.10.9+6e6c44045",
-    "MOONBIT_RELEASE_DATE": "2026-08-19",
+    "MOONBIT_VERSION": "0.1.20260827",
+    "MOONBIT_COMMIT": "d0aaa07",
+    "MOONC_VERSION": "v0.10.11+6ff76a5f9",
+    "MOONBIT_RELEASE_DATE": "2026-08-27",
     "MOONBIT_UNIX_INSTALLER_SHA256": (
         "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
     ),
