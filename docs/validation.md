@@ -2,9 +2,9 @@
 
 MoonHostABI reached a **local Spike GO** on 2026-09-04. The single verification
 entry point reproduced the parser, projection, canonicalization, compatibility,
-generation, Node.js, and Chromium evidence described below. Windows and Linux
-CI are configured in `.github/workflows/ci.yml`; no remote CI run is claimed in
-this document because the repository has not been pushed by this workflow.
+generation, Node.js, and Chromium evidence described below. The public
+Verification workflow has since completed successfully for both Windows and
+Linux (`https://github.com/0717lee/moonhostabi/actions/runs/33965007322`).
 
 ## Reproduce the local gate
 
@@ -371,9 +371,9 @@ that today's Node/Chromium adapter can exchange typed GC references.
 | Node and Chromium exercise real imports/exports | scalar, identity, trace and negative observations | GO |
 | Malformed/unsupported values fail closed | parser, projector, decoder, generator and CLI tests | GO |
 
-Local Spike decision: **GO**. Contest/release delivery still requires the first
-green remote run of both CI matrix jobs; the workflow exists, but local work is
-not evidence of a GitHub-hosted run.
+Local Spike decision: **GO**. The public Verification matrix decision is also
+**GO** for both Linux and Windows. The separate dispatch-only Release dry run
+has not been executed, and no Mooncakes publication is claimed here.
 
 ## Current limitations
 
@@ -400,8 +400,9 @@ not evidence of a GitHub-hosted run.
   path. JavaScript does not repeat Wasm parameter and result signature checks;
   artifact ABI analysis and the generated contract remain authoritative for
   those signatures.
-- The proof covers native CLI execution on Windows locally and configures Linux
-  CI, but no remote Linux result is claimed yet.
+- The proof covers native CLI execution on Windows locally and on both Linux and
+  Windows in the public Verification matrix. The separate Release dry run still
+  needs an explicit dispatch before release artifacts are accepted.
 - MoonBit's CI installer is content-hash pinned and receives the official
   installer snapshot `0.10.9+6e6c44045` (not the reported `moon` identity
   `0.1.20260819`). The Linux and Windows binary archives are preflighted with
@@ -415,12 +416,12 @@ not evidence of a GitHub-hosted run.
   are not implemented.
 - The deterministic ZIP result above is locally observed with the tool/runtime
   versions recorded inside its manifest. Fixed metadata minimizes platform
-  variation, but byte identity across Windows and Linux is not claimed before a
-  green remote matrix run compares those outputs.
+  variation; the Verification matrix is green, while the Release dry run remains
+  the explicit gate for cross-platform release artifacts.
 - The Windows release ZIP path is locally executed and deterministic. Linux
   tar/gzip flags, modes, entry types, and aggregate behavior have local static or
-  simulated coverage, but a real Linux release binary/tar smoke remains pending
-  the authorized Ubuntu workflow run.
+  simulated coverage; the dispatch-only Release dry run is the remaining remote
+  release-packaging check.
 
 ## `wasm_core` parser patch and upstream status
 

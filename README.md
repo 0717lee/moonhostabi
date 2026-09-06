@@ -4,10 +4,10 @@ Artifact-first MoonBit Wasm-GC Host ABI lock, adapter, and validation toolchain.
 
 MoonHostABI projects a runtime-facing ABI from compiled MoonBit Wasm-GC,
 canonicalizes recursive types independently of raw indices, detects breaking
-host-contract drift, and emits a strict TypeScript/ESM adapter. The current
-proof-grade Spike is **local GO**; see [the validation evidence](docs/validation.md)
-for hashes, the compatibility matrix, runtime observations, limits, and the
-unverified remote-CI boundary.
+host-contract drift, and emits a strict TypeScript/ESM adapter. The proof-grade
+Spike is **GO** locally and on the public Linux/Windows CI matrix; see [the
+validation evidence](docs/validation.md) for hashes, the compatibility matrix,
+runtime observations, and limits.
 
 ## Judge quickstart
 
