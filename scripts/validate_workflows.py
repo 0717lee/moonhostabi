@@ -36,6 +36,7 @@ MOONBIT_CONTRACT_ENV = {
     "MOONBIT_COMMIT": "d0aaa07",
     "MOONC_VERSION": "v0.10.11+6ff76a5f9",
     "MOONBIT_RELEASE_DATE": "2026-08-27",
+    "MOONC_RELEASE_DATE": "2026-08-28",
     "MOONBIT_UNIX_INSTALLER_SHA256": (
         "46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe"
     ),
@@ -287,7 +288,7 @@ def assert_moonbit_contract(job: dict[str, Any], text: str, label: str) -> None:
         raise ValueError(f"{label}: three-line MoonBit identity prefix block is required")
     expected_prefixes = (
         '"moon $env:MOONBIT_VERSION ($env:MOONBIT_COMMIT $env:MOONBIT_RELEASE_DATE) "',
-        '"moonc $env:MOONC_VERSION ($env:MOONBIT_RELEASE_DATE) "',
+        '"moonc $env:MOONC_VERSION ($env:MOONC_RELEASE_DATE) "',
         '"moonrun $env:MOONBIT_VERSION ($env:MOONBIT_COMMIT $env:MOONBIT_RELEASE_DATE) "',
     )
     prefix_block = prefix_match.group(1)
@@ -483,7 +484,7 @@ def self_test(ci: dict[str, Any], release: dict[str, Any], repository: Path) -> 
         if step.get("name") == "Verify exact MoonBit toolchain"
     )
     verify_step["run"] = verify_step["run"].replace(
-        '"moonc $env:MOONC_VERSION ($env:MOONBIT_RELEASE_DATE) "',
+        '"moonc $env:MOONC_VERSION ($env:MOONC_RELEASE_DATE) "',
         '"moonc $env:MOONC_VERSION (wrong-date) "',
     )
     expect_failure(lambda: validate_release(missing_moonc_identity), "missing moonc identity")

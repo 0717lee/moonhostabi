@@ -37,6 +37,7 @@ jobs:
       MOONBIT_COMMIT: d0aaa07
       MOONC_VERSION: v0.10.11+6ff76a5f9
       MOONBIT_RELEASE_DATE: 2026-08-27
+      MOONC_RELEASE_DATE: 2026-08-28
       MOONBIT_UNIX_INSTALLER_SHA256: 46495f8cdc0050f79b6cb195d66478d101cb3601d68506568fbe377fcdf2a9fe
       MOONBIT_WINDOWS_INSTALLER_SHA256: a5101e91ffa9905fb25cd009b9a4aa942971a294bd055c89836e3af89b710c64
     steps:
@@ -103,7 +104,7 @@ jobs:
           }
           $expectedPrefixes = @(
             "moon $env:MOONBIT_VERSION ($env:MOONBIT_COMMIT $env:MOONBIT_RELEASE_DATE) ",
-            "moonc $env:MOONC_VERSION ($env:MOONBIT_RELEASE_DATE) ",
+            "moonc $env:MOONC_VERSION ($env:MOONC_RELEASE_DATE) ",
             "moonrun $env:MOONBIT_VERSION ($env:MOONBIT_COMMIT $env:MOONBIT_RELEASE_DATE) "
           )
           foreach ($prefix in $expectedPrefixes) {
