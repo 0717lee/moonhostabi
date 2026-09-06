@@ -178,6 +178,9 @@ jobs:
           $files = @(Get-ChildItem -LiteralPath $inputRoot -Recurse -File)
           foreach ($file in $files) {
             $destination = Join-Path $inputRoot $file.Name
+            if ([IO.Path]::GetFullPath($file.FullName) -ceq [IO.Path]::GetFullPath($destination)) {
+              continue
+            }
             if (Test-Path -LiteralPath $destination) {
               throw "Duplicate release handoff filename: $($file.Name)"
             }
