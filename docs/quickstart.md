@@ -133,7 +133,7 @@ The committed local evidence is deliberately split:
   `34009238880`; it is separate from the Verification matrix and does not publish
   a release.
 - **Mooncakes publication:** pending explicit publication authorization and
-  registry credentials; no package has been published by these workflows.
+  registry access; no package has been published by these workflows.
 
 The quickstart commands do not invoke a remote service or require a hidden
 checkout setting. A green local marker is evidence for the named local check
