@@ -170,6 +170,22 @@ jobs:
           path: ${{ runner.temp }}/moonhostabi-release-input
           merge-multiple: true
 
+      - name: Flatten platform handoffs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $inputRoot = Join-Path $env:RUNNER_TEMP 'moonhostabi-release-input'
+          $files = @(Get-ChildItem -LiteralPath $inputRoot -Recurse -File)
+          foreach ($file in $files) {
+            $destination = Join-Path $inputRoot $file.Name
+            if (Test-Path -LiteralPath $destination) {
+              throw "Duplicate release handoff filename: $($file.Name)"
+            }
+            Move-Item -LiteralPath $file.FullName -Destination $destination
+          }
+          Get-ChildItem -LiteralPath $inputRoot -Directory |
+            Remove-Item -Recurse -Force
+
       - name: Validate and aggregate fixed release set
         shell: pwsh
         run: |
