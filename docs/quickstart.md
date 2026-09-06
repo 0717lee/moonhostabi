@@ -126,9 +126,9 @@ The committed local evidence is deliberately split:
   package negatives are observed and marked `GO`.
 - **Linux archive path:** tar/gzip metadata and aggregate behavior are checked by
   the local static/mock path; this is not a Linux native-binary result.
-- **Remote Linux native:** covered by the successful public Verification matrix
-  run [`33965007322`](https://github.com/0717lee/moonhostabi/actions/runs/33965007322).
-  No tag or published release is implied by local markers.
+- **Remote Linux native:** covered by successful public Verification matrix run
+  `33965007322` (see the repository's Actions history). No tag or published
+  release is implied by local markers.
 
 The quickstart commands do not invoke a remote service or require a hidden
 checkout setting. A green local marker is evidence for the named local check
