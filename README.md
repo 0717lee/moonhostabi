@@ -11,6 +11,15 @@ runtime observations, and limits.
 
 Published package: `0717lee/moonhostabi@0.1.1` on Mooncakes.
 
+## Independent scope
+
+MoonHostABI is an artifact-first Wasm-GC host-boundary toolchain. It consumes
+compiled Wasm bytes, models recursive GC types and runtime imports/exports,
+locks the resulting ABI, and emits a typed TypeScript adapter plus reproducible
+evidence. It is deliberately separate from source-level `.mbti` public-API
+diff tools: those tools compare MoonBit declarations, while MoonHostABI checks the
+binary host contract that a JavaScript or native embedding must satisfy.
+
 ## Judge quickstart
 
 MoonHostABI makes a compiled MoonBit Wasm-GC artifact's host-facing ABI
