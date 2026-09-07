@@ -64,7 +64,7 @@ $packageOutput = Join-Path ([IO.Path]::GetTempPath()) 'moonhostabi-package-new'
 $evidenceOutput = Join-Path ([IO.Path]::GetTempPath()) 'windows.evidence.json'
 [IO.Directory]::CreateDirectory($packageOutput) | Out-Null
 pwsh -NoProfile -File scripts/package-release.ps1 `
-  -Version 0.1.0 `
+  -Version 0.1.1 `
   -Output $packageOutput `
   -EvidenceOut $evidenceOutput
 ```

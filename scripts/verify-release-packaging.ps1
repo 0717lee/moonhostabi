@@ -1000,9 +1000,14 @@ try {
     throw 'Aggregate no-overwrite contract failed.'
   }
 
+  $versionParts = $version.Split('.')
+  $versionMismatch = '{0}.{1}.{2}' -f `
+    $versionParts[0],
+    $versionParts[1],
+    ([int]$versionParts[2] + 1)
   foreach ($case in @(
     @{ Version = '01.0.0'; Name = 'invalid-semver' },
-    @{ Version = '0.1.1'; Name = 'version-mismatch' }
+    @{ Version = $versionMismatch; Name = 'version-mismatch' }
   )) {
     $negativeOutput = Join-Path $runRoot "package-$($case.Name)"
     [IO.Directory]::CreateDirectory($negativeOutput) | Out-Null
