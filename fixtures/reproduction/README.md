@@ -90,4 +90,5 @@ The ZIP uses explicit entry order, `/` separators, no compression, zero external
 attributes, and the legal DOS timestamp `1980-01-01 00:00:00`. Identical inputs
 under the same recorded tool/runtime versions must produce identical bytes.
 The local evidence currently comes from Windows; Linux behavior is configured
-in CI but is not claimed as remotely observed until a green run exists.
+in the public Linux/Windows Verification matrix; the release dry run separately
+covers platform packaging and aggregate evidence.

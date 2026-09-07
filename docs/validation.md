@@ -4,7 +4,8 @@ MoonHostABI reached a **local Spike GO** on 2026-09-04. The single verification
 entry point reproduced the parser, projection, canonicalization, compatibility,
 generation, Node.js, and Chromium evidence described below. The public
 Verification workflow has since completed successfully for both Windows and
-Linux (`https://github.com/0717lee/moonhostabi/actions/runs/33965007322`).
+Linux on the release candidate commit
+(`https://github.com/0717lee/moonhostabi/actions/runs/34081779933`).
 
 ## Reproduce the local gate
 
@@ -50,7 +51,7 @@ that verification does not instantiate or execute the artifact.
 | Tool | Locally verified version |
 | --- | --- |
 | `moon` | `0.1.20260827 (d0aaa07 2026-08-27)` |
-| `moonc` | `v0.10.11+6ff76a5f9 (2026-08-27)` |
+| `moonc` | `v0.10.11+6ff76a5f9 (2026-08-28)` |
 | `moonrun` | `0.1.20260827 (d0aaa07 2026-08-27)` |
 | `wasm-tools` | `1.258.0 (5c6d31c78 2026-08-24)` |
 | Node.js | `v24.12.0` |
@@ -282,9 +283,10 @@ SHAs and are checked by a PyYAML semantic validator with negative self-tests.
 See [the release dry-run guide](releasing.md).
 
 This is local release-automation evidence. The public Verification workflow is
-green for both matrix jobs (run
-`https://github.com/0717lee/moonhostabi/actions/runs/33965007322`); the separate
-Release dry-run workflow has not been triggered. No tag or GitHub Release exists.
+green for both matrix jobs, and the separate Release dry run completed
+successfully for Linux, Windows, and aggregate
+(`https://github.com/0717lee/moonhostabi/actions/runs/34081936398`). No tag or
+GitHub Release exists; the Mooncakes package is published as `0.1.1`.
 
 ## Task 8 judge quickstart evidence
 
@@ -302,8 +304,8 @@ The quickstart also points to the six-section report schema and explains how
 `validation.json` connects that report to the bundle's artifact, lock, contract,
 adapter, commands, and manifest files. Its document validator checks links,
 relative command paths, encoding, and stale claims. The Verification matrix
-provides the remote Linux native result; the Release dry-run workflow remains the
-separate packaging gate and has not yet been triggered.
+provides the remote Linux native result; the Release dry-run workflow also passed
+for the published candidate.
 
 ## Runtime observations
 
@@ -376,8 +378,8 @@ that today's Node/Chromium adapter can exchange typed GC references.
 Local Spike decision: **GO**. The public Verification matrix decision is also
 **GO** for both Linux and Windows. The dispatch-only Release dry run also passed
 for both platform packages and aggregate
-(`https://github.com/0717lee/moonhostabi/actions/runs/34009238880`). No Mooncakes
-publication is claimed here.
+(`https://github.com/0717lee/moonhostabi/actions/runs/34081936398`). The module
+`0717lee/moonhostabi@0.1.1` is published to Mooncakes.
 
 ## Current limitations
 
@@ -406,7 +408,7 @@ publication is claimed here.
   those signatures.
 - The proof covers native CLI execution on Windows locally and on both Linux and
   Windows in the public Verification matrix. The separate Release dry run passed
-  for this commit; future release commits must repeat that dispatch.
+  for the published candidate; future release commits must repeat that dispatch.
 - MoonBit's CI installer is content-hash pinned and receives the official
   installer snapshot `0.10.11+6ff76a5f9` (not the reported `moon` identity
   `0.1.20260827`). The Linux and Windows binary archives are preflighted with

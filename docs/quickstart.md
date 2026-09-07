@@ -127,13 +127,13 @@ The committed local evidence is deliberately split:
 - **Linux archive path:** tar/gzip metadata and aggregate behavior are checked by
   the local static/mock path; this is not a Linux native-binary result.
 - **Remote Linux native:** covered by successful public Verification matrix run
-  `33965007322` (see the repository's Actions history). No tag or published
-  release is implied by local markers.
+  `34081779933` (see the repository's Actions history). No tag or GitHub Release
+  is implied by these markers.
 - **Release dry run:** passed for Linux, Windows, and aggregate in run
-  `34009238880`; it is separate from the Verification matrix and does not publish
-  a release.
-- **Mooncakes publication:** pending explicit publication authorization and
-  registry access; no package has been published by these workflows.
+  `34081936398`; it is separate from the Verification matrix and does not publish
+  a GitHub Release.
+- **Mooncakes publication:** `0717lee/moonhostabi@0.1.1` is published. A future
+  version remains pending its own final checks and publication.
 
 The quickstart commands do not invoke a remote service or require a hidden
 checkout setting. A green local marker is evidence for the named local check

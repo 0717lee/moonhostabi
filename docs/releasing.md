@@ -87,8 +87,9 @@ only to test aggregate success and failure paths. The simulation is marked in
 evidence, cannot claim smoke success, and is rejected by production aggregation
 unless the test-only switch is explicit. The workflow is configured to perform
 the real Linux package path on Ubuntu. The Verification matrix and the
-dispatch-only Release dry run are green for the current commit; repeat both gates
-for every release candidate before publication.
+dispatch-only Release dry run are green for the published `0.1.1` candidate
+(runs `34081779933` and `34081936398`); repeat both gates for every release
+candidate before publication.
 
 ## Deterministic archive rules
 
@@ -113,8 +114,9 @@ the same hash.
 authorization to run remote CI, it preflights the fixed Linux/Windows MoonBit
 binary archives, installs the pinned snapshot, resolves dependencies with
 `moon check` before applying the guarded parser patch, and rejects a
-moon/moonc/moonrun version mismatch before building. This workflow
-has not yet been run remotely; the following steps are its acceptance procedure:
+moon/moonc/moonrun version mismatch before building. The published candidate's
+run completed successfully; the following steps remain the acceptance procedure
+for future candidates:
 
 1. Open **Actions → Release dry run → Run workflow**.
 2. Enter the exact version from `moon.mod`.

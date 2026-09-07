@@ -9,6 +9,8 @@ Spike is **GO** locally and on the public Linux/Windows CI matrix; see [the
 validation evidence](docs/validation.md) for hashes, the compatibility matrix,
 runtime observations, and limits.
 
+Published package: `0717lee/moonhostabi@0.1.1` on Mooncakes.
+
 ## Judge quickstart
 
 MoonHostABI makes a compiled MoonBit Wasm-GC artifact's host-facing ABI
