@@ -44,7 +44,6 @@ const memory = assertMemoryContract(instance.exports, {
   kind: "memory",
   exportName: "memory",
   minimumPages: 1,
-  maximumPages: 2,
   shared: false,
 });
 ```
