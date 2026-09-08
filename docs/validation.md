@@ -286,7 +286,7 @@ This is local release-automation evidence. The public Verification workflow is
 green for both matrix jobs, and the separate Release dry run completed
 successfully for Linux, Windows, and aggregate
 (`https://github.com/0717lee/moonhostabi/actions/runs/34081936398`). No tag or
-GitHub Release exists; the Mooncakes package is published as `0.1.1`.
+GitHub Release exists for `0.1.1`; the `0.2.0` package is the current release candidate.
 
 ## Task 8 judge quickstart evidence
 
@@ -379,7 +379,7 @@ Local Spike decision: **GO**. The public Verification matrix decision is also
 **GO** for both Linux and Windows. The dispatch-only Release dry run also passed
 for both platform packages and aggregate
 (`https://github.com/0717lee/moonhostabi/actions/runs/34081936398`). The module
-`0717lee/moonhostabi@0.1.1` is published to Mooncakes.
+`0717lee/moonhostabi@0.2.0` is the current release candidate for Mooncakes.
 
 ## Current limitations
 

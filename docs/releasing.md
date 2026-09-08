@@ -67,7 +67,7 @@ $packageOutput = Join-Path ([IO.Path]::GetTempPath()) 'moonhostabi-package-new'
 $evidenceOutput = Join-Path ([IO.Path]::GetTempPath()) 'windows.evidence.json'
 [IO.Directory]::CreateDirectory($packageOutput) | Out-Null
 pwsh -NoProfile -File scripts/package-release.ps1 `
-  -Version 0.1.1 `
+  -Version 0.2.0 `
   -Output $packageOutput `
   -EvidenceOut $evidenceOutput
 ```
@@ -90,7 +90,8 @@ only to test aggregate success and failure paths. The simulation is marked in
 evidence, cannot claim smoke success, and is rejected by production aggregation
 unless the test-only switch is explicit. The workflow is configured to perform
 the real Linux package path on Ubuntu. The Verification matrix and the
-dispatch-only Release dry run are green for the published `0.1.1` candidate
+dispatch-only Release dry run are green for the published `0.1.1` baseline; rerun
+them for the `0.2.0` candidate
 (runs `34081779933` and `34081936398`); repeat both gates for every release
 candidate before publication.
 
