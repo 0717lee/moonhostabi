@@ -66,6 +66,14 @@ test "generator adds memory resource preflight without changing legacy output" {
   inspect(generated.typescript.contains("WebAssembly.Memory"), content="true")
   let manifest = decode_generation_manifest(generated.manifest)
   inspect(manifest.abi_fingerprint(), content=generated.abi_sha256)
+  let invalid = generate_typescript_adapter_with_resources(abi, contract, ResourceContractSources::{
+    memory: Some("{"),
+    table: None,
+    global: None,
+    tag: None,
+  })
+  inspect(invalid.typescript, content="")
+  inspect(invalid.diagnostics.length(), content="1")
 }
 
 ///|
