@@ -97,6 +97,13 @@ pub fn abi_sha256(abi : ResourceAbi) -> String {
 }
 
 ///|
+fn sha256_text(value : String) -> String {
+  @crypto.bytes_to_hex_string(
+    @crypto.sha256(@encoding.encode(@encoding.UTF8, value)),
+  )
+}
+
+///|
 /// Create a v2 resource lockfile from an artifact and its memory surface.
 pub fn create_lockfile(abi : ResourceAbi, artifact : Bytes) -> ResourceLockfile {
   let canonical = ResourceAbi::{
@@ -106,11 +113,7 @@ pub fn create_lockfile(abi : ResourceAbi, artifact : Bytes) -> ResourceLockfile 
   }
   ResourceLockfile::{
     lockfile_version: 2,
-    schema_sha256: abi_sha256(ResourceAbi::{
-      schema_version: 2,
-      memories: [],
-      unsupported: [],
-    }),
+    schema_sha256: sha256_text("moonhostabi.resource.lock/v2"),
     artifact_sha256: @crypto.bytes_to_hex_string(@crypto.sha256(artifact)),
     abi_sha256: abi_sha256(canonical),
     abi: canonical,

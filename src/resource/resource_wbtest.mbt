@@ -39,4 +39,8 @@ test "resource lockfile v2 is deterministic" {
   let second = encode_lockfile(create_lockfile(abi, b"artifact"))
   inspect(first == second, content="true")
   inspect(first.contains("\"lockfileVersion\":2"), content="true")
+  inspect(
+    create_lockfile(abi, b"artifact").schema_sha256.length(),
+    content="64",
+  )
 }
