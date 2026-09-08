@@ -135,6 +135,24 @@ fn resource_source(value : String?) -> String {
 }
 
 ///|
+fn resource_sources_valid(sources : ResourceContractSources) -> Bool {
+  for value in [sources.memory, sources.table, sources.global, sources.tag] {
+    match value {
+      None => ()
+      Some(text) =>
+        if text.trim().is_empty() {
+          continue
+        } else {
+          ignore(@json.parse(text)) catch {
+            _ => return false
+          }
+        }
+    }
+  }
+  true
+}
+
+///|
 fn render_resource_runtime(sources : ResourceContractSources) -> String {
   let lines = [
     "",
@@ -175,7 +193,21 @@ pub fn generate_typescript_adapter_with_resources(
   sources : ResourceContractSources,
 ) -> GenerationResult raise @contract.ContractError {
   let base = generate_typescript_adapter(abi, contract)
-  if !base.diagnostics.is_empty() {
+  if !base.diagnostics.is_empty() || !resource_sources_valid(sources) {
+    if base.diagnostics.is_empty() {
+      let diagnostics = [
+        generator_diagnostic(
+          "resourceContract", "resource contract sources must contain valid JSON",
+        ),
+      ]
+      return {
+        typescript: "",
+        contract: base.contract,
+        manifest: "",
+        abi_sha256: base.abi_sha256,
+        diagnostics,
+      }
+    }
     return base
   }
   let typescript = base.typescript + render_resource_runtime(sources)
