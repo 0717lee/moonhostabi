@@ -84,7 +84,13 @@ fn int64_value(
   path : String,
 ) -> Int64 raise ResourceError {
   match required(value, key, path) {
-    Number(number, ..) => number.to_int64()
+    Number(number, ..) => {
+      let value = number.to_int64()
+      if value.to_double() != number {
+        invalid_resource("\{path}.\{key}: expected integer")
+      }
+      value
+    }
     _ => invalid_resource("\{path}.\{key}: expected integer")
   }
 }
@@ -97,7 +103,13 @@ fn optional_int64(
 ) -> Int64? raise ResourceError {
   match required(value, key, path) {
     Null => None
-    Number(number, ..) => Some(number.to_int64())
+    Number(number, ..) => {
+      let value = number.to_int64()
+      if value.to_double() != number {
+        invalid_resource("\{path}.\{key}: expected integer or null")
+      }
+      Some(value)
+    }
     _ => invalid_resource("\{path}.\{key}: expected integer or null")
   }
 }
@@ -175,6 +187,20 @@ fn parse_json(text : String) -> Json raise ResourceError {
 }
 
 ///|
+fn is_sha256(value : String) -> Bool {
+  if value.length() != 64 {
+    return false
+  }
+  for character in value {
+    if !((character >= '0' && character <= '9') ||
+      (character >= 'a' && character <= 'f')) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 /// Decode and validate a canonical resource lockfile v2.
 pub fn decode_lockfile(text : String) -> ResourceLockfile raise ResourceError {
   let root = object(parse_json(text), "lockfile")
@@ -194,7 +220,10 @@ pub fn decode_lockfile(text : String) -> ResourceLockfile raise ResourceError {
     abi_sha256: string_value(root, "abiSha256", "lockfile"),
     abi: decode_abi(required(root, "abi", "lockfile"), "lockfile.abi"),
   }
-  if lockfile.schema_sha256 != sha256_text("moonhostabi.resource.lock/v2") ||
+  if !is_sha256(lockfile.schema_sha256) ||
+    !is_sha256(lockfile.artifact_sha256) ||
+    !is_sha256(lockfile.abi_sha256) ||
+    lockfile.schema_sha256 != sha256_text("moonhostabi.resource.lock/v2") ||
     lockfile.abi_sha256 != abi_sha256(lockfile.abi) {
     invalid_resource("lockfile: fingerprint mismatch")
   }
