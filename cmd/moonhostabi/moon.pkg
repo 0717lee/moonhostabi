@@ -1,10 +1,12 @@
 import {
+  "Milky2018/wasm_core/types" @wasm_types,
   "0717lee/moonhostabi/src/compat",
   "0717lee/moonhostabi/src/contract",
   "0717lee/moonhostabi/src/generator",
   "0717lee/moonhostabi/src/lockfile",
   "0717lee/moonhostabi/src/model",
   "0717lee/moonhostabi/src/projector",
+  "0717lee/moonhostabi/src/resource",
   "0717lee/moonhostabi/src/verification",
   "0717lee/moonhostabi/src/wasm_adapter",
   "moonbitlang/core/encoding/utf8",

@@ -33,6 +33,14 @@ test "argument parsing is pure and order-sensitive" {
     fail("expected inspect command")
   }
   inspect(path, content="module.wasm")
+  guard parse_command([
+      "resource-lock", "module.wasm", "--out", "resources.json",
+    ])
+    is Some(ResourceLock(resource_artifact, resource_output)) else {
+    fail("expected resource-lock command")
+  }
+  inspect(resource_artifact, content="module.wasm")
+  inspect(resource_output, content="resources.json")
   assert_true(
     parse_command(["inspect", "module.wasm", "json", "--format"]) is None,
   )
@@ -123,7 +131,7 @@ test "argument parsing is pure and order-sensitive" {
 
 ///|
 test "help and version have exact stdout-only contracts" {
-  let expected_help = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
+  let expected_help = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
   let help = dispatch(["--help"])
   inspect(help.exit_code, content="0")
   inspect(help.stdout, content=expected_help)
@@ -289,6 +297,26 @@ test "lock and check preserve the baseline and classify breaking ABI" {
   inspect(breaking.stdout.contains("exports[add].params"), content="true")
   inspect(@fs.read_file_to_bytes(lock_path) == before, content="true")
   @fs.remove_file(lock_path)
+}
+
+///|
+test "resource-lock writes standalone resource schema" {
+  let path = "_build/task-resource-lock.json"
+  if @fs.path_exists(path) {
+    @fs.remove_file(path)
+  }
+  let result = dispatch([
+    "resource-lock", "fixtures/artifacts/scalar.wasm", "--out", path,
+  ])
+  inspect(result.exit_code, content="0")
+  inspect(result.stdout.contains("\"unsupported\":0"), content="true")
+  inspect(@fs.is_file(path), content="true")
+  let decoded = @resource.decode_lockfile(
+    @utf8.decode(@fs.read_file_to_bytes(path)[:]),
+  )
+  inspect(decoded.lockfile_version, content="2")
+  inspect(decoded.abi.memories.length(), content="0")
+  @fs.remove_file(path)
 }
 
 ///|

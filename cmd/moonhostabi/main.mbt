@@ -38,6 +38,7 @@ pub(all) enum CliCommand {
   Version
   Inspect(String)
   Lock(String, String)
+  ResourceLock(String, String)
   Check(String, String)
   Verify(String, String, String?)
   Generate(String, String?, String, GenerateMode)
@@ -74,7 +75,7 @@ const MHA_LOCKFILE_INVALID : String = "MHA_LOCKFILE_INVALID"
 const MHA_CONTRACT_INVALID : String = "MHA_CONTRACT_INVALID"
 
 ///|
-const USAGE : String = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
+const USAGE : String = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
 
 ///|
 fn parse_command(args : Array[String]) -> CliCommand? {
@@ -94,6 +95,12 @@ fn parse_command(args : Array[String]) -> CliCommand? {
     args[2] == "--out" &&
     !args[3].is_empty() {
     Some(Lock(args[1], args[3]))
+  } else if args.length() == 4 &&
+    args[0] == "resource-lock" &&
+    !args[1].is_empty() &&
+    args[2] == "--out" &&
+    !args[3].is_empty() {
+    Some(ResourceLock(args[1], args[3]))
   } else if args.length() == 4 &&
     args[0] == "check" &&
     !args[1].is_empty() &&
@@ -247,6 +254,39 @@ fn analyze_artifact(
     wasm_module,
     @projector.default_js_capability_policy(),
   )
+}
+
+///|
+/// Project the host-visible resource inventory into the standalone resource
+/// lock schema. Memory metadata is retained when it is available from the
+/// projection; other resource kinds are recorded as explicit unsupported
+/// entries so a lock never silently drops a host boundary.
+fn resource_abi_from_analysis(
+  analysis : @projector.ProjectionAnalysis,
+) -> @resource.ResourceAbi {
+  let memories : Array[@resource.MemoryResource] = []
+  let unsupported : Array[String] = []
+  for resource in analysis.resources {
+    match resource.kind {
+      @model.Memory =>
+        memories.push(@resource.MemoryResource::{
+          path: match resource.module_name {
+            Some(module_name) => "imports[{module_name}.{resource.name}]"
+            None => "exports[{resource.name}]"
+          },
+          module_name: resource.module_name,
+          name: resource.name,
+          minimum_pages: 0,
+          maximum_pages: None,
+          shared: false,
+          memory64: false,
+          page_size_log2: 16,
+        })
+      @model.Table | @model.Global | @model.Tag =>
+        unsupported.push(resource.stable_text())
+    }
+  }
+  @resource.ResourceAbi::{ schema_version: 2, memories, unsupported, }
 }
 
 ///|
@@ -1095,6 +1135,20 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       {
         exit_code: 0,
         stdout: "{\"written\":\{json_string(output_path)}}",
+        stderr: "",
+      }
+    }
+    ResourceLock(artifact_path, output_path) => {
+      let artifact = read_bytes(artifact_path)
+      let analysis = analyze_artifact(artifact)
+      let resource_abi = resource_abi_from_analysis(analysis)
+      let encoded = @resource.encode_lockfile(
+        @resource.create_lockfile(resource_abi, artifact),
+      )
+      write_new_file(output_path, @utf8.encode(encoded))
+      {
+        exit_code: 0,
+        stdout: "{\"written\":\{json_string(output_path)},\"unsupported\":\{resource_abi.unsupported.length()}}",
         stderr: "",
       }
     }

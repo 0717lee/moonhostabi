@@ -76,6 +76,7 @@ Run the native CLI from source:
 ```powershell
 moon run cmd/moonhostabi --target native inspect <artifact.wasm> --format json
 moon run cmd/moonhostabi --target native lock <artifact.wasm> --out <lock.json>
+moon run cmd/moonhostabi --target native resource-lock <artifact.wasm> --out <resource-lock.json>
 moon run cmd/moonhostabi --target native check <artifact.wasm> --against <lock.json>
 moon run cmd/moonhostabi --target native verify <artifact.wasm> --against <lock.json> --format json
 moon run cmd/moonhostabi --target native verify <artifact.wasm> --against <lock.json> --contract <contract.json> --format json
