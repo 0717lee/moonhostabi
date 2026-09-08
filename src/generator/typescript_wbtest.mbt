@@ -440,3 +440,27 @@ test "duplicate JavaScript import and export keys fail closed" {
   inspect(generated.diagnostics[0].path, content="imports[host.same]")
   inspect(generated.diagnostics[1].path, content="exports[same]")
 }
+
+///|
+test "generator resource entry accepts opaque guards for all resource kinds" {
+  let abi = generator_fixture_abi()
+  let contract = @contract.create_contract_draft(abi)
+  let generated = generate_typescript_adapter_with_resources(abi, contract, ResourceContractSources::{
+    memory: Some("{\"schemaVersion\":3}"),
+    table: Some("{\"schemaVersion\":1}"),
+    global: None,
+    tag: Some("{\"schemaVersion\":1}"),
+  })
+  inspect(generated.diagnostics.length(), content="0")
+  inspect(
+    generated.typescript.contains("memoryResourceContract"),
+    content="true",
+  )
+  inspect(generated.typescript.contains("guards.table"), content="true")
+  inspect(
+    generated.typescript.contains("instantiateWithResources"),
+    content="true",
+  )
+  let manifest = decode_generation_manifest(generated.manifest)
+  inspect(manifest.abi_fingerprint(), content=generated.abi_sha256)
+}

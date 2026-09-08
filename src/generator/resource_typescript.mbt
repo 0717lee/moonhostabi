@@ -115,3 +115,78 @@ pub fn generate_typescript_adapter_with_memory(
     diagnostics,
   }
 }
+
+///|
+/// JSON contract sources for the four Wasm resource kinds. The generator keeps
+/// these opaque so runtime packages can evolve their own guard implementations.
+pub(all) struct ResourceContractSources {
+  memory : String?
+  table : String?
+  global : String?
+  tag : String?
+} derive(Eq, Debug)
+
+///|
+fn resource_source(value : String?) -> String {
+  match value {
+    Some(text) => if text.trim().is_empty() { "null" } else { text }
+    None => "null"
+  }
+}
+
+///|
+fn render_resource_runtime(sources : ResourceContractSources) -> String {
+  let lines = [
+    "",
+    "export interface ResourceGuards {",
+    "  memory?: (exports: WebAssembly.Exports, contract: unknown) => void;",
+    "  table?: (exports: WebAssembly.Exports, contract: unknown) => void;",
+    "  global?: (exports: WebAssembly.Exports, contract: unknown) => void;",
+    "  tag?: (exports: WebAssembly.Exports, contract: unknown) => void;",
+    "}",
+    "const memoryResourceContract: unknown = \{resource_source(sources.memory)};",
+    "const tableResourceContract: unknown = \{resource_source(sources.table)};",
+    "const globalResourceContract: unknown = \{resource_source(sources.global)};",
+    "const tagResourceContract: unknown = \{resource_source(sources.tag)};",
+    "",
+    "export async function instantiateWithResources<HostToken = unknown>(",
+    "  bytes: BufferSource,",
+    "  imports: HostImports<HostToken>,",
+    "  guards: ResourceGuards,",
+    "): Promise<ModuleExports<HostToken>> {",
+    "  const exports = await instantiate(bytes, imports);",
+    "  if (memoryResourceContract !== null && guards.memory) guards.memory(exports as unknown as WebAssembly.Exports, memoryResourceContract);",
+    "  if (tableResourceContract !== null && guards.table) guards.table(exports as unknown as WebAssembly.Exports, tableResourceContract);",
+    "  if (globalResourceContract !== null && guards.global) guards.global(exports as unknown as WebAssembly.Exports, globalResourceContract);",
+    "  if (tagResourceContract !== null && guards.tag) guards.tag(exports as unknown as WebAssembly.Exports, tagResourceContract);",
+    "  return exports;",
+    "}",
+  ]
+  lines.join("\n") + "\n"
+}
+
+///|
+/// Generate an adapter with caller-supplied guards for all resource kinds.
+/// Contract JSON remains opaque; this preserves compatibility with independent
+/// runtime guard packages while keeping the legacy function-only API unchanged.
+pub fn generate_typescript_adapter_with_resources(
+  abi : @model.HostAbi,
+  contract : @contract.Contract,
+  sources : ResourceContractSources,
+) -> GenerationResult raise @contract.ContractError {
+  let base = generate_typescript_adapter(abi, contract)
+  if !base.diagnostics.is_empty() {
+    return base
+  }
+  let typescript = base.typescript + render_resource_runtime(sources)
+  let manifest = encode_generation_manifest(
+    create_generation_manifest(base.abi_sha256, base.contract, typescript),
+  )
+  {
+    typescript,
+    contract: base.contract,
+    manifest,
+    abi_sha256: base.abi_sha256,
+    diagnostics: [],
+  }
+}
