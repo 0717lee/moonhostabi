@@ -307,6 +307,7 @@ try {
     'usage:',
     '  moonhostabi inspect <artifact.wasm> --format json',
     '  moonhostabi lock <artifact.wasm> --out <lock.json>',
+    '  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>',
     '  moonhostabi check <artifact.wasm> --against <lock.json>',
     '  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json',
     '  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]',
