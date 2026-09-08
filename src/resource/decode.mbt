@@ -46,9 +46,10 @@ fn required(
   key : String,
   path : String,
 ) -> Json raise ResourceError {
-  value
-  .get(key)
-  .unwrap_or(invalid_resource("\{path}.\{key}: required field is missing"))
+  match value.get(key) {
+    Some(item) => item
+    None => invalid_resource("\{path}.\{key}: required field is missing")
+  }
 }
 
 ///|
