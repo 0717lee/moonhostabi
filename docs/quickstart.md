@@ -132,8 +132,12 @@ The committed local evidence is deliberately split:
 - **Release dry run:** passed for Linux, Windows, and aggregate in run
   `34081936398`; it is separate from the Verification matrix and does not publish
   a GitHub Release.
-- **Mooncakes publication:** `0717lee/moonhostabi@0.1.1` is published. A future
-  version remains pending its own final checks and publication.
+- **Mooncakes publication:** `0717lee/moonhostabi@0.1.1` is published. Future versions must repeat the same checks before publication.
+
+For a short live demonstration, run the repository-owned [judge demo](judge-demo.md).
+It uses the committed `externref` fixture to show inspection, lock creation,
+compatibility verification, and typed adapter generation in one temporary output
+directory.
 
 The quickstart commands do not invoke a remote service or require a hidden
 checkout setting. A green local marker is evidence for the named local check
@@ -178,3 +182,5 @@ result is recorded separately from this local command.
 - [Verification report schema](report-schema.md)
 - [Reproduction bundle guide](../fixtures/reproduction/README.md)
 - [Release dry-run guide](releasing.md)
+- [Judge demo](judge-demo.md)
+- [MoonBit ecosystem follow-up](ecosystem.md)

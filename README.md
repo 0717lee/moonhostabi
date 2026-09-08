@@ -38,6 +38,13 @@ The package check is locally observed on Windows, while the public Verification
 matrix exercises the native CLI path on both Linux and Windows. Release archive
 aggregation remains a separate dispatch-only dry run documented below.
 
+For a short end-to-end presentation, run the [judge demo](docs/judge-demo.md):
+it inspects a compiled artifact, creates a lockfile, verifies a contract, and
+generates the TypeScript adapter in one temporary run.
+
+The project's relationship to nearby MoonBit tooling and its planned ecosystem
+integration points are recorded in [the ecosystem note](docs/ecosystem.md).
+
 ## Reproduce the Spike
 
 Prerequisites are PowerShell 7, a MoonBit toolchain reporting `moon

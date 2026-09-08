@@ -198,7 +198,7 @@ def validate_quickstart(repository: Path) -> None:
         "Linux",
         "mock",
         "remote",
-        "pending",
+        "Future versions must repeat",
         "pwsh -NoProfile -File scripts/verify-command.ps1",
         "pwsh -NoProfile -File scripts/verify-reproduction-bundle.ps1",
         "pwsh -NoProfile -File scripts/verify-release-packaging.ps1",
@@ -225,7 +225,7 @@ def validate_quickstart(repository: Path) -> None:
         "MOONHOSTABI_BUNDLE_STATUS=GO",
         "MOONHOSTABI_PACKAGE_STATUS=GO",
         "remote",
-        "pending",
+        "Future versions must repeat",
     )
     for phrase in required_validation:
         if phrase not in validation:

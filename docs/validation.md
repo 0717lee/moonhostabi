@@ -408,7 +408,8 @@ for both platform packages and aggregate
   those signatures.
 - The proof covers native CLI execution on Windows locally and on both Linux and
   Windows in the public Verification matrix. The separate Release dry run passed
-  for the published candidate; future release commits must repeat that dispatch.
+  for the published candidate. Future versions must repeat the same checks before
+  publication.
 - MoonBit's CI installer is content-hash pinned and receives the official
   installer snapshot `0.10.11+6ff76a5f9` (not the reported `moon` identity
   `0.1.20260827`). The Linux and Windows binary archives are preflighted with
