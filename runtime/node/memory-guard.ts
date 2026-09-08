@@ -5,7 +5,6 @@ export interface MemoryContract {
   kind: "memory";
   exportName: string;
   minimumPages: number;
-  maximumPages?: number;
   shared?: boolean;
 }
 
@@ -21,43 +20,65 @@ function mismatch(message: string): Error {
  * malformed contracts.
  */
 export function assertMemoryContract(
-  exports: WebAssembly.Exports,
-  contract: MemoryContract,
+  exports: unknown,
+  contract: unknown,
 ): WebAssembly.Memory {
+  if (typeof contract !== "object" || contract === null) {
+    throw mismatch("invalid memory contract");
+  }
+  const shape = contract as Record<string, unknown>;
+  const allowedKeys = [
+    "schemaVersion",
+    "kind",
+    "exportName",
+    "minimumPages",
+    "shared",
+  ];
+  const { schemaVersion, kind, exportName, minimumPages, shared } = shape;
   if (
-    contract.schemaVersion !== 1 ||
-    contract.kind !== "memory" ||
-    contract.exportName.length === 0 ||
-    !Number.isInteger(contract.minimumPages) ||
-    contract.minimumPages < 0 ||
-    (contract.maximumPages !== undefined &&
-      (!Number.isInteger(contract.maximumPages) ||
-        contract.maximumPages < contract.minimumPages))
+    Object.keys(shape).some((key) => !allowedKeys.includes(key)) ||
+    !["schemaVersion", "kind", "exportName", "minimumPages"].every((key) =>
+      Object.prototype.hasOwnProperty.call(shape, key),
+    ) ||
+    schemaVersion !== 1 ||
+    kind !== "memory" ||
+    typeof exportName !== "string" ||
+    exportName.length === 0 ||
+    typeof minimumPages !== "number" ||
+    !Number.isInteger(minimumPages) ||
+    minimumPages < 0 ||
+    (shared !== undefined && typeof shared !== "boolean")
   ) {
     throw mismatch("invalid memory contract");
   }
 
-  const value = (exports as Record<string, unknown>)[contract.exportName];
+  const resourceError = `module export exports[${exportName}] must be a WebAssembly.Memory`;
+  if (
+    typeof exports !== "object" ||
+    exports === null ||
+    !Object.prototype.hasOwnProperty.call(exports, exportName)
+  ) {
+    throw mismatch(resourceError);
+  }
+  const value = (exports as Record<string, unknown>)[exportName];
   if (!(value instanceof WebAssembly.Memory)) {
-    throw mismatch(
-      `module export exports[${contract.exportName}] must be a WebAssembly.Memory`,
-    );
+    throw mismatch(resourceError);
   }
 
   const pages = value.buffer.byteLength / 65536;
-  if (pages < contract.minimumPages) {
+  if (pages < minimumPages) {
     throw mismatch(
-      `memory exports[${contract.exportName}] has ${pages} pages; expected at least ${contract.minimumPages}`,
+      `memory exports[${exportName}] has ${pages} pages; expected at least ${minimumPages}`,
     );
   }
 
-  if (contract.shared !== undefined) {
+  if (shared !== undefined) {
     const isShared =
       typeof SharedArrayBuffer !== "undefined" &&
       value.buffer instanceof SharedArrayBuffer;
-    if (isShared !== contract.shared) {
+    if (isShared !== shared) {
       throw mismatch(
-        `memory exports[${contract.exportName}] shared flag does not match contract`,
+        `memory exports[${exportName}] shared flag does not match contract`,
       );
     }
   }

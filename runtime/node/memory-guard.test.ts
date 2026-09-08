@@ -6,7 +6,6 @@ const contract: MemoryContract = {
   kind: "memory",
   exportName: "memory",
   minimumPages: 1,
-  maximumPages: 2,
   shared: false,
 };
 
@@ -18,7 +17,7 @@ assert.throws(
   /MHA_ADAPTER_MISMATCH: module export exports\[memory\] must be a WebAssembly.Memory/,
 );
 assert.throws(
-  () => assertMemoryContract({ memory: 1 } as unknown as WebAssembly.Exports, contract),
+  () => assertMemoryContract({ memory: 1 }, contract),
   /MHA_ADAPTER_MISMATCH: module export exports\[memory\] must be a WebAssembly.Memory/,
 );
 assert.throws(
@@ -28,8 +27,29 @@ assert.throws(
 );
 assert.throws(
   () =>
-    assertMemoryContract({ memory }, { ...contract, maximumPages: 0 }),
+    assertMemoryContract({ memory }, { ...contract, minimumPages: -1 }),
   /MHA_ADAPTER_MISMATCH: invalid memory contract/,
+);
+for (const invalid of [
+  null,
+  undefined,
+  1,
+  "memory",
+  {},
+  { ...contract, maximumPages: 2 },
+]) {
+  assert.throws(
+    () => assertMemoryContract({ memory }, invalid),
+    /MHA_ADAPTER_MISMATCH: invalid memory contract/,
+  );
+}
+assert.throws(
+  () => assertMemoryContract(null, contract),
+  /MHA_ADAPTER_MISMATCH: module export exports\[memory\] must be a WebAssembly.Memory/,
+);
+assert.throws(
+  () => assertMemoryContract(Object.create({ memory }), contract),
+  /MHA_ADAPTER_MISMATCH: module export exports\[memory\] must be a WebAssembly.Memory/,
 );
 
 console.log("memory contract guard: ok");
