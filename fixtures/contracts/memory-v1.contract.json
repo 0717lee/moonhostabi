@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "kind": "memory",
+  "exportName": "memory",
+  "minimumPages": 1,
+  "maximumPages": 2,
+  "shared": false
+}
