@@ -19,6 +19,12 @@ The next ecosystem improvements are deliberately incremental:
    memory contract), with a fixture, adapter behavior, failure diagnostics, and
    documentation for each addition.
 
+An independent downstream smoke project is available at
+[0717lee/moonhostabi-consumer](https://github.com/0717lee/moonhostabi-consumer).
+Its CI resolves `0717lee/moonhostabi@0.1.1` from Mooncakes in a clean project.
+The parser compatibility issue is tracked upstream in
+[wasmoon#512](https://github.com/Milky2018/wasmoon/issues/512).
+
 The current project does not claim to replace MoonBit's compiler diagnostics,
 source API guards, or a general Wasm runtime. Keeping those boundaries explicit
 helps prevent overlap with existing packages and makes future integrations
