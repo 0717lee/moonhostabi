@@ -20,7 +20,7 @@ The core package boundaries are:
 | `src/model`        | `HostAbi`, `AbiFunction`, `AbiValueType`, `AbiResource`, diagnostics                   | Domain values, host resource inventory, and diagnostic codes                 |
 | `src/wasm_adapter` | `parse_artifact`                                                                       | Parse compiled Wasm bytes                                                    |
 | `src/projector`    | `analyze_host_abi` (`ProjectionAnalysis.resources`)                                    | Project function ABI and inventory table, memory, global, and tag boundaries |
-| `src/resource`     | `ResourceAbi`, `create_lockfile`, `create_memory_contract`, `generate_memory_contract` | Versioned memory resource lock and contract protocol                         |
+| `src/resource`     | `ResourceAbi`, `create_lockfile`, `decode_lockfile`, `create_memory_contract`, `decode_memory_contract`, `generate_memory_contract` | Versioned memory resource lock and contract protocol                         |
 | `src/lockfile`     | `canonicalize_host_abi`, `host_abi_sha256`, `create_lockfile`, `encode_lockfile`       | Canonical fingerprints and lockfiles                                         |
 | `src/compat`       | `semantic_policy`, `strict_policy`, `compare_host_abi`, `compare_lockfiles`            | Compatibility decisions                                                      |
 | `src/contract`     | `create_contract_draft`, `decode_contract`, `validate_contract`, `migrate_v1_contract` | Host contract validation                                                     |

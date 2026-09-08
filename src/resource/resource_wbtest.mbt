@@ -30,6 +30,8 @@ test "resource ABI canonicalization and memory contract" {
     generate_memory_contract(abi).contains("\"schemaVersion\":3"),
     content="true",
   )
+  let decoded = decode_memory_contract(encode_memory_contract(contract))
+  inspect(decoded == contract, content="true")
 }
 
 ///|
@@ -42,5 +44,19 @@ test "resource lockfile v2 is deterministic" {
   inspect(
     create_lockfile(abi, b"artifact").schema_sha256.length(),
     content="64",
+  )
+  let lockfile = create_lockfile(abi, b"artifact")
+  inspect(
+    decode_lockfile(encode_lockfile(lockfile)) == lockfile,
+    content="true",
+  )
+  inspect(
+    try {
+      ignore(decode_lockfile(encode_lockfile(lockfile) + " "))
+      false
+    } catch {
+      _ => true
+    },
+    content="true",
   )
 }
