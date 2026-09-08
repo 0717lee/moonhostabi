@@ -24,7 +24,7 @@ The core package boundaries are:
 | `src/lockfile`     | `canonicalize_host_abi`, `host_abi_sha256`, `create_lockfile`, `encode_lockfile`                                                    | Canonical fingerprints and lockfiles                                         |
 | `src/compat`       | `semantic_policy`, `strict_policy`, `compare_host_abi`, `compare_lockfiles`                                                         | Compatibility decisions                                                      |
 | `src/contract`     | `create_contract_draft`, `decode_contract`, `validate_contract`, `migrate_v1_contract`                                              | Host contract validation                                                     |
-| `src/generator`    | `generate_typescript_adapter`, `generate_typescript_adapter_with_memory`                                                            | Strict TypeScript adapter and memory preflight generation                    |
+| `src/generator`    | `generate_typescript_adapter`, `generate_typescript_adapter_with_memory`, `generate_typescript_adapter_with_resources`              | Strict TypeScript adapter and resource preflight generation                  |
 | `src/verification` | `verify_artifact`, `encode_verification_report`                                                                                     | Aggregate machine-readable release reports                                   |
 
 The `cmd/moonhostabi` CLI targets `native`; reusable library packages can be
@@ -55,7 +55,9 @@ the canonical lockfile and contract schemas.
 
 The same runtime boundary now has independent guards for tables, globals, and
 exception tags: `assertTableContract`, `assertGlobalContract`, and
-`assertTagContract`. They validate the JavaScript-observable instance and
+`assertTagContract`. `generate_typescript_adapter_with_resources` can append a
+resource-aware `instantiateWithResources` entrypoint and accepts these guards as
+explicit callbacks. The guards validate JavaScript-observable instance and
 contract fields, while leaving signature details that JavaScript cannot reflect
 to the Wasm artifact analysis layer.
 
@@ -66,6 +68,6 @@ project's review and release process.
 
 `ProjectionAnalysis.resources` is an inventory surface for non-function
 boundaries. It records deterministic details for tables, memories, globals, and
-tags so a host can make an explicit policy decision. The current JavaScript
-adapter still fails closed for these resources; inventory support therefore does
-not imply generated bindings.
+tags so a host can make an explicit policy decision. Resource-aware generation
+now provides the adapter entrypoint and guard callback contract; applications
+still choose and wire the guard implementation for each resource kind.
