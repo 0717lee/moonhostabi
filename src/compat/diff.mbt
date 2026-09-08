@@ -626,6 +626,8 @@ fn finalize_report(changes : Array[AbiChange]) -> CompatibilityReport {
   { classification, changes, }
 }
 
+/// Compare two Host ABI values under the selected semantic or strict policy.
+
 ///|
 pub fn compare_host_abi(
   baseline : @model.HostAbi,
@@ -657,6 +659,8 @@ pub fn compare_host_abi(
   finalize_report(changes)
 }
 
+/// Compare Host ABI values and append parser/projection diagnostics to the report.
+
 ///|
 pub fn compare_host_abi_with_diagnostics(
   baseline : @model.HostAbi,
@@ -677,6 +681,8 @@ pub fn compare_host_abi_with_diagnostics(
   }
   finalize_report(changes)
 }
+
+/// Compare the canonical ABIs stored in two lockfiles.
 
 ///|
 pub fn compare_lockfiles(

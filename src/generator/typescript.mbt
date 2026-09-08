@@ -537,6 +537,11 @@ fn render_typescript(
   lines.join("\n") + "\n"
 }
 
+/// Generate a strict TypeScript/ESM adapter for a validated Host ABI contract.
+///
+/// Unsupported or unrepresentable boundaries are returned as diagnostics and no
+/// adapter source is emitted for them.
+
 ///|
 pub fn generate_typescript_adapter(
   abi : @model.HostAbi,

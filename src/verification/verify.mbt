@@ -38,6 +38,8 @@ fn baseline_report(input : VerificationBaselineInput) -> BaselineReport {
   }
 }
 
+/// Decode a lockfile baseline into the verification input form.
+
 ///|
 pub fn decode_verification_baseline(text : String) -> VerificationBaselineInput {
   ValidBaseline(@lockfile.decode_lockfile(text)) catch {
@@ -151,6 +153,11 @@ fn outcome_from_sections(
     None => VerificationInvalid
   }
 }
+
+/// Verify artifact bytes against a baseline and optional host contract.
+///
+/// The operation parses and analyzes bytes without instantiating or executing
+/// the artifact, then returns the canonical report sections used by the CLI.
 
 ///|
 pub fn verify_artifact(

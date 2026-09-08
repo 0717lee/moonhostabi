@@ -1,8 +1,11 @@
 # Release dry-run guide
 
 MoonHostABI's release workflow builds and aggregates immutable artifacts but
-does not publish a tag or GitHub Release. Publication remains disabled until a
-human authorizes the exact commit after both remote matrix jobs pass.
+does not publish a tag or GitHub Release automatically. The `v0.1.1` tag and
+GitHub Release were published manually after the remote matrix jobs passed.
+Future releases should repeat that approval step for the exact commit.
+
+See the [v0.1.1 GitHub Release](https://github.com/0717lee/moonhostabi/releases/tag/v0.1.1).
 
 ## Release outputs
 

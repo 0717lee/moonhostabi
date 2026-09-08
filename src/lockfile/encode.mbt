@@ -95,15 +95,21 @@ fn encode_canonical_host_abi(abi : @model.HostAbi) -> String {
   "{\"schemaVersion\":\{abi.schema_version},\"imports\":\{encode_functions(abi.imports)},\"exports\":\{encode_functions(abi.exports)},\"types\":\{encode_type_definitions(abi.types)},\"features\":\{encode_string_array(abi.features)}}"
 }
 
+/// Return the canonical ABI JSON used for lockfile fingerprints.
+
 ///|
 pub fn encode_canonical_abi(abi : @model.HostAbi) -> String {
   encode_canonical_host_abi(canonicalize_host_abi(abi))
 }
 
+/// Compute the SHA-256 fingerprint of the canonical Host ABI JSON.
+
 ///|
 pub fn host_abi_sha256(abi : @model.HostAbi) -> String {
   sha256_text(encode_canonical_abi(abi))
 }
+
+/// Create a lockfile from an ABI and the exact artifact bytes that produced it.
 
 ///|
 pub fn create_lockfile(abi : @model.HostAbi, artifact : Bytes) -> AbiLockfile {

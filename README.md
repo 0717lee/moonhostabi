@@ -48,6 +48,11 @@ integration points are recorded in [the ecosystem note](docs/ecosystem.md).
 Release history is in [CHANGELOG.md](CHANGELOG.md); contribution and local gate
 instructions are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
+The native CLI is the recommended integration point; reusable library packages
+can be checked for supported MoonBit targets. The generated `adapter.ts` is the
+JavaScript/TypeScript host boundary. See the [library API guide](docs/library-api.md)
+before importing packages from a downstream module.
+
 ## Reproduce the Spike
 
 Prerequisites are PowerShell 7, a MoonBit toolchain reporting `moon
