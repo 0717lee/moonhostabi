@@ -440,6 +440,23 @@ test "non-function public ABI items produce explicit diagnostics" {
   inspect(analysis.diagnostics[3].path, content="imports[env.tag]")
   inspect(analysis.diagnostics[4].path, content="exports[table]")
   inspect(analysis.diagnostics[7].path, content="exports[tag]")
+  inspect(analysis.resources.length(), content="8")
+  inspect(
+    analysis.resources
+    .map(fn(resource) { resource.stable_text() })
+    .join("|")
+    .contains("resource export global global(index=0)"),
+    content="true",
+  )
+  inspect(
+    analysis.resources
+    .map(fn(resource) { resource.stable_text() })
+    .join("|")
+    .contains(
+      "resource import env.table table(elem=externref,min=1,max=none,table64=false)",
+    ),
+    content="true",
+  )
 }
 
 ///|

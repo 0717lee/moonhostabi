@@ -127,3 +127,41 @@ pub(all) struct HostAbi {
   types : Array[AbiTypeDef]
   features : Array[String]
 } derive(Eq, Debug)
+
+///|
+/// A non-function item crossing the Wasm host boundary.
+///
+/// Resources are inventory-only in the current adapter: they are surfaced so
+/// callers can inspect and gate them explicitly while generation remains
+/// fail-closed for unsupported JavaScript bindings.
+pub(all) enum AbiResourceKind {
+  Table
+  Memory
+  Global
+  Tag
+} derive(Eq, Debug)
+
+///|
+/// A table, memory, global, or exception tag import/export.
+pub(all) struct AbiResource {
+  module_name : String?
+  name : String
+  kind : AbiResourceKind
+  details : String
+} derive(Eq, Debug)
+
+///|
+/// Return a deterministic, human- and machine-readable resource summary.
+pub fn AbiResource::stable_text(self : AbiResource) -> String {
+  let direction = match self.module_name {
+    Some(module_name) => "import \{module_name}.\{self.name}"
+    None => "export \{self.name}"
+  }
+  let kind = match self.kind {
+    Table => "table"
+    Memory => "memory"
+    Global => "global"
+    Tag => "tag"
+  }
+  "resource \{direction} \{kind}(\{self.details})"
+}

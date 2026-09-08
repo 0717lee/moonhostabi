@@ -17,8 +17,9 @@ The core package boundaries are:
 
 | Package | Stable entry points | Purpose |
 | --- | --- | --- |
-| `src/model` | `HostAbi`, `AbiFunction`, `AbiValueType`, diagnostics | Domain values and diagnostic codes |
+| `src/model` | `HostAbi`, `AbiFunction`, `AbiValueType`, `AbiResource`, diagnostics | Domain values, host resource inventory, and diagnostic codes |
 | `src/wasm_adapter` | `parse_artifact` | Parse compiled Wasm bytes |
+| `src/projector` | `analyze_host_abi` (`ProjectionAnalysis.resources`) | Project function ABI and inventory table, memory, global, and tag boundaries |
 | `src/lockfile` | `canonicalize_host_abi`, `host_abi_sha256`, `create_lockfile`, `encode_lockfile` | Canonical fingerprints and lockfiles |
 | `src/compat` | `semantic_policy`, `strict_policy`, `compare_host_abi`, `compare_lockfiles` | Compatibility decisions |
 | `src/contract` | `create_contract_draft`, `decode_contract`, `validate_contract`, `migrate_v1_contract` | Host contract validation |
@@ -34,3 +35,9 @@ Lockfile schema v1 and contract schema v2 are versioned contracts. Treat
 unknown schema versions, unsupported public Wasm items, and unrepresentable
 values as failures. Keep generated adapters and lockfiles under the downstream
 project's review and release process.
+
+`ProjectionAnalysis.resources` is an inventory surface for non-function
+boundaries. It records deterministic details for tables, memories, globals, and
+tags so a host can make an explicit policy decision. The current JavaScript
+adapter still fails closed for these resources; inventory support therefore does
+not imply generated bindings.
