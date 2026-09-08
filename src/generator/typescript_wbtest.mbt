@@ -36,6 +36,39 @@ fn generator_fixture_abi() -> @model.HostAbi {
 }
 
 ///|
+test "generator adds memory resource preflight without changing legacy output" {
+  let abi = generator_fixture_abi()
+  let contract = @contract.create_contract_draft(abi)
+  let resource_contract = @resource.create_memory_contract(@resource.ResourceAbi::{
+    schema_version: 2,
+    memories: [
+      {
+        path: "exports[memory]",
+        module_name: None,
+        name: "memory",
+        minimum_pages: 1L,
+        maximum_pages: None,
+        shared: false,
+        memory64: false,
+        page_size_log2: 16,
+      },
+    ],
+    unsupported: [],
+  })
+  let generated = generate_typescript_adapter_with_memory(
+    abi, contract, resource_contract,
+  )
+  inspect(generated.diagnostics.length(), content="0")
+  inspect(
+    generated.typescript.contains("instantiateWithResources"),
+    content="true",
+  )
+  inspect(generated.typescript.contains("WebAssembly.Memory"), content="true")
+  let manifest = decode_generation_manifest(generated.manifest)
+  inspect(manifest.abi_fingerprint(), content=generated.abi_sha256)
+}
+
+///|
 fn generate_draft(
   abi : @model.HostAbi,
 ) -> GenerationResult raise @contract.ContractError {
