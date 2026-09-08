@@ -54,6 +54,15 @@ Expected final marker:
 MOONHOSTABI_VERIFY_STATUS=GO
 ```
 
+To create a standalone host-resource inventory lock, run the native CLI with a
+compiled artifact. Memory entries are fingerprinted; table, global, and tag
+entries are retained in the lock's `unsupported` list for an explicit,
+fail-closed review:
+
+```powershell
+moon run cmd/moonhostabi --target native resource-lock <artifact.wasm> --out <resource-lock.json>
+```
+
 The script also prints the individual help, version, timeout, exit-code,
 canonical-report, Unicode-path, and no-host-execution markers. A successful
 exit code and the marker are both required.
