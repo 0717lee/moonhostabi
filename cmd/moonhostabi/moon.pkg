@@ -9,6 +9,7 @@ import {
   "0717lee/moonhostabi/src/resource",
   "0717lee/moonhostabi/src/verification",
   "0717lee/moonhostabi/src/wasm_adapter",
+  "Milky2018/wasm_core/types" @wasm_types,
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",

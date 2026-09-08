@@ -146,6 +146,27 @@ test "help and version have exact stdout-only contracts" {
 }
 
 ///|
+test "resource-lock writes a canonical inventory lockfile" {
+  let path = "_build/task-resource-lock.json"
+  if @fs.path_exists(path) {
+    @fs.remove_file(path)
+  }
+  let result = dispatch([
+    "resource-lock", "fixtures/artifacts/scalar.wasm", "--out", path,
+  ])
+  inspect(result.exit_code, content="0")
+  inspect(result.stderr, content="")
+  inspect(@fs.is_file(path), content="true")
+  let lock = @resource.decode_lockfile(@fs.read_file_to_string(path)) catch {
+    error => fail(error.to_string())
+  }
+  inspect(lock.lockfile_version, content="2")
+  inspect(lock.abi.memories.length(), content="0")
+  inspect(lock.abi.unsupported.length(), content="0")
+  @fs.remove_file(path)
+}
+
+///|
 test "verify dispatch reports success and readable invalid inputs on stdout" {
   let lock_path = "_build/task5-verify.lock.json"
   let invalid_lock_path = "_build/task5-invalid.lock.json"

@@ -263,25 +263,76 @@ fn analyze_artifact(
 /// entries so a lock never silently drops a host boundary.
 fn resource_abi_from_analysis(
   analysis : @projector.ProjectionAnalysis,
+  wasm_module : @wasm_types.Module,
 ) -> @resource.ResourceAbi {
   let memories : Array[@resource.MemoryResource] = []
   let unsupported : Array[String] = []
   for resource in analysis.resources {
     match resource.kind {
-      @model.Memory =>
+      @model.Memory => {
+        let memory = match resource.module_name {
+          Some(module_name) => {
+            let mut found : @wasm_types.MemoryType? = None
+            for imported in wasm_module.imports {
+              if imported.mod_name == module_name &&
+                imported.name == resource.name {
+                match imported.desc {
+                  @wasm_types.Memory(value) => found = Some(value)
+                  _ => ()
+                }
+              }
+            }
+            found
+          }
+          None => {
+            let mut memory_index = 0
+            for imported in wasm_module.imports {
+              if imported.desc is @wasm_types.Memory(_) {
+                memory_index += 1
+              }
+            }
+            let mut found : @wasm_types.MemoryType? = None
+            for exported in wasm_module.exports {
+              if exported.name == resource.name {
+                match exported.desc {
+                  @wasm_types.Memory(index) => {
+                    let defined = index - memory_index
+                    if defined >= 0 && defined < wasm_module.memories.length() {
+                      found = Some(wasm_module.memories[defined])
+                    }
+                  }
+                  _ => ()
+                }
+              }
+            }
+            found
+          }
+        }
+        let (minimum_pages, maximum_pages, memory64, page_size_log2) = match
+          memory {
+          Some(value) =>
+            (
+              value.limits.min,
+              value.limits.max,
+              value.is_memory64,
+              value.page_size_log2,
+            )
+          None => (0L, None, false, 16)
+        }
         memories.push(@resource.MemoryResource::{
           path: match resource.module_name {
-            Some(module_name) => "imports[{module_name}.{resource.name}]"
-            None => "exports[{resource.name}]"
+            Some(module_name) => "imports[\{module_name}.\{resource.name}]"
+            None => "exports[\{resource.name}]"
           },
           module_name: resource.module_name,
           name: resource.name,
-          minimum_pages: 0,
-          maximum_pages: None,
+          minimum_pages,
+          maximum_pages,
           shared: false,
-          memory64: false,
-          page_size_log2: 16,
+          memory64,
+          page_size_log2,
         })
+      }
       @model.Table | @model.Global | @model.Tag =>
         unsupported.push(resource.stable_text())
     }
@@ -1141,7 +1192,16 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
     ResourceLock(artifact_path, output_path) => {
       let artifact = read_bytes(artifact_path)
       let analysis = analyze_artifact(artifact)
-      let resource_abi = resource_abi_from_analysis(analysis)
+      let resource_abi = resource_abi_from_analysis(
+        analysis,
+        @wasm_adapter.parse_artifact(artifact) catch {
+          error =>
+            raise CliExecutionError(
+              @model.MHA_PARSE_MALFORMED,
+              error.to_string(),
+            )
+        },
+      )
       let encoded = @resource.encode_lockfile(
         @resource.create_lockfile(resource_abi, artifact),
       )
