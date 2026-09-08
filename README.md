@@ -11,8 +11,6 @@ runtime observations, and limits.
 
 Published package: `0717lee/moonhostabi@0.1.1` on Mooncakes.
 
-Tagged release: [v0.1.1](https://github.com/0717lee/moonhostabi/releases/tag/v0.1.1).
-
 ## Independent scope
 
 MoonHostABI is an artifact-first Wasm-GC host-boundary toolchain. It consumes
@@ -46,6 +44,9 @@ generates the TypeScript adapter in one temporary run.
 
 The project's relationship to nearby MoonBit tooling and its planned ecosystem
 integration points are recorded in [the ecosystem note](docs/ecosystem.md).
+
+Release history is in [CHANGELOG.md](CHANGELOG.md); contribution and local gate
+instructions are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Reproduce the Spike
 
