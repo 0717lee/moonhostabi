@@ -53,6 +53,12 @@ and throws `MHA_ADAPTER_MISMATCH` on failure. It is intentionally separate from
 the current function-only generated adapter until resource fields are added to
 the canonical lockfile and contract schemas.
 
+The same runtime boundary now has independent guards for tables, globals, and
+exception tags: `assertTableContract`, `assertGlobalContract`, and
+`assertTagContract`. They validate the JavaScript-observable instance and
+contract fields, while leaving signature details that JavaScript cannot reflect
+to the Wasm artifact analysis layer.
+
 Lockfile schema v1 and contract schema v2 are versioned contracts. Treat
 unknown schema versions, unsupported public Wasm items, and unrepresentable
 values as failures. Keep generated adapters and lockfiles under the downstream

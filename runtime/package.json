@@ -4,7 +4,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "test:node": "npm run build && node dist/node/verify.js && node dist/node/verify-negative.js && node dist/node/memory-guard.test.js",
+    "test:node": "npm run build && node dist/node/verify.js && node dist/node/verify-negative.js && node dist/node/memory-guard.test.js && node dist/node/resource-guards.test.js",
     "test:browser": "npm run build && playwright test --config playwright.config.ts browser/verify.spec.ts"
   },
   "devDependencies": {

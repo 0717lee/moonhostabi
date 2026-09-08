@@ -32,6 +32,19 @@ test "resource ABI canonicalization and memory contract" {
   )
   let decoded = decode_memory_contract(encode_memory_contract(contract))
   inspect(decoded == contract, content="true")
+  let fractional = encode_memory_contract(contract).replace(
+    old="\"minimumPages\":1",
+    new="\"minimumPages\":1.5",
+  )
+  inspect(
+    try {
+      ignore(decode_memory_contract(fractional))
+      false
+    } catch {
+      _ => true
+    },
+    content="true",
+  )
 }
 
 ///|
@@ -53,6 +66,19 @@ test "resource lockfile v2 is deterministic" {
   inspect(
     try {
       ignore(decode_lockfile(encode_lockfile(lockfile) + " "))
+      false
+    } catch {
+      _ => true
+    },
+    content="true",
+  )
+  let bad_hash = encode_lockfile(lockfile).replace(
+    old=lockfile.artifact_sha256,
+    new="not-a-sha",
+  )
+  inspect(
+    try {
+      ignore(decode_lockfile(bad_hash))
       false
     } catch {
       _ => true
