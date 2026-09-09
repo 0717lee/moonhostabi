@@ -8,7 +8,7 @@ verification packages when they need an in-process gate.
 Add the published module to a downstream MoonBit project:
 
 ```powershell
-moon add 0717lee/moonhostabi@0.3.0
+moon add 0717lee/moonhostabi@0.4.0
 moon update
 moon check
 ```

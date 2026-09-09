@@ -21,7 +21,7 @@ The next ecosystem improvements are deliberately incremental:
 
 An independent downstream smoke project is available at
 [0717lee/moonhostabi-consumer](https://github.com/0717lee/moonhostabi-consumer).
-Its CI resolves `0717lee/moonhostabi@0.3.0` from Mooncakes in a clean project.
+Its CI resolves `0717lee/moonhostabi@0.4.0` from Mooncakes in a clean project.
 The parser compatibility issue is tracked upstream in
 [wasmoon#512](https://github.com/Milky2018/wasmoon/issues/512).
 
