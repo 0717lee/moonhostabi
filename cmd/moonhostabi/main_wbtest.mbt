@@ -47,7 +47,7 @@ test "argument parsing is pure and order-sensitive" {
   guard parse_command([
       "generate", "module.wasm", "--contract", "contract.json", "--out", "generated",
     ])
-    is Some(Generate(artifact, Some(contract), output, Fresh)) else {
+    is Some(Generate(artifact, Some(contract), None, output, Fresh)) else {
     fail("expected generate command")
   }
   inspect(artifact, content="module.wasm")
@@ -56,13 +56,13 @@ test "argument parsing is pure and order-sensitive" {
   guard parse_command([
       "generate", "module.wasm", "--out", "generated", "--update",
     ])
-    is Some(Generate(_, None, _, Update)) else {
+    is Some(Generate(_, None, None, _, Update)) else {
     fail("expected update command")
   }
   guard parse_command([
       "generate", "module.wasm", "--out", "generated", "--dry-run",
     ])
-    is Some(Generate(_, None, _, DryRun)) else {
+    is Some(Generate(_, None, None, _, DryRun)) else {
     fail("expected dry-run command")
   }
   guard parse_command([
@@ -131,7 +131,7 @@ test "argument parsing is pure and order-sensitive" {
 
 ///|
 test "help and version have exact stdout-only contracts" {
-  let expected_help = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
+  let expected_help = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>\n  moonhostabi resource-lock-v3 <artifact.wasm> --out <resource-lock-v3.json>\n  moonhostabi resource-verify <artifact.wasm> --against <resource-lock-v3.json> --format json\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
   let help = dispatch(["--help"])
   inspect(help.exit_code, content="0")
   inspect(help.stdout, content=expected_help)
@@ -550,6 +550,7 @@ fn transaction_fixture() -> @generator.GenerationResult raise {
   generate_adapter(
     analysis.abi,
     Some(@fs.read_file_to_string("fixtures/contracts/externref.contract.json")),
+    None,
   )
 }
 

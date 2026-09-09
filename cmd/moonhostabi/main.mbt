@@ -276,7 +276,7 @@ fn analyze_artifact(
 /// entries so a lock never silently drops a host boundary.
 fn resource_abi_from_analysis(
   analysis : @projector.ProjectionAnalysis,
-  wasm_module : @wasm_types.wasm,
+  wasm_module : @wasm_types.Module,
 ) -> @resource.ResourceAbi {
   let memories : Array[@resource.MemoryResource] = []
   let unsupported : Array[String] = []
@@ -355,7 +355,7 @@ fn resource_abi_from_analysis(
 
 fn resource_surface_from_analysis(
   analysis : @projector.ProjectionAnalysis,
-  wasm_module : @wasm_types.wasm,
+  wasm_module : @wasm_types.Module,
 ) -> @resource.ResourceSurface {
   let legacy = resource_abi_from_analysis(analysis, wasm_module)
   @resource.ResourceSurface::{
@@ -1274,7 +1274,6 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       let analysis = @projector.analyze_host_abi(wasm, @projector.default_js_capability_policy())
       let current = resource_surface_from_analysis(analysis, wasm)
       let compatible = @resource.encode_resource_surface(baseline.abi) == @resource.encode_resource_surface(current)
-      let status = if compatible { "compatible" } else { "breaking" }
       let code = if compatible { 0 } else { exit_code_for_failure(BreakingAbi) }
       { exit_code: code, stdout: "{\"schemaVersion\":1,\"classification\":{json_string(status)},\"baselineAbiSha256\":{json_string(baseline.abi_sha256)},\"currentAbiSha256\":{json_string(@resource.resource_surface_sha256(current))}}", stderr: "", }
     }
