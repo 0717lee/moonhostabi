@@ -310,3 +310,41 @@ test "verification outcome precedence is stable for combined failures" {
   )
   inspect(invalid_baseline_and_contract.recommended_exit_code(), content="3")
 }
+
+///|
+test "resource compatibility is optional and uses schema v2" {
+  let artifact = @fs.read_file_to_bytes("fixtures/artifacts/scalar.wasm")
+  let baseline_resources = Some([
+    @model.AbiResource::{
+      module_name: None,
+      name: "memory",
+      kind: @model.Memory,
+      details: "min=1",
+    },
+  ])
+  let report = verify_artifact_with_resources(
+    artifact,
+    verification_test_baseline(artifact),
+    ContractNotProvided,
+    baseline_resources,
+  )
+  inspect(report.outcome == VerificationBreaking, content="true")
+  inspect(report.recommended_exit_code(), content="2")
+  inspect(
+    encode_verification_report(report).contains("\"schemaVersion\":2"),
+    content="true",
+  )
+  inspect(
+    encode_verification_report(report).contains(
+      "\"resources\":{\"status\":\"evaluated\"",
+    ),
+    content="true",
+  )
+  match report.resource_compatibility {
+    Some(resources) => {
+      inspect(resources.classification == @compat.Breaking, content="true")
+      inspect(resources.changes[0].code, content="MHA_RESOURCE_REMOVED")
+    }
+    None => fail("expected resource compatibility section")
+  }
+}

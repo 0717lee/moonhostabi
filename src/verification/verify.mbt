@@ -126,6 +126,7 @@ fn verify_contract(
 fn outcome_from_sections(
   baseline : BaselineReport,
   compatibility : @compat.CompatibilityReport?,
+  resource_compatibility : @compat.CompatibilityReport?,
   contract : ContractReport,
   generator : GeneratorReport,
 ) -> VerificationOutcome {
@@ -139,6 +140,13 @@ fn outcome_from_sections(
         return VerificationUnknown
       }
   }
+  match resource_compatibility {
+    Some(report) =>
+      if report.classification == @compat.Unknown {
+        return VerificationUnknown
+      }
+    None => ()
+  }
   if contract is ContractInvalidReport(_) ||
     generator is GeneratorUnrepresentable(_) {
     return VerificationAdapterMismatch
@@ -148,7 +156,15 @@ fn outcome_from_sections(
       if report.classification == @compat.Breaking {
         VerificationBreaking
       } else {
-        VerificationCompatible
+        match resource_compatibility {
+          Some(resource_report) =>
+            if resource_report.classification == @compat.Breaking {
+              VerificationBreaking
+            } else {
+              VerificationCompatible
+            }
+          None => VerificationCompatible
+        }
       }
     None => VerificationInvalid
   }
@@ -164,6 +180,19 @@ pub fn verify_artifact(
   artifact : Bytes,
   baseline_input : VerificationBaselineInput,
   contract_input : VerificationContractInput,
+) -> VerificationReport {
+  verify_artifact_with_resources(artifact, baseline_input, contract_input, None)
+}
+
+///|
+/// Verify an artifact and optionally compare its non-function resources with a
+/// caller-provided baseline. The optional section keeps the original v1 report
+/// and function-only verification API fully backward compatible.
+pub fn verify_artifact_with_resources(
+  artifact : Bytes,
+  baseline_input : VerificationBaselineInput,
+  contract_input : VerificationContractInput,
+  baseline_resources : Array[@model.AbiResource]?,
 ) -> VerificationReport {
   let artifact_sha256 = @lockfile.sha256_hex(artifact)
   let baseline = baseline_report(baseline_input)
@@ -197,6 +226,7 @@ pub fn verify_artifact(
         provenance_artifact_match: None,
         provenance_abi_match: None,
         compatibility: None,
+        resource_compatibility: None,
         contract,
         generator: GeneratorNotEvaluated,
       }
@@ -221,9 +251,13 @@ pub fn verify_artifact(
         InvalidBaseline(_) => (None, None, None)
       }
       let (contract, generator) = verify_contract(analysis.abi, contract_input)
+      let resource_compatibility = optional_resource_report(
+        baseline_resources,
+        analysis.resources,
+      )
       VerificationReport::{
         outcome: outcome_from_sections(
-          baseline, compatibility, contract, generator,
+          baseline, compatibility, resource_compatibility, contract, generator,
         ),
         artifact_status: if analysis.diagnostics.is_empty() {
           ArtifactValid
@@ -237,6 +271,7 @@ pub fn verify_artifact(
         provenance_artifact_match,
         provenance_abi_match,
         compatibility,
+        resource_compatibility,
         contract,
         generator,
       }

@@ -46,6 +46,9 @@ pub struct VerificationReport {
   provenance_artifact_match : Bool?
   provenance_abi_match : Bool?
   compatibility : @compat.CompatibilityReport?
+  /// Optional non-function resource compatibility section. When present,
+  /// reports are encoded as schema version 2; legacy reports remain v1.
+  resource_compatibility : @compat.CompatibilityReport?
   contract : ContractReport
   generator : GeneratorReport
 } derive(Eq, Debug)
@@ -162,6 +165,15 @@ fn encode_compatibility_report(
 }
 
 ///|
+/// Encode the optional resource compatibility section. Its shape intentionally
+/// mirrors the function compatibility section so consumers can reuse decoders.
+fn encode_resource_compatibility_report(
+  compatibility : @compat.CompatibilityReport?,
+) -> String {
+  encode_compatibility_report(compatibility)
+}
+
+///|
 fn encode_contract_report(contract : ContractReport) -> String {
   match contract {
     ContractNotProvidedReport =>
@@ -187,7 +199,16 @@ fn encode_generator_report(generator : GeneratorReport) -> String {
 
 ///|
 pub fn encode_verification_report(report : VerificationReport) -> String {
-  "{\"schemaVersion\":1,\"outcome\":\{report_json_string(report_outcome(report.outcome))},\"artifact\":{\"status\":\{report_json_string(report_artifact_status(report.artifact_status))},\"sha256\":\{report_json_string(report.artifact_sha256)},\"abiSha256\":\{report_optional_string(report.artifact_abi_sha256)},\"diagnostics\":\{encode_report_diagnostics(report.artifact_diagnostics)}},\"baseline\":\{encode_baseline_report(report.baseline)},\"provenance\":{\"artifactMatchesBaseline\":\{report_optional_bool(report.provenance_artifact_match)},\"abiMatchesBaseline\":\{report_optional_bool(report.provenance_abi_match)}},\"compatibility\":\{encode_compatibility_report(report.compatibility)},\"contract\":\{encode_contract_report(report.contract)},\"generator\":\{encode_generator_report(report.generator)}}"
+  let schema_version = match report.resource_compatibility {
+    Some(_) => 2
+    None => 1
+  }
+  let resource_section = match report.resource_compatibility {
+    Some(value) =>
+      ",\"resources\":\{encode_resource_compatibility_report(Some(value))}"
+    None => ""
+  }
+  "{\"schemaVersion\":\{schema_version},\"outcome\":\{report_json_string(report_outcome(report.outcome))},\"artifact\":{\"status\":\{report_json_string(report_artifact_status(report.artifact_status))},\"sha256\":\{report_json_string(report.artifact_sha256)},\"abiSha256\":\{report_optional_string(report.artifact_abi_sha256)},\"diagnostics\":\{encode_report_diagnostics(report.artifact_diagnostics)}},\"baseline\":\{encode_baseline_report(report.baseline)},\"provenance\":{\"artifactMatchesBaseline\":\{report_optional_bool(report.provenance_artifact_match)},\"abiMatchesBaseline\":\{report_optional_bool(report.provenance_abi_match)}},\"compatibility\":\{encode_compatibility_report(report.compatibility)}\{resource_section},\"contract\":\{encode_contract_report(report.contract)},\"generator\":\{encode_generator_report(report.generator)}}"
 }
 
 ///|
