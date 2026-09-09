@@ -105,12 +105,17 @@ fn parse_command(args : Array[String]) -> CliCommand? {
     Some(ResourceLock(args[1], args[3]))
   } else if args.length() == 4 &&
     args[0] == "resource-lock-v3" &&
-    !args[1].is_empty() && args[2] == "--out" && !args[3].is_empty() {
+    !args[1].is_empty() &&
+    args[2] == "--out" &&
+    !args[3].is_empty() {
     Some(ResourceLockV3(args[1], args[3]))
   } else if args.length() == 6 &&
-    args[0] == "resource-verify" && !args[1].is_empty() &&
-    args[2] == "--against" && !args[3].is_empty() &&
-    args[4] == "--format" && args[5] == "json" {
+    args[0] == "resource-verify" &&
+    !args[1].is_empty() &&
+    args[2] == "--against" &&
+    !args[3].is_empty() &&
+    args[4] == "--format" &&
+    args[5] == "json" {
     Some(ResourceVerify(args[1], args[3]))
   } else if args.length() == 4 &&
     args[0] == "check" &&
@@ -150,7 +155,13 @@ fn parse_command(args : Array[String]) -> CliCommand? {
     args[4] == "--out" &&
     !args[5].is_empty() {
     Some(Generate(args[1], Some(args[3]), None, args[5], Fresh))
-  } else if args.length() == 6 && args[0] == "generate" && !args[1].is_empty() && args[2] == "--resource-contract" && !args[3].is_empty() && args[4] == "--out" && !args[5].is_empty() {
+  } else if args.length() == 6 &&
+    args[0] == "generate" &&
+    !args[1].is_empty() &&
+    args[2] == "--resource-contract" &&
+    !args[3].is_empty() &&
+    args[4] == "--out" &&
+    !args[5].is_empty() {
     Some(Generate(args[1], None, Some(args[3]), args[5], Fresh))
   } else if args.length() == 5 &&
     args[0] == "generate" &&
@@ -353,6 +364,7 @@ fn resource_abi_from_analysis(
   @resource.ResourceAbi::{ schema_version: 2, memories, unsupported, }
 }
 
+///|
 fn resource_surface_from_analysis(
   analysis : @projector.ProjectionAnalysis,
   wasm_module : @wasm_types.Module,
@@ -502,17 +514,24 @@ fn generate_adapter(
       raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
   }
   match resource_contract_text {
-    None => @generator.generate_typescript_adapter(abi, contract) catch {
-      error => raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
-    }
+    None =>
+      @generator.generate_typescript_adapter(abi, contract) catch {
+        error =>
+          raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
+      }
     Some(resource_text) => {
       ignore(@resource.decode_resource_contract(resource_text)) catch {
-        error => raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
+        error =>
+          raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
       }
       @generator.generate_typescript_adapter_with_resources(abi, contract, @generator.ResourceContractSources::{
-        memory: Some(resource_text), table: Some(resource_text), global: Some(resource_text), tag: Some(resource_text),
+        memory: Some(resource_text),
+        table: Some(resource_text),
+        global: Some(resource_text),
+        tag: Some(resource_text),
       }) catch {
-        error => raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
+        error =>
+          raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
       }
     }
   }
@@ -1255,27 +1274,49 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
     ResourceLockV3(artifact_path, output_path) => {
       let artifact = read_bytes(artifact_path)
       let wasm = @wasm_adapter.parse_artifact(artifact) catch {
-        error => raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
+        error =>
+          raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
       }
-      let analysis = @projector.analyze_host_abi(wasm, @projector.default_js_capability_policy())
+      let analysis = @projector.analyze_host_abi(
+        wasm,
+        @projector.default_js_capability_policy(),
+      )
       let surface = resource_surface_from_analysis(analysis, wasm)
-      let encoded = @resource.encode_resource_lockfile(@resource.create_resource_lockfile(surface, artifact))
+      let encoded = @resource.encode_resource_lockfile(
+        @resource.create_resource_lockfile(surface, artifact),
+      )
       write_new_file(output_path, @utf8.encode(encoded))
-      { exit_code: 0, stdout: "{\"written\":{json_string(output_path)},\"schemaVersion\":3}", stderr: "", }
+      {
+        exit_code: 0,
+        stdout: "{\"written\":{json_string(output_path)},\"schemaVersion\":3}",
+        stderr: "",
+      }
     }
     ResourceVerify(artifact_path, baseline_path) => {
       let artifact = read_bytes(artifact_path)
-      let baseline = @resource.decode_resource_lockfile(@utf8.decode(read_bytes(baseline_path)[:])) catch {
-        error => raise CliExecutionError(MHA_LOCKFILE_INVALID, error.to_string())
+      let baseline = @resource.decode_resource_lockfile(
+        @utf8.decode(read_bytes(baseline_path)[:]),
+      ) catch {
+        error =>
+          raise CliExecutionError(MHA_LOCKFILE_INVALID, error.to_string())
       }
       let wasm = @wasm_adapter.parse_artifact(artifact) catch {
-        error => raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
+        error =>
+          raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
       }
-      let analysis = @projector.analyze_host_abi(wasm, @projector.default_js_capability_policy())
+      let analysis = @projector.analyze_host_abi(
+        wasm,
+        @projector.default_js_capability_policy(),
+      )
       let current = resource_surface_from_analysis(analysis, wasm)
-      let compatible = @resource.encode_resource_surface(baseline.abi) == @resource.encode_resource_surface(current)
+      let compatible = @resource.encode_resource_surface(baseline.abi) ==
+        @resource.encode_resource_surface(current)
       let code = if compatible { 0 } else { exit_code_for_failure(BreakingAbi) }
-      { exit_code: code, stdout: "{\"schemaVersion\":1,\"classification\":{json_string(status)},\"baselineAbiSha256\":{json_string(baseline.abi_sha256)},\"currentAbiSha256\":{json_string(@resource.resource_surface_sha256(current))}}", stderr: "", }
+      {
+        exit_code: code,
+        stdout: "{\"schemaVersion\":1,\"classification\":{json_string(status)},\"baselineAbiSha256\":{json_string(baseline.abi_sha256)},\"currentAbiSha256\":{json_string(@resource.resource_surface_sha256(current))}}",
+        stderr: "",
+      }
     }
     Check(artifact_path, baseline_path) => {
       let baseline = decode_baseline(read_bytes(baseline_path))
@@ -1311,7 +1352,13 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
         stderr: "",
       }
     }
-    Generate(artifact_path, contract_path, resource_contract_path, output_directory, mode) => {
+    Generate(
+      artifact_path,
+      contract_path,
+      resource_contract_path,
+      output_directory,
+      mode
+    ) => {
       let analysis = analyze_artifact(read_bytes(artifact_path))
       if !analysis.diagnostics.is_empty() {
         return unsupported_result(analysis.diagnostics, "")
@@ -1338,7 +1385,11 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
         Some(path) => Some(decode_contract_file(path))
         None => None
       }
-      let generated = generate_adapter(analysis.abi, contract, resource_contract)
+      let generated = generate_adapter(
+        analysis.abi,
+        contract,
+        resource_contract,
+      )
       if !generated.diagnostics.is_empty() {
         return unsupported_result(generated.diagnostics, "")
       }
