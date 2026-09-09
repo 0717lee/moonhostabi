@@ -86,3 +86,101 @@ test "resource lockfile v2 is deterministic" {
     content="true",
   )
 }
+
+///|
+test "complete resource surface v3 round trips all resource kinds" {
+  let surface = ResourceSurface::{
+    schema_version: 99,
+    memories: [],
+    tables: [
+      {
+        path: "imports[env.table]",
+        module_name: Some("env"),
+        name: "table",
+        element_type: "externref",
+        minimum_elements: 1L,
+        maximum_elements: Some(8L),
+        table64: false,
+      },
+    ],
+    globals: [
+      {
+        path: "exports[counter]",
+        module_name: None,
+        name: "counter",
+        value_type: "i32",
+        mutable: true,
+      },
+    ],
+    tags: [
+      {
+        path: "imports[env.fail]",
+        module_name: Some("env"),
+        name: "fail",
+        type_index: 2L,
+      },
+    ],
+    unsupported: ["exports[legacy]"],
+  }
+  let lockfile = create_resource_lockfile(surface, b"resource-artifact")
+  let encoded = encode_resource_lockfile(lockfile)
+  inspect(encoded.contains("\"tables\""), content="true")
+  inspect(encoded.contains("\"globals\""), content="true")
+  inspect(encoded.contains("\"tags\""), content="true")
+  inspect(decode_resource_lockfile(encoded) == lockfile, content="true")
+  let contract = create_resource_contract(surface)
+  inspect(validate_resource_contract(surface, contract), content="true")
+  inspect(
+    decode_resource_contract(encode_resource_contract(contract)) == contract,
+    content="true",
+  )
+}
+
+///|
+test "complete resource protocol rejects invalid limits and fingerprints" {
+  let surface = ResourceSurface::{
+    schema_version: 3,
+    memories: [],
+    tables: [
+      {
+        path: "exports[table]",
+        module_name: None,
+        name: "table",
+        element_type: "funcref",
+        minimum_elements: 2L,
+        maximum_elements: Some(4L),
+        table64: false,
+      },
+    ],
+    globals: [],
+    tags: [],
+    unsupported: [],
+  }
+  let lockfile = create_resource_lockfile(surface, b"artifact")
+  let bad_hash = encode_resource_lockfile(lockfile).replace(
+    old=lockfile.abi_sha256,
+    new="0000000000000000000000000000000000000000000000000000000000000000",
+  )
+  inspect(
+    try {
+      ignore(decode_resource_lockfile(bad_hash))
+      false
+    } catch {
+      _ => true
+    },
+    content="true",
+  )
+  let bad_limit = encode_resource_lockfile(lockfile).replace(
+    old="\"maximumElements\":4",
+    new="\"maximumElements\":1",
+  )
+  inspect(
+    try {
+      ignore(decode_resource_lockfile(bad_limit))
+      false
+    } catch {
+      _ => true
+    },
+    content="true",
+  )
+}
