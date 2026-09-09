@@ -6,9 +6,17 @@ fn decode_module_name(
 ) -> String? raise ResourceError {
   match required(value, key, path) {
     Null => None
-    String(text) => Some(text)
+    String(text) => Some(nonempty(text, "\{path}.\{key}"))
     _ => invalid_resource("\{path}.\{key}: expected string or null")
   }
+}
+
+///|
+fn nonempty(value : String, path : String) -> String raise ResourceError {
+  if value.is_empty() {
+    invalid_resource("\{path}: must not be empty")
+  }
+  value
 }
 
 ///|
@@ -37,11 +45,23 @@ fn decode_table_resource(
       )
     _ => ()
   }
+  let resource_path = nonempty(
+    string_value(object, "path", path),
+    "\{path}.path",
+  )
+  let resource_name = nonempty(
+    string_value(object, "name", path),
+    "\{path}.name",
+  )
+  let element_type = nonempty(
+    string_value(object, "elementType", path),
+    "\{path}.elementType",
+  )
   TableResource::{
-    path: string_value(object, "path", path),
+    path: resource_path,
     module_name: decode_module_name(object, "module", path),
-    name: string_value(object, "name", path),
-    element_type: string_value(object, "elementType", path),
+    name: resource_name,
+    element_type,
     minimum_elements,
     maximum_elements,
     table64: bool_value(object, "table64", path),
@@ -55,11 +75,23 @@ fn decode_global_resource(
 ) -> GlobalResource raise ResourceError {
   let object = object(value, path)
   keys(object, ["path", "module", "name", "valueType", "mutable"], path)
+  let resource_path = nonempty(
+    string_value(object, "path", path),
+    "\{path}.path",
+  )
+  let resource_name = nonempty(
+    string_value(object, "name", path),
+    "\{path}.name",
+  )
+  let value_type = nonempty(
+    string_value(object, "valueType", path),
+    "\{path}.valueType",
+  )
   GlobalResource::{
-    path: string_value(object, "path", path),
+    path: resource_path,
     module_name: decode_module_name(object, "module", path),
-    name: string_value(object, "name", path),
-    value_type: string_value(object, "valueType", path),
+    name: resource_name,
+    value_type,
     mutable: bool_value(object, "mutable", path),
   }
 }
@@ -75,10 +107,18 @@ fn decode_tag_resource(
   if type_index < 0L {
     invalid_resource("\{path}.typeIndex: expected non-negative integer")
   }
+  let resource_path = nonempty(
+    string_value(object, "path", path),
+    "\{path}.path",
+  )
+  let resource_name = nonempty(
+    string_value(object, "name", path),
+    "\{path}.name",
+  )
   TagResource::{
-    path: string_value(object, "path", path),
+    path: resource_path,
     module_name: decode_module_name(object, "module", path),
-    name: string_value(object, "name", path),
+    name: resource_name,
     type_index,
   }
 }
@@ -90,10 +130,10 @@ fn strings_array(
   path : String,
 ) -> Array[String] raise ResourceError {
   let values : Array[String] = []
-  for _, item in array_value(value, key, path) {
+  for index, item in array_value(value, key, path) {
     match item {
       String(text) => values.push(text)
-      _ => invalid_resource("\{path}.\{key}[{index}]: expected string")
+      _ => invalid_resource("\{path}.\{key}[\{index}]: expected string")
     }
   }
   values
@@ -106,8 +146,8 @@ fn tables_array(
   path : String,
 ) -> Array[TableResource] raise ResourceError {
   let values : Array[TableResource] = []
-  for _, item in array_value(value, key, path) {
-    values.push(decode_table_resource(item, "\{path}.\{key}[{index}]"))
+  for index, item in array_value(value, key, path) {
+    values.push(decode_table_resource(item, "\{path}.\{key}[\{index}]"))
   }
   values
 }
@@ -119,8 +159,8 @@ fn globals_array(
   path : String,
 ) -> Array[GlobalResource] raise ResourceError {
   let values : Array[GlobalResource] = []
-  for _, item in array_value(value, key, path) {
-    values.push(decode_global_resource(item, "\{path}.\{key}[{index}]"))
+  for index, item in array_value(value, key, path) {
+    values.push(decode_global_resource(item, "\{path}.\{key}[\{index}]"))
   }
   values
 }
@@ -132,8 +172,8 @@ fn tags_array(
   path : String,
 ) -> Array[TagResource] raise ResourceError {
   let values : Array[TagResource] = []
-  for _, item in array_value(value, key, path) {
-    values.push(decode_tag_resource(item, "\{path}.\{key}[{index}]"))
+  for index, item in array_value(value, key, path) {
+    values.push(decode_tag_resource(item, "\{path}.\{key}[\{index}]"))
   }
   values
 }
