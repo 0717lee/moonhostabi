@@ -155,7 +155,7 @@ test "resource compatibility reports memory table global and tag changes" {
   ]
   let report = compare_resources(baseline, current)
   inspect(report.classification == @compat.Breaking, content="true")
-  inspect(report.changes.length(), content="3")
+  inspect(report.changes.length(), content="4")
   inspect(report.changes[0].code, content="MHA_RESOURCE_CHANGED")
   inspect(
     report.changes
