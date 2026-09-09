@@ -8,7 +8,7 @@ verification packages when they need an in-process gate.
 Add the published module to a downstream MoonBit project:
 
 ```powershell
-moon add 0717lee/moonhostabi@0.2.0
+moon add 0717lee/moonhostabi@0.3.0
 moon update
 moon check
 ```
@@ -49,9 +49,9 @@ const memory = assertMemoryContract(instance.exports, {
 ```
 
 The guard checks the exported value, page count, sharedness, and contract shape,
-and throws `MHA_ADAPTER_MISMATCH` on failure. It is intentionally separate from
-the current function-only generated adapter until resource fields are added to
-the canonical lockfile and contract schemas.
+and throws `MHA_ADAPTER_MISMATCH` on failure. Resource-aware generation remains
+an explicit opt-in so existing function-only adapters retain byte-for-byte
+compatibility while consumers adopt the versioned resource contracts.
 
 The same runtime boundary now has independent guards for tables, globals, and
 exception tags: `assertTableContract`, `assertGlobalContract`, and
