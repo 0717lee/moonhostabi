@@ -141,7 +141,7 @@ The committed local evidence is deliberately split:
 - **Release dry run:** passed for Linux, Windows, and aggregate in run
   `34081936398`; it is separate from the Verification matrix and does not publish
   a GitHub Release.
-- **Mooncakes publication:** `0717lee/moonhostabi@0.3.0` is the current release candidate. Future versions must repeat the same checks before publication.
+- **Mooncakes publication:** `0717lee/moonhostabi@0.3.0` is published and passed the package self-check. Future versions must repeat the same checks before publication.
 
 For a short live demonstration, run the repository-owned [judge demo](judge-demo.md).
 It uses the committed `externref` fixture to show inspection, lock creation,
