@@ -1,4 +1,6 @@
 import {
+  "0717lee/moonhostabi/src/model",
+  "0717lee/moonhostabi/src/projector",
   "moonbitlang/core/json",
   "moonbitlang/x/crypto",
   "moonbitlang/x/encoding",
