@@ -308,10 +308,13 @@ try {
     '  moonhostabi inspect <artifact.wasm> --format json',
     '  moonhostabi lock <artifact.wasm> --out <lock.json>',
     '  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>',
+    '  moonhostabi resource-lock-v3 <artifact.wasm> --out <resource-lock-v3.json>',
+    '  moonhostabi resource-verify <artifact.wasm> --against <resource-lock-v3.json> --format json',
     '  moonhostabi check <artifact.wasm> --against <lock.json>',
     '  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json',
     '  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]',
     '  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>',
+    '  moonhostabi generate <artifact.wasm> --resource-contract <resource-contract.json> --out <directory>',
     '  moonhostabi --help',
     '  moonhostabi --version'
   ) -join "`n"
