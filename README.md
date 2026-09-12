@@ -135,10 +135,9 @@ resource contract JSON and emits the resource guard callbacks and
 `instantiateWithResources` entrypoint. `resource-lock-v3` writes the versioned
 resource surface lock, while `resource-verify` compares that lock with a new
 artifact and returns exit code `0` for an identical surface or `2` for a
-changed surface. The v3 CLI currently records memory fields directly and
-retains table, global, and tag inventory entries in the explicit
-`unsupported` list; it does not claim to infer their JavaScript binding
-semantics.
+changed surface. The v3 CLI records memory, table, global, and tag metadata;
+generation remains fail-closed when a resource lacks a safe JavaScript
+binding.
 
 `--dry-run` performs parsing, contract validation, and generation without
 creating filesystem output. `--update` reuses the existing contract and only

@@ -63,10 +63,9 @@ moon run cmd/moonhostabi --target native resource-verify <artifact.wasm> --again
 ```
 
 `resource-verify` exits `0` when the canonical resource surface is unchanged
-and `2` when it changes. The v3 CLI serializes memory metadata and keeps table,
-global, and tag inventory entries in the explicit `unsupported` list. This is a
-deliberate fail-closed boundary: the command does not infer JavaScript binding
-semantics for those resource kinds.
+and `2` when it changes. The v3 CLI serializes memory, table, global, and tag
+metadata. Generation remains fail-closed when a resource lacks a safe
+JavaScript binding.
 
 To opt into resource-aware TypeScript generation, provide a validated v4
 resource contract alongside the artifact:
