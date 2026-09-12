@@ -6,7 +6,7 @@ on:
       version:
         description: Strict MAJOR.MINOR.PATCH matching moon.mod
         required: true
-        default: 0.3.0
+        default: 0.4.0
         type: string
 
 permissions:
