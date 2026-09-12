@@ -341,6 +341,45 @@ test "resource-lock writes standalone resource schema" {
 }
 
 ///|
+test "resource surface preserves table global and tag entries" {
+  let wasm = @wasm_types.Module::Module()
+  let limits = @wasm_types.Limits::{ min: 1L, max: Some(4L), }
+  wasm.imports.push({
+    mod_name: "env",
+    name: "table",
+    desc: @wasm_types.ImportDesc::Table(@wasm_types.TableType::{
+      elem_type: @wasm_types.ExternRef,
+      limits,
+      is_table64: false,
+    }),
+  })
+  wasm.imports.push({
+    mod_name: "env",
+    name: "global",
+    desc: @wasm_types.ImportDesc::Global(@wasm_types.GlobalType::{
+      value_type: @wasm_types.I32,
+      mutable: true,
+    }),
+  })
+  wasm.imports.push({
+    mod_name: "env",
+    name: "tag",
+    desc: @wasm_types.ImportDesc::Tag(2),
+  })
+  let analysis = @projector.analyze_host_abi(
+    wasm,
+    @projector.default_js_capability_policy(),
+  )
+  let surface = resource_surface_from_analysis(analysis, wasm)
+  inspect(surface.tables.length(), content="1")
+  inspect(surface.globals.length(), content="1")
+  inspect(surface.tags.length(), content="1")
+  inspect(surface.tables[0].minimum_elements, content="1")
+  inspect(surface.globals[0].mutable, content="true")
+  inspect(surface.tags[0].type_index, content="2")
+}
+
+///|
 test "malformed and unsupported artifacts exit three" {
   let malformed_path = "_build/task10-malformed.wasm"
   @fs.write_bytes_to_file(malformed_path, b"\x00asm")

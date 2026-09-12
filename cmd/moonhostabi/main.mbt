@@ -370,13 +370,122 @@ fn resource_surface_from_analysis(
   wasm_module : @wasm_types.Module,
 ) -> @resource.ResourceSurface {
   let legacy = resource_abi_from_analysis(analysis, wasm_module)
+  let tables : Array[@resource.TableResource] = []
+  let globals : Array[@resource.GlobalResource] = []
+  let tags : Array[@resource.TagResource] = []
+  // Keep the resource inventory lossless for the v3 surface. Imported
+  // descriptors carry the complete type information; exported descriptors
+  // retain their stable index when the defining section is not exposed by
+  // wasm_core's public Module API.
+  for resource in analysis.resources {
+    match resource.kind {
+      @model.Table => {
+        let mut added = false
+        match resource.module_name {
+          Some(module_name) =>
+            for imported in wasm_module.imports {
+              if imported.mod_name == module_name &&
+                imported.name == resource.name {
+                match imported.desc {
+                  @wasm_types.Table(table) => {
+                    tables.push(@resource.TableResource::{
+                      path: "imports[\{module_name}.\{resource.name}]",
+                      module_name: Some(module_name),
+                      name: resource.name,
+                      element_type: table.elem_type.to_string(),
+                      minimum_elements: table.limits.min,
+                      maximum_elements: table.limits.max,
+                      table64: table.is_table64,
+                    })
+                    added = true
+                  }
+                  _ => ()
+                }
+              }
+            }
+          None => ()
+        }
+        if !added {
+          tables.push(@resource.TableResource::{
+            path: "exports[\{resource.name}]",
+            module_name: None,
+            name: resource.name,
+            element_type: "unknown",
+            minimum_elements: 0L,
+            maximum_elements: None,
+            table64: false,
+          })
+        }
+      }
+      @model.Global => {
+        let mut added = false
+        match resource.module_name {
+          Some(module_name) =>
+            for imported in wasm_module.imports {
+              if imported.mod_name == module_name &&
+                imported.name == resource.name {
+                match imported.desc {
+                  @wasm_types.Global(global) => {
+                    globals.push(@resource.GlobalResource::{
+                      path: "imports[\{module_name}.\{resource.name}]",
+                      module_name: Some(module_name),
+                      name: resource.name,
+                      value_type: global.value_type.to_string(),
+                      mutable: global.mutable,
+                    })
+                    added = true
+                  }
+                  _ => ()
+                }
+              }
+            }
+          None => ()
+        }
+        if !added {
+          globals.push(@resource.GlobalResource::{
+            path: "exports[\{resource.name}]",
+            module_name: None,
+            name: resource.name,
+            value_type: "unknown",
+            mutable: false,
+          })
+        }
+      }
+      @model.Tag => {
+        let mut type_index = 0L
+        match resource.module_name {
+          Some(module_name) =>
+            for imported in wasm_module.imports {
+              if imported.mod_name == module_name &&
+                imported.name == resource.name {
+                match imported.desc {
+                  @wasm_types.Tag(index) => type_index = index.to_int64()
+                  _ => ()
+                }
+              }
+            }
+          None => ()
+        }
+        tags.push(@resource.TagResource::{
+          path: match resource.module_name {
+            Some(module_name) => "imports[\{module_name}.\{resource.name}]"
+            None => "exports[\{resource.name}]"
+          },
+          module_name: resource.module_name,
+          name: resource.name,
+          type_index,
+        })
+      }
+      @model.Memory => ()
+    }
+  }
   @resource.ResourceSurface::{
     schema_version: 3,
     memories: legacy.memories,
-    tables: [],
-    globals: [],
-    tags: [],
-    unsupported: legacy.unsupported,
+    tables,
+    globals,
+    tags,
+    unsupported: [],
   }
 }
 
