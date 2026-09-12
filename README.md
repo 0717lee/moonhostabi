@@ -9,7 +9,7 @@ Spike is **GO** locally and on the public Linux/Windows CI matrix; see [the
 validation evidence](docs/validation.md) for hashes, the compatibility matrix,
 runtime observations, and limits.
 
-Published package: `0717lee/moonhostabi@0.4.0` on Mooncakes.
+Published package: `0717lee/moonhostabi@0.4.1` on Mooncakes.
 
 ## Independent scope
 

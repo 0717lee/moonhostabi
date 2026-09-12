@@ -341,7 +341,7 @@ def expect_rejected(callback: Callable[[], object], label: str) -> None:
 
 
 def create_bad_tar(path: Path, kind: str | None) -> None:
-    version = "0.4.0"
+    version = "0.4.1"
     root = platform_root(version, "linux")
     target = f"{root}/README.md"
     encoded_tar = io.BytesIO()
@@ -385,7 +385,7 @@ def self_test() -> None:
         root = Path(temporary)
         valid = root / "valid.tar.gz"
         create_bad_tar(valid, None)
-        validate_tar(valid, "0.4.0")
+        validate_tar(valid, "0.4.1")
         encoded = valid.read_bytes()
         gzip_mutations = {
             "nonzero mtime": encoded[:4] + b"\x01\x00\x00\x00" + encoded[8:],
@@ -397,7 +397,7 @@ def self_test() -> None:
         for label, mutated in gzip_mutations.items():
             archive = root / f"gzip-{label.replace(' ', '-')}.tar.gz"
             archive.write_bytes(mutated)
-            expect_rejected(lambda value=archive: validate_tar(value, "0.4.0"), label)
+            expect_rejected(lambda value=archive: validate_tar(value, "0.4.1"), label)
         decoded_valid = zlib.decompress(encoded, wbits=31)
         with tarfile.open(fileobj=io.BytesIO(decoded_valid), mode="r:") as valid_archive:
             valid_members = valid_archive.getmembers()
@@ -410,11 +410,11 @@ def self_test() -> None:
         for label, mutated_tar in tar_mutations.items():
             archive = root / f"{label.replace(' ', '-')}.tar.gz"
             write_canonical_gzip(archive, mutated_tar)
-            expect_rejected(lambda value=archive: validate_tar(value, "0.4.0"), label)
+            expect_rejected(lambda value=archive: validate_tar(value, "0.4.1"), label)
         for kind in ["symlink", "hardlink", "device", "fifo"]:
             archive = root / f"{kind}.tar.gz"
             create_bad_tar(archive, kind)
-            expect_rejected(lambda value=archive: validate_tar(value, "0.4.0"), f"tar {kind}")
+            expect_rejected(lambda value=archive: validate_tar(value, "0.4.1"), f"tar {kind}")
 
 
 def main() -> int:
