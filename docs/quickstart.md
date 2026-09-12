@@ -54,14 +54,31 @@ Expected final marker:
 MOONHOSTABI_VERIFY_STATUS=GO
 ```
 
-To create a standalone host-resource inventory lock, run the native CLI with a
-compiled artifact. Memory entries are fingerprinted; table, global, and tag
-entries are retained in the lock's `unsupported` list for an explicit,
-fail-closed review:
+To create a standalone versioned host-resource lock, run the native CLI with a
+compiled artifact:
 
 ```powershell
-moon run cmd/moonhostabi --target native resource-lock <artifact.wasm> --out <resource-lock.json>
+moon run cmd/moonhostabi --target native resource-lock-v3 <artifact.wasm> --out <resource-lock-v3.json>
+moon run cmd/moonhostabi --target native resource-verify <artifact.wasm> --against <resource-lock-v3.json> --format json
 ```
+
+`resource-verify` exits `0` when the canonical resource surface is unchanged
+and `2` when it changes. The v3 CLI serializes memory metadata and keeps table,
+global, and tag inventory entries in the explicit `unsupported` list. This is a
+deliberate fail-closed boundary: the command does not infer JavaScript binding
+semantics for those resource kinds.
+
+To opt into resource-aware TypeScript generation, provide a validated v4
+resource contract alongside the artifact:
+
+```powershell
+moon run cmd/moonhostabi --target native generate fixtures/artifacts/externref.wasm --resource-contract <resource-contract.json> --out <generated-directory>
+```
+
+The generated directory contains `adapter.ts`,
+`moonhostabi.contract.json`, and `moonhostabi.manifest.json`; resource guards
+are wired only through the explicit contract and callbacks supplied by the
+consumer.
 
 The script also prints the individual help, version, timeout, exit-code,
 canonical-report, Unicode-path, and no-host-execution markers. A successful
