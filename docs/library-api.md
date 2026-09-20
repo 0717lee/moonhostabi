@@ -13,6 +13,10 @@ moon update
 moon check
 ```
 
+The resource surface v4, lockfile v4, contract v5, and artifact-bound generator
+below are unreleased APIs in this checkout. They are not part of the published
+`0.4.1` package.
+
 The core package boundaries are:
 
 | Package            | Stable entry points                                                                                                                 | Purpose                                                                      |
@@ -32,7 +36,54 @@ checked for supported MoonBit targets. The generated TypeScript adapter runs in
 a JavaScript/TypeScript host; MoonHostABI does not provide a Wasm runtime or
 application-specific host behavior.
 
-## Memory contract guard
+## Use the artifact-bound resource API
+
+Use `src/resource.project_resource_artifact(bytes)` to build a
+`ResourceSurfaceV4`. It resolves imported and defined resource indices before
+projecting the host imports and exports, including re-exports. Unlike the
+module-only `project_resource_surface` helper, the artifact path also reads
+memory flags directly from the Wasm bytes; the pinned parser does not retain
+shared-memory metadata. The module-only helper marks that missing evidence as
+unsupported.
+
+The source resource APIs are:
+
+| Operation | Entry points | Result |
+| --- | --- | --- |
+| Project | `project_resource_artifact` | `ResourceSurfaceV4` |
+| Lock | `create_resource_lockfile_v4`, `encode_resource_lockfile_v4`, `decode_resource_lockfile_v4` | `ResourceLockfileV4` with artifact and surface fingerprints |
+| Contract | `create_resource_contract_v5`, `encode_resource_contract_v5`, `decode_resource_contract_v5`, `validate_resource_contract_v5` | `ResourceContractV5` bound to the resource surface |
+| Compare | `compare_resource_surfaces`, `encode_resource_comparison`, `render_resource_comparison_text`, `render_resource_comparison_markdown` | `ResourceComparison` schema v1 |
+| Migrate | `lift_legacy_surface` | Known legacy resource types normalized; missing tag signatures remain unsupported |
+
+`TagSignatureResource` stores resolved `params` and `results`, replacing the
+legacy raw tag type index. `compare_resource_surfaces` classifies any known
+resource-field change as `breaking`; unresolved types make the result `unknown`
+even if the fingerprints match. See the [resource protocol](resource-protocol.md)
+for wire fields, CLI commands, and migration behavior.
+
+Call `src/generator.generate_typescript_adapter_with_resource_contract` with
+the function ABI, function contract, resource surface, v5 resource contract,
+and lowercase SHA-256 of the same artifact bytes. The CLI computes these inputs
+together. Library callers must also derive them from the same artifact; the
+generator takes the supplied fingerprint and does not receive bytes to hash.
+Inspect the returned diagnostics before using the generated output.
+
+This generator emits `HostImportsWithResources`, `ModuleExportsWithResources`,
+and the equivalent `instantiate` and `instantiateWithResources` entrypoints.
+Both check the artifact hash and validate imported resources with small Wasm
+type probes before instantiating the application module, then validate its
+exported resources. The probes have no code or start function and check real
+resource types, declared limits, global mutability, and tag signatures.
+
+Generation supports non-shared memory32 with 65,536-byte pages, table32 with
+`funcref`/`externref` elements, scalar or `externref` globals, and tags with
+scalar or `externref` parameters and no results. A wider analyzable surface
+does not imply adapter support. Runtime SHA-256 needs `crypto.subtle`; use
+Node.js 24 or a supporting browser in a secure context. Regenerate for any
+artifact byte change, even when its resource surface is unchanged.
+
+## Keep legacy guard APIs separate
 
 The first runtime resource extension is an explicit memory guard for consumers
 that already have a memory contract. Import `assertMemoryContract` from the
@@ -53,7 +104,7 @@ and throws `MHA_ADAPTER_MISMATCH` on failure. Resource-aware generation remains
 an explicit opt-in so existing function-only adapters retain byte-for-byte
 compatibility while consumers adopt the versioned resource contracts.
 
-The same runtime boundary now has independent guards for tables, globals, and
+The legacy runtime boundary also has independent guards for tables, globals, and
 exception tags: `assertTableContract`, `assertGlobalContract`, and
 `assertTagContract`. `generate_typescript_adapter_with_resources` can append a
 resource-aware `instantiateWithResources` entrypoint and accepts these guards as
@@ -69,5 +120,7 @@ project's review and release process.
 `ProjectionAnalysis.resources` is an inventory surface for non-function
 boundaries. It records deterministic details for tables, memories, globals, and
 tags so a host can make an explicit policy decision. Resource-aware generation
-now provides the adapter entrypoint and guard callback contract; applications
-still choose and wire the guard implementation for each resource kind.
+through `generate_typescript_adapter_with_resources` provides the legacy guard
+callback contract; applications choose and wire its guards. The new
+`generate_typescript_adapter_with_resource_contract` API uses the built-in
+artifact and type checks described above.

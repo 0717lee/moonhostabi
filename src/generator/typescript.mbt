@@ -488,6 +488,7 @@ fn render_typescript(
   abi : @model.HostAbi,
   abi_sha256 : String,
   contract : @contract.Contract,
+  include_instantiate? : Bool = true,
 ) -> String raise @contract.ContractError {
   let imports = @model.sort_abi_functions(abi.imports)
   let exports = @model.sort_abi_functions(abi.exports)
@@ -512,6 +513,9 @@ fn render_typescript(
   if !exports.is_empty() {
     lines.push("")
     append_module_export_preflight(lines, exports)
+  }
+  if !include_instantiate {
+    return lines.join("\n") + "\n"
   }
   let all_names = contract.semantic_aliases()
   let import_names = semantic_aliases_for_functions(imports, contract)

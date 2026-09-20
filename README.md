@@ -11,6 +11,10 @@ runtime observations, and limits.
 
 Published package: `0717lee/moonhostabi@0.4.1` on Mooncakes.
 
+The resource surface v4, resource contract v5, and artifact-bound adapters
+described below are **unreleased source features**. Run them from this checkout;
+the published `0.4.1` package does not include this work.
+
 ## Independent scope
 
 MoonHostABI is an artifact-first Wasm-GC host-boundary toolchain. It consumes
@@ -78,7 +82,9 @@ moon run cmd/moonhostabi --target native inspect <artifact.wasm> --format json
 moon run cmd/moonhostabi --target native lock <artifact.wasm> --out <lock.json>
 moon run cmd/moonhostabi --target native resource-lock <artifact.wasm> --out <resource-lock.json>
 moon run cmd/moonhostabi --target native resource-lock-v3 <artifact.wasm> --out <resource-lock-v3.json>
-moon run cmd/moonhostabi --target native resource-verify <artifact.wasm> --against <resource-lock-v3.json> --format json
+moon run cmd/moonhostabi --target native resource-lock-v4 <artifact.wasm> --out <resource-lock-v4.json>
+moon run cmd/moonhostabi --target native resource-contract <artifact.wasm> --out <resource-contract.json>
+moon run cmd/moonhostabi --target native resource-verify <artifact.wasm> --against <resource-lock-v4.json> --format json
 moon run cmd/moonhostabi --target native check <artifact.wasm> --against <lock.json>
 moon run cmd/moonhostabi --target native verify <artifact.wasm> --against <lock.json> --format json
 moon run cmd/moonhostabi --target native verify <artifact.wasm> --against <lock.json> --contract <contract.json> --format json
@@ -130,14 +136,40 @@ successful fresh generation publishes `adapter.ts`,
 together from a unique sibling staging directory without replacing an existing
 path.
 
-Resource-aware generation is opt-in. `--resource-contract` accepts the v4
-resource contract JSON and emits the resource guard callbacks and
-`instantiateWithResources` entrypoint. `resource-lock-v3` writes the versioned
-resource surface lock, while `resource-verify` compares that lock with a new
-artifact and returns exit code `0` for an identical surface or `2` for a
-changed surface. The v3 CLI records memory, table, global, and tag metadata;
-generation remains fail-closed when a resource lacks a safe JavaScript
-binding.
+Resource-aware generation is opt-in. `resource-lock-v4` captures imported and
+exported memory, table, global, and tag declarations, including resources defined
+in the module and re-exported imports. Tags use resolved parameter/result types
+so a raw type-index change alone does not break compatibility.
+`resource-contract` writes contract v5 from the artifact; `generate
+--resource-contract` requires that contract to match the artifact's resource
+surface. Both generated `instantiate(bytes, imports)` and
+`instantiateWithResources(bytes, imports)` check the artifact SHA-256 and real
+host resource types before instantiating the application module.
+
+`resource-verify` accepts v3 or v4 locks and JSON, text, or Markdown output. It
+returns `0` for an unchanged known surface, `2` for a resource change, and `3`
+when compatibility is unknown or inputs are invalid. A legacy v3 tag stores only
+a type index, so even the same artifact requires a new v4 lock before its tag
+compatibility can be accepted. Invalid or mismatched resource contracts and
+unsupported generation also return `3`.
+
+Generated resource adapters currently support non-shared memory32 with
+65,536-byte pages, table32 with `funcref` or `externref` elements, and globals
+and tag parameters using scalar types or `externref`. Analysis can record a
+wider surface than generation supports. The runtime requires Web Crypto
+`crypto.subtle` (Node.js 24 or a supporting browser in a secure context); any
+artifact byte change requires a new adapter. See the
+[resource protocol walkthrough](docs/resource-protocol.md) for fixtures,
+version migration, the report schema, and runtime checks.
+
+Run the source resource gate after installing the locked runtime dependencies:
+
+```powershell
+npm --prefix runtime ci
+pwsh -NoProfile -File scripts/verify-resources.ps1
+```
+
+Success ends with `MOONHOSTABI_RESOURCE_E2E_STATUS=GO`.
 
 `--dry-run` performs parsing, contract validation, and generation without
 creating filesystem output. `--update` reuses the existing contract and only
@@ -146,6 +178,10 @@ values prove MoonHostABI ownership. The directory is atomically claimed and its
 exact byte snapshot is revalidated before publication. Edited, missing,
 unknown, concurrently replaced, symbolic-link, and reparse-point outputs are
 refused. There is no `--force` mode.
+
+Resource-aware outputs require a fresh directory and an explicit resource
+contract on each generation. `--update` refuses these outputs so it cannot
+replace their resource checks with a function-only adapter.
 
 ## Development setup
 

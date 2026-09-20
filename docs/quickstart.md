@@ -54,32 +54,43 @@ Expected final marker:
 MOONHOSTABI_VERIFY_STATUS=GO
 ```
 
-To create a standalone versioned host-resource lock, run the native CLI with a
-compiled artifact:
+The unreleased source resource workflow has its own lock and contract versions.
+To lock and verify the committed memory/table/global/tag fixture, create a fresh
+temporary directory first:
 
 ```powershell
-moon run cmd/moonhostabi --target native resource-lock-v3 <artifact.wasm> --out <resource-lock-v3.json>
-moon run cmd/moonhostabi --target native resource-verify <artifact.wasm> --against <resource-lock-v3.json> --format json
+$resourceRun = Join-Path ([IO.Path]::GetTempPath()) ('moonhostabi-resource-demo-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $resourceRun | Out-Null
+moon run cmd/moonhostabi --target native resource-lock-v4 fixtures/artifacts/resources.wasm --out "$resourceRun/resources.lock.json"
+moon run cmd/moonhostabi --target native resource-verify fixtures/artifacts/resources.wasm --against "$resourceRun/resources.lock.json" --format json
+moon run cmd/moonhostabi --target native resource-contract fixtures/artifacts/resources.wasm --out "$resourceRun/resources.contract.json"
+moon run cmd/moonhostabi --target native generate fixtures/artifacts/resources.wasm --resource-contract "$resourceRun/resources.contract.json" --out "$resourceRun/generated"
 ```
 
-`resource-verify` exits `0` when the canonical resource surface is unchanged
-and `2` when it changes. The v3 CLI serializes memory, table, global, and tag
-metadata. Generation remains fail-closed when a resource lacks a safe
-JavaScript binding.
+Each command should exit `0`. The lock has `lockfileVersion: 4`, its resource
+surface has `schemaVersion: 4`, and the resource contract has `schemaVersion: 5`.
+The generated directory contains `adapter.ts`, `moonhostabi.contract.json`, and
+`moonhostabi.manifest.json`; keep the separate `resources.contract.json` as the
+input for later regeneration.
 
-To opt into resource-aware TypeScript generation, provide a validated v4
-resource contract alongside the artifact:
+Run the dedicated resource gate to exercise changed signatures and limits,
+type-index renumbering, imports, re-exports, TypeScript compilation, and actual
+Node.js resource use:
 
 ```powershell
-moon run cmd/moonhostabi --target native generate fixtures/artifacts/externref.wasm --resource-contract <resource-contract.json> --out <generated-directory>
+npm --prefix runtime ci
+pwsh -NoProfile -File scripts/verify-resources.ps1
 ```
 
-The generated directory contains `adapter.ts`,
-`moonhostabi.contract.json`, and `moonhostabi.manifest.json`; resource guards
-are wired only through the explicit contract and callbacks supplied by the
-consumer.
+Expected final marker: `MOONHOSTABI_RESOURCE_E2E_STATUS=GO`. Use Node.js 24 and
+the MoonBit and `wasm-tools` setup described above. The generated adapter checks
+artifact bytes and imported resource types before application instantiation;
+both `instantiate` and `instantiateWithResources` perform those checks. See the
+[resource protocol walkthrough](resource-protocol.md) for supported types,
+runtime requirements, report fields, and legacy migration. These source changes
+are not included in the published `0.4.1` package.
 
-The script also prints the individual help, version, timeout, exit-code,
+The CLI evidence script also prints the individual help, version, timeout, exit-code,
 canonical-report, Unicode-path, and no-host-execution markers. A successful
 exit code and the marker are both required.
 
@@ -157,7 +168,7 @@ The committed local evidence is deliberately split:
 - **Release dry run:** passed for Linux, Windows, and aggregate in run
   `34081936398`; it is separate from the Verification matrix and does not publish
   a GitHub Release.
-- **Mooncakes publication:** `0717lee/moonhostabi@0.4.1` is the next release candidate. Future versions must repeat the same checks before publication.
+- **Mooncakes publication:** `0717lee/moonhostabi@0.4.1` is the published package. The resource v4/v5 workflow in this checkout is unreleased. Future versions must repeat the checks before publication.
 
 For a short live demonstration, run the repository-owned [judge demo](judge-demo.md).
 It uses the committed `externref` fixture to show inspection, lock creation,
@@ -189,6 +200,9 @@ Choose a new temporary output path and rerun the focused command. The gates
 refuse to replace an existing archive or generated directory so that an old
 result cannot be mistaken for a fresh one.
 
+Resource-aware generation also refuses `--update`. Generate into a new directory
+with `--resource-contract`, and regenerate whenever the artifact bytes change.
+
 ### The browser or full Spike check fails
 
 Run the three focused checks first. If they pass, install the Node/npm and
@@ -205,6 +219,7 @@ result is recorded separately from this local command.
 
 - [Validation evidence](validation.md)
 - [Verification report schema](report-schema.md)
+- [Resource protocol and adapter walkthrough](resource-protocol.md)
 - [Reproduction bundle guide](../fixtures/reproduction/README.md)
 - [Release dry-run guide](releasing.md)
 - [Judge demo](judge-demo.md)

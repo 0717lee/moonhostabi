@@ -7,6 +7,31 @@ Verification workflow has since completed successfully for both Windows and
 Linux on the release candidate commit
 (`https://github.com/0717lee/moonhostabi/actions/runs/34081779933`).
 
+## Unreleased resource workflow verification
+
+On September 20, 2026, the source-only resource workflow passed the full local
+Windows gate, followed by `moon build --target all`:
+
+- 147 MoonBit tests passed, with checks across the configured targets.
+- The existing CLI, bundle, package, and transaction gates passed; original
+  fixture and generated-adapter byte checks remained unchanged.
+- All six Chromium tests passed.
+- The resource E2E gate rebuilt its Wasm fixtures, parsed real CLI JSON reports,
+  compiled generated adapters with strict TypeScript, and exercised actual
+  memory, table, global, and tag bindings, including imports and re-exports.
+- Twenty runtime rejection cases passed. A changed artifact containing a
+  state-changing start function was rejected before that function could run.
+
+The final markers were `MOONHOSTABI_RESOURCE_E2E_STATUS=GO` and
+`MOONHOSTABI_SPIKE_STATUS=GO`. The resource gate is included in
+`scripts/verify-spike.ps1`, which the existing CI workflow invokes. These local
+results are not evidence of a new remote CI run or package publication:
+`0717lee/moonhostabi@0.4.1` does not include this unreleased workflow. A new
+release must repeat the Linux/Windows CI and release checks.
+
+See the [resource protocol](resource-protocol.md) for supported types, legacy
+lock migration, field-level report formats, and artifact-bound runtime checks.
+
 ## Reproduce the local gate
 
 The host must provide PowerShell 7, a MoonBit toolchain reporting the exact
@@ -383,8 +408,9 @@ for both platform packages and aggregate
 
 ## Current limitations
 
-- The generated adapter supports function imports/exports only. Public tables,
-  memories, globals and tags fail closed.
+- Default generation supports function imports/exports only. Public tables,
+  memories, globals and tags require the unreleased, explicit
+  `--resource-contract` workflow; otherwise they fail closed.
 - Typed GC references and `v128` are modeled for ABI comparison but are not
   represented by the default JavaScript adapter.
 - Contract v2 names each public `externref` position independently; positions
@@ -397,9 +423,10 @@ for both platform packages and aggregate
   a real non-link directory, an exact manifest-owned file set with matching
   hashes, and an unchanged byte snapshot after the directory is atomically
   claimed.
-- The lockfile schema remains version 1. Host ABI contracts use canonical
+- The function ABI lockfile schema remains version 1. Host ABI contracts use canonical
   schema v2 and accept only a strictly validated v1-to-v2 migration; no later
-  schema migration is implemented.
+  function-contract migration is implemented. The separate unreleased resource
+  workflow uses lockfile v4 and contract v5.
 - Runtime preflight validates required imports and, immediately after
   instantiation, verifies every required export is an own property whose value
   is a function. Failures report `MHA_ADAPTER_MISMATCH` with an `exports[...]`

@@ -131,7 +131,7 @@ test "argument parsing is pure and order-sensitive" {
 
 ///|
 test "help and version have exact stdout-only contracts" {
-  let expected_help = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>\n  moonhostabi resource-lock-v3 <artifact.wasm> --out <resource-lock-v3.json>\n  moonhostabi resource-verify <artifact.wasm> --against <resource-lock-v3.json> --format json\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi generate <artifact.wasm> --resource-contract <resource-contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
+  let expected_help = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>\n  moonhostabi resource-lock-v3 <artifact.wasm> --out <resource-lock-v3.json>\n  moonhostabi resource-lock-v4 <artifact.wasm> --out <resource-lock-v4.json>\n  moonhostabi resource-contract <artifact.wasm> --out <resource-contract.json>\n  moonhostabi resource-verify <artifact.wasm> --against <resource-lock.json> --format <json|text|markdown>\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi generate <artifact.wasm> [--contract <contract.json>] --resource-contract <resource-contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
   let help = dispatch(["--help"])
   inspect(help.exit_code, content="0")
   inspect(help.stdout, content=expected_help)
@@ -343,6 +343,9 @@ test "resource-lock writes standalone resource schema" {
 ///|
 test "resource surface preserves table global and tag entries" {
   let wasm = @wasm_types.Module::Module()
+  wasm.types.push(@wasm_types.SubType::func([], []))
+  wasm.types.push(@wasm_types.SubType::func([], []))
+  wasm.types.push(@wasm_types.SubType::func([@wasm_types.I32], []))
   let limits = @wasm_types.Limits::{ min: 1L, max: Some(4L), }
   wasm.imports.push({
     mod_name: "env",
@@ -366,11 +369,10 @@ test "resource surface preserves table global and tag entries" {
     name: "tag",
     desc: @wasm_types.ImportDesc::Tag(2),
   })
-  let analysis = @projector.analyze_host_abi(
+  let surface = legacy_resource_surface(
+    @resource.project_resource_surface(wasm),
     wasm,
-    @projector.default_js_capability_policy(),
   )
-  let surface = resource_surface_from_analysis(analysis, wasm)
   inspect(surface.tables.length(), content="1")
   inspect(surface.globals.length(), content="1")
   inspect(surface.tags.length(), content="1")

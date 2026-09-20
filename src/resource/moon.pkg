@@ -1,7 +1,10 @@
 import {
   "0717lee/moonhostabi/src/model",
   "0717lee/moonhostabi/src/projector",
+  "0717lee/moonhostabi/src/wasm_adapter",
   "moonbitlang/core/json",
   "moonbitlang/x/crypto",
   "moonbitlang/x/encoding",
+  "Milky2018/wasm_core/types" @wasm_types,
+  "moonbitlang/core/string",
 }

@@ -372,6 +372,11 @@ try {
     -Arguments @('--prefix', $runtimeRoot, 'run', 'test:browser') `
     -Description 'Chromium runtime verification'
 
+  Invoke-Checked `
+    -FilePath $pwshExecutable `
+    -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-resources.ps1')) `
+    -Description 'Resource protocol and generated adapter end-to-end verification'
+
   Write-Output 'MOONHOSTABI_SPIKE_STATUS=GO'
 }
 finally {

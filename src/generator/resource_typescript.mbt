@@ -39,7 +39,18 @@ fn memory_resource_diagnostics(
 ///|
 fn render_memory_resource_runtime(
   contract : @resource.MemoryContract,
-) -> String {
+  abi : @model.HostAbi,
+  function_contract : @contract.Contract,
+) -> String raise @contract.ContractError {
+  let names = function_contract.semantic_aliases()
+  let import_names = semantic_aliases_for_functions(
+    @model.sort_abi_functions(abi.imports),
+    function_contract,
+  )
+  let export_names = semantic_aliases_for_functions(
+    @model.sort_abi_functions(abi.exports),
+    function_contract,
+  )
   let entries = contract.memories.map(fn(memory) {
     let shared = if memory.shared { "true" } else { "false" }
     "{ exportName: \{Json::string(memory.name).stringify()}, minimumPages: \{memory.minimum_pages}, shared: \{shared} }"
@@ -69,10 +80,10 @@ fn render_memory_resource_runtime(
     "  }",
     "}",
     "",
-    "export async function instantiateWithResources<HostToken = unknown>(",
+    "export async function instantiateWithResources\{type_parameter_declaration(names, true)}(",
     "  bytes: BufferSource,",
-    "  imports: HostImports<HostToken>,",
-    "): Promise<ModuleExports<HostToken>> {",
+    "  imports: HostImports\{type_arguments(import_names)},",
+    "): Promise<ModuleExports\{type_arguments(export_names)}> {",
     "  const exports = await instantiate(bytes, imports);",
     "  assertMemoryResources(exports as unknown as WebAssembly.Exports);",
     "  return exports;",
@@ -103,7 +114,7 @@ pub fn generate_typescript_adapter_with_memory(
     }
   }
   let typescript = base.typescript +
-    render_memory_resource_runtime(resource_contract)
+    render_memory_resource_runtime(resource_contract, abi, contract)
   let manifest = encode_generation_manifest(
     create_generation_manifest(base.abi_sha256, base.contract, typescript),
   )
@@ -153,7 +164,20 @@ fn resource_sources_valid(sources : ResourceContractSources) -> Bool {
 }
 
 ///|
-fn render_resource_runtime(sources : ResourceContractSources) -> String {
+fn render_resource_runtime(
+  sources : ResourceContractSources,
+  abi : @model.HostAbi,
+  contract : @contract.Contract,
+) -> String raise @contract.ContractError {
+  let names = contract.semantic_aliases()
+  let import_names = semantic_aliases_for_functions(
+    @model.sort_abi_functions(abi.imports),
+    contract,
+  )
+  let export_names = semantic_aliases_for_functions(
+    @model.sort_abi_functions(abi.exports),
+    contract,
+  )
   let lines = [
     "",
     "export interface ResourceGuards {",
@@ -167,11 +191,15 @@ fn render_resource_runtime(sources : ResourceContractSources) -> String {
     "const globalResourceContract: unknown = \{resource_source(sources.global)};",
     "const tagResourceContract: unknown = \{resource_source(sources.tag)};",
     "",
-    "export async function instantiateWithResources<HostToken = unknown>(",
+    "export async function instantiateWithResources\{type_parameter_declaration(names, true)}(",
     "  bytes: BufferSource,",
-    "  imports: HostImports<HostToken>,",
+    "  imports: HostImports\{type_arguments(import_names)},",
     "  guards: ResourceGuards,",
-    "): Promise<ModuleExports<HostToken>> {",
+    "): Promise<ModuleExports\{type_arguments(export_names)}> {",
+    "  if (memoryResourceContract !== null && typeof guards?.memory !== \"function\") throw new Error(\"MHA_ADAPTER_MISMATCH: missing memory resource guard\");",
+    "  if (tableResourceContract !== null && typeof guards?.table !== \"function\") throw new Error(\"MHA_ADAPTER_MISMATCH: missing table resource guard\");",
+    "  if (globalResourceContract !== null && typeof guards?.global !== \"function\") throw new Error(\"MHA_ADAPTER_MISMATCH: missing global resource guard\");",
+    "  if (tagResourceContract !== null && typeof guards?.tag !== \"function\") throw new Error(\"MHA_ADAPTER_MISMATCH: missing tag resource guard\");",
     "  const exports = await instantiate(bytes, imports);",
     "  if (memoryResourceContract !== null && guards.memory) guards.memory(exports as unknown as WebAssembly.Exports, memoryResourceContract);",
     "  if (tableResourceContract !== null && guards.table) guards.table(exports as unknown as WebAssembly.Exports, tableResourceContract);",
@@ -210,7 +238,8 @@ pub fn generate_typescript_adapter_with_resources(
     }
     return base
   }
-  let typescript = base.typescript + render_resource_runtime(sources)
+  let typescript = base.typescript +
+    render_resource_runtime(sources, abi, contract)
   let manifest = encode_generation_manifest(
     create_generation_manifest(base.abi_sha256, base.contract, typescript),
   )

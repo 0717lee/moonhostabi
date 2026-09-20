@@ -235,6 +235,14 @@ def assert_dependency_resolution_order(
         )
 
 
+def assert_resource_gate(text: str) -> None:
+    dependency_index = text.find("-Description 'npm ci'")
+    resource_index = text.find("scripts/verify-resources.ps1")
+    success_index = text.find("MOONHOSTABI_SPIKE_STATUS=GO")
+    if not 0 <= dependency_index < resource_index < success_index:
+        raise ValueError("verify-spike.ps1: resource E2E gate must run after npm ci and before GO")
+
+
 def assert_moonbit_contract(job: dict[str, Any], text: str, label: str) -> None:
     """Require the pinned installer snapshot and all three reported identities."""
     env = job.get("env")
@@ -529,6 +537,11 @@ def self_test(ci: dict[str, Any], release: dict[str, Any], repository: Path) -> 
     expect_failure(lambda: validate_release(missing_download), "missing artifact download")
 
     verify_spike = (repository / "scripts" / "verify-spike.ps1").read_text(encoding="utf-8")
+    assert_resource_gate(verify_spike)
+    expect_failure(
+        lambda: assert_resource_gate(verify_spike.replace("scripts/verify-resources.ps1", "scripts/skipped-resource-gate.ps1")),
+        "resource end-to-end gate omitted",
+    )
     assert_dependency_resolution_order(
         verify_spike,
         "verify-spike.ps1",
@@ -560,6 +573,7 @@ def main() -> int:
     workflow_root = args.repository.resolve() / ".github" / "workflows"
     repository = args.repository.resolve()
     verify_spike = (repository / "scripts" / "verify-spike.ps1").read_text(encoding="utf-8")
+    assert_resource_gate(verify_spike)
     assert_dependency_resolution_order(
         verify_spike,
         "verify-spike.ps1",

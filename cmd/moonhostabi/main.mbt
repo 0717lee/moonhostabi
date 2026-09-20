@@ -40,7 +40,9 @@ pub(all) enum CliCommand {
   Lock(String, String)
   ResourceLock(String, String)
   ResourceLockV3(String, String)
-  ResourceVerify(String, String)
+  ResourceLockV4(String, String)
+  ResourceContract(String, String)
+  ResourceVerify(String, String, String)
   Check(String, String)
   Verify(String, String, String?)
   Generate(String, String?, String?, String, GenerateMode)
@@ -77,7 +79,7 @@ const MHA_LOCKFILE_INVALID : String = "MHA_LOCKFILE_INVALID"
 const MHA_CONTRACT_INVALID : String = "MHA_CONTRACT_INVALID"
 
 ///|
-const USAGE : String = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>\n  moonhostabi resource-lock-v3 <artifact.wasm> --out <resource-lock-v3.json>\n  moonhostabi resource-verify <artifact.wasm> --against <resource-lock-v3.json> --format json\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi generate <artifact.wasm> --resource-contract <resource-contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
+const USAGE : String = "usage:\n  moonhostabi inspect <artifact.wasm> --format json\n  moonhostabi lock <artifact.wasm> --out <lock.json>\n  moonhostabi resource-lock <artifact.wasm> --out <resource-lock.json>\n  moonhostabi resource-lock-v3 <artifact.wasm> --out <resource-lock-v3.json>\n  moonhostabi resource-lock-v4 <artifact.wasm> --out <resource-lock-v4.json>\n  moonhostabi resource-contract <artifact.wasm> --out <resource-contract.json>\n  moonhostabi resource-verify <artifact.wasm> --against <resource-lock.json> --format <json|text|markdown>\n  moonhostabi check <artifact.wasm> --against <lock.json>\n  moonhostabi verify <artifact.wasm> --against <lock.json> [--contract <contract.json>] --format json\n  moonhostabi generate <artifact.wasm> --out <directory> [--update | --dry-run]\n  moonhostabi generate <artifact.wasm> --contract <contract.json> --out <directory>\n  moonhostabi generate <artifact.wasm> [--contract <contract.json>] --resource-contract <resource-contract.json> --out <directory>\n  moonhostabi --help\n  moonhostabi --version"
 
 ///|
 fn parse_command(args : Array[String]) -> CliCommand? {
@@ -109,14 +111,26 @@ fn parse_command(args : Array[String]) -> CliCommand? {
     args[2] == "--out" &&
     !args[3].is_empty() {
     Some(ResourceLockV3(args[1], args[3]))
+  } else if args.length() == 4 &&
+    args[0] == "resource-lock-v4" &&
+    !args[1].is_empty() &&
+    args[2] == "--out" &&
+    !args[3].is_empty() {
+    Some(ResourceLockV4(args[1], args[3]))
+  } else if args.length() == 4 &&
+    args[0] == "resource-contract" &&
+    !args[1].is_empty() &&
+    args[2] == "--out" &&
+    !args[3].is_empty() {
+    Some(ResourceContract(args[1], args[3]))
   } else if args.length() == 6 &&
     args[0] == "resource-verify" &&
     !args[1].is_empty() &&
     args[2] == "--against" &&
     !args[3].is_empty() &&
     args[4] == "--format" &&
-    args[5] == "json" {
-    Some(ResourceVerify(args[1], args[3]))
+    (args[5] == "json" || args[5] == "text" || args[5] == "markdown") {
+    Some(ResourceVerify(args[1], args[3], args[5]))
   } else if args.length() == 4 &&
     args[0] == "check" &&
     !args[1].is_empty() &&
@@ -163,6 +177,16 @@ fn parse_command(args : Array[String]) -> CliCommand? {
     args[4] == "--out" &&
     !args[5].is_empty() {
     Some(Generate(args[1], None, Some(args[3]), args[5], Fresh))
+  } else if args.length() == 8 &&
+    args[0] == "generate" &&
+    !args[1].is_empty() &&
+    args[2] == "--contract" &&
+    !args[3].is_empty() &&
+    args[4] == "--resource-contract" &&
+    !args[5].is_empty() &&
+    args[6] == "--out" &&
+    !args[7].is_empty() {
+    Some(Generate(args[1], Some(args[3]), Some(args[5]), args[7], Fresh))
   } else if args.length() == 5 &&
     args[0] == "generate" &&
     !args[1].is_empty() &&
@@ -365,131 +389,6 @@ fn resource_abi_from_analysis(
 }
 
 ///|
-fn resource_surface_from_analysis(
-  analysis : @projector.ProjectionAnalysis,
-  wasm_module : @wasm_types.Module,
-) -> @resource.ResourceSurface {
-  let legacy = resource_abi_from_analysis(analysis, wasm_module)
-  let tables : Array[@resource.TableResource] = []
-  let globals : Array[@resource.GlobalResource] = []
-  let tags : Array[@resource.TagResource] = []
-  // Keep the resource inventory lossless for the v3 surface. Imported
-  // descriptors carry the complete type information; exported descriptors
-  // retain their stable index when the defining section is not exposed by
-  // wasm_core's public Module API.
-  for resource in analysis.resources {
-    match resource.kind {
-      @model.Table => {
-        let mut added = false
-        match resource.module_name {
-          Some(module_name) =>
-            for imported in wasm_module.imports {
-              if imported.mod_name == module_name &&
-                imported.name == resource.name {
-                match imported.desc {
-                  @wasm_types.Table(table) => {
-                    tables.push(@resource.TableResource::{
-                      path: "imports[\{module_name}.\{resource.name}]",
-                      module_name: Some(module_name),
-                      name: resource.name,
-                      element_type: table.elem_type.to_string(),
-                      minimum_elements: table.limits.min,
-                      maximum_elements: table.limits.max,
-                      table64: table.is_table64,
-                    })
-                    added = true
-                  }
-                  _ => ()
-                }
-              }
-            }
-          None => ()
-        }
-        if !added {
-          tables.push(@resource.TableResource::{
-            path: "exports[\{resource.name}]",
-            module_name: None,
-            name: resource.name,
-            element_type: "unknown",
-            minimum_elements: 0L,
-            maximum_elements: None,
-            table64: false,
-          })
-        }
-      }
-      @model.Global => {
-        let mut added = false
-        match resource.module_name {
-          Some(module_name) =>
-            for imported in wasm_module.imports {
-              if imported.mod_name == module_name &&
-                imported.name == resource.name {
-                match imported.desc {
-                  @wasm_types.Global(global) => {
-                    globals.push(@resource.GlobalResource::{
-                      path: "imports[\{module_name}.\{resource.name}]",
-                      module_name: Some(module_name),
-                      name: resource.name,
-                      value_type: global.value_type.to_string(),
-                      mutable: global.mutable,
-                    })
-                    added = true
-                  }
-                  _ => ()
-                }
-              }
-            }
-          None => ()
-        }
-        if !added {
-          globals.push(@resource.GlobalResource::{
-            path: "exports[\{resource.name}]",
-            module_name: None,
-            name: resource.name,
-            value_type: "unknown",
-            mutable: false,
-          })
-        }
-      }
-      @model.Tag => {
-        let mut type_index = 0L
-        match resource.module_name {
-          Some(module_name) =>
-            for imported in wasm_module.imports {
-              if imported.mod_name == module_name &&
-                imported.name == resource.name {
-                match imported.desc {
-                  @wasm_types.Tag(index) => type_index = index.to_int64()
-                  _ => ()
-                }
-              }
-            }
-          None => ()
-        }
-        tags.push(@resource.TagResource::{
-          path: match resource.module_name {
-            Some(module_name) => "imports[\{module_name}.\{resource.name}]"
-            None => "exports[\{resource.name}]"
-          },
-          module_name: resource.module_name,
-          name: resource.name,
-          type_index,
-        })
-      }
-      @model.Memory => ()
-    }
-  }
-  @resource.ResourceSurface::{
-    schema_version: 3,
-    memories: legacy.memories,
-    tables,
-    globals,
-    tags,
-    unsupported: [],
-  }
-}
-
-///|
 #cfg(platform="windows")
 priv struct NativePath(String)
 
@@ -611,7 +510,11 @@ fn decode_contract_file(path : String) -> String raise CliExecutionError {
 fn generate_adapter(
   abi : @model.HostAbi,
   contract_text : String?,
-  resource_contract_text : String?,
+  resource_input : (
+    @resource.ResourceSurfaceV4,
+    @resource.ResourceContractV5,
+    String,
+  )?,
 ) -> @generator.GenerationResult raise CliExecutionError {
   let contract = try {
     match contract_text {
@@ -619,30 +522,21 @@ fn generate_adapter(
       None => @contract.create_contract_draft(abi)
     }
   } catch {
-    error =>
-      raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
+    error => raise CliExecutionError(MHA_CONTRACT_INVALID, error.to_string())
   }
-  match resource_contract_text {
+  match resource_input {
     None =>
       @generator.generate_typescript_adapter(abi, contract) catch {
         error =>
-          raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
+          raise CliExecutionError(MHA_CONTRACT_INVALID, error.to_string())
       }
-    Some(resource_text) => {
-      ignore(@resource.decode_resource_contract(resource_text)) catch {
+    Some((surface, resource_contract, artifact_sha256)) =>
+      @generator.generate_typescript_adapter_with_resource_contract(
+        abi, contract, surface, resource_contract, artifact_sha256,
+      ) catch {
         error =>
-          raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
+          raise CliExecutionError(MHA_CONTRACT_INVALID, error.to_string())
       }
-      @generator.generate_typescript_adapter_with_resources(abi, contract, @generator.ResourceContractSources::{
-        memory: Some(resource_text),
-        table: Some(resource_text),
-        global: Some(resource_text),
-        tag: Some(resource_text),
-      }) catch {
-        error =>
-          raise CliExecutionError(MHA_CONTRACT_INVALID, Show::to_string(error))
-      }
-    }
   }
 }
 
@@ -1386,46 +1280,64 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
         error =>
           raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
       }
-      let analysis = @projector.analyze_host_abi(
-        wasm,
-        @projector.default_js_capability_policy(),
-      )
-      let surface = resource_surface_from_analysis(analysis, wasm)
+      let surface = legacy_resource_surface(resource_projection(artifact), wasm)
       let encoded = @resource.encode_resource_lockfile(
         @resource.create_resource_lockfile(surface, artifact),
       )
       write_new_file(output_path, @utf8.encode(encoded))
       {
         exit_code: 0,
-        stdout: "{\"written\":{json_string(output_path)},\"schemaVersion\":3}",
+        stdout: "{\"written\":\{json_string(output_path)},\"schemaVersion\":3}",
         stderr: "",
       }
     }
-    ResourceVerify(artifact_path, baseline_path) => {
+    ResourceLockV4(artifact_path, output_path) => {
       let artifact = read_bytes(artifact_path)
-      let baseline = @resource.decode_resource_lockfile(
-        @utf8.decode(read_bytes(baseline_path)[:]),
-      ) catch {
-        error =>
-          raise CliExecutionError(MHA_LOCKFILE_INVALID, error.to_string())
-      }
-      let wasm = @wasm_adapter.parse_artifact(artifact) catch {
-        error =>
-          raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
-      }
-      let analysis = @projector.analyze_host_abi(
-        wasm,
-        @projector.default_js_capability_policy(),
+      let surface = resource_projection(artifact)
+      let encoded = @resource.encode_resource_lockfile_v4(
+        @resource.create_resource_lockfile_v4(surface, artifact),
       )
-      let current = resource_surface_from_analysis(analysis, wasm)
-      let compatible = @resource.encode_resource_surface(baseline.abi) ==
-        @resource.encode_resource_surface(current)
-      let code = if compatible { 0 } else { exit_code_for_failure(BreakingAbi) }
+      write_new_file(output_path, @utf8.encode(encoded))
       {
-        exit_code: code,
-        stdout: "{\"schemaVersion\":1,\"classification\":{json_string(status)},\"baselineAbiSha256\":{json_string(baseline.abi_sha256)},\"currentAbiSha256\":{json_string(@resource.resource_surface_sha256(current))}}",
+        exit_code: 0,
+        stdout: "{\"written\":\{json_string(output_path)},\"schemaVersion\":4}",
         stderr: "",
       }
+    }
+    ResourceContract(artifact_path, output_path) => {
+      let surface = resource_projection(read_bytes(artifact_path))
+      if !surface.unsupported.is_empty() {
+        return invalid_result(
+          "MHA_RESOURCE_UNSUPPORTED", "cannot create a resource contract with unresolved types",
+        )
+      }
+      let encoded = @resource.encode_resource_contract_v5(
+        @resource.create_resource_contract_v5(surface),
+      )
+      write_new_file(output_path, @utf8.encode(encoded))
+      {
+        exit_code: 0,
+        stdout: "{\"written\":\{json_string(output_path)},\"schemaVersion\":5}",
+        stderr: "",
+      }
+    }
+    ResourceVerify(artifact_path, baseline_path, format) => {
+      let baseline_text = @utf8.decode(read_bytes(baseline_path)[:]) catch {
+        _ =>
+          raise CliExecutionError(
+            MHA_LOCKFILE_INVALID,
+            "resource lockfile is not valid UTF-8",
+          )
+      }
+      let baseline = resource_baseline(baseline_text)
+      let current = resource_projection(read_bytes(artifact_path))
+      let report = @resource.compare_resource_surfaces(baseline, current)
+      let output = match format {
+        "text" => @resource.render_resource_comparison_text(report)
+        "markdown" => @resource.render_resource_comparison_markdown(report)
+        _ => @resource.encode_resource_comparison(report)
+      }
+      { exit_code: report.exit_code, stdout: output, stderr: "", }
     }
     Check(artifact_path, baseline_path) => {
       let baseline = decode_baseline(read_bytes(baseline_path))
@@ -1468,18 +1380,39 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       output_directory,
       mode
     ) => {
-      let analysis = analyze_artifact(read_bytes(artifact_path))
-      if !analysis.diagnostics.is_empty() {
-        return unsupported_result(analysis.diagnostics, "")
+      let artifact = read_bytes(artifact_path)
+      let analysis = analyze_artifact(artifact)
+      let diagnostics = match resource_contract_path {
+        None => analysis.diagnostics
+        Some(_) =>
+          analysis.diagnostics.filter(fn(diagnostic) {
+            diagnostic.code != @model.MHA_PROJECT_UNSUPPORTED_ITEM
+          })
+      }
+      if !diagnostics.is_empty() {
+        return unsupported_result(diagnostics, "")
       }
       let expected_snapshot = match mode {
-        Update =>
-          Some(
-            validate_owned_generation_directory(
-              output_directory,
-              @lockfile.host_abi_sha256(analysis.abi),
-            ),
+        Update => {
+          let snapshot = validate_owned_generation_directory(
+            output_directory,
+            @lockfile.host_abi_sha256(analysis.abi),
           )
+          let adapter = @utf8.decode(snapshot.adapter_bytes[:]) catch {
+            _ =>
+              raise CliExecutionError(
+                MHA_OUTPUT_UNOWNED,
+                "owned adapter is not valid UTF-8",
+              )
+          }
+          if adapter.contains("instantiateWithResources") {
+            raise CliExecutionError(
+              MHA_OUTPUT_UNOWNED,
+              "resource-aware output requires a fresh directory and explicit resource contract; --update cannot discard resource checks",
+            )
+          }
+          Some(snapshot)
+        }
         Fresh | DryRun => None
       }
       let contract = match expected_snapshot {
@@ -1491,7 +1424,14 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
           }
       }
       let resource_contract = match resource_contract_path {
-        Some(path) => Some(decode_contract_file(path))
+        Some(path) => {
+          let surface = resource_projection(artifact)
+          let contract = resource_contract_for_surface(
+            decode_contract_file(path),
+            surface,
+          )
+          Some((surface, contract, @lockfile.sha256_hex(artifact)))
+        }
         None => None
       }
       let generated = generate_adapter(

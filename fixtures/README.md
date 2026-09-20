@@ -11,7 +11,7 @@ This corpus is authored specifically for MoonHostABI. It does not reuse source o
 | `breaking_v2` | Seeded breaking candidate | `add(i32)->i32` |
 | `rec-a` / `rec-reindexed` | Independent WAT type-index invariance pair | equivalent `node-null` recursive ABI |
 
-Rebuild every artifact and Oracle printout from the repository root:
+Rebuild the compiler fixtures and recursive-type Oracle printouts from the repository root:
 
 ```powershell
 pwsh -NoProfile -File scripts/build-fixtures.ps1
@@ -23,3 +23,17 @@ the checksum-verified executable under `.tools/wasm-tools`; CI may provide the
 same version on `PATH`. Outputs are staged and structurally validated before
 the committed artifacts and Oracle files are replaced. Per-run build data is
 removed unless `-KeepBuild` is supplied for diagnosis.
+
+## Resource boundary corpus
+
+The `resources*.wat` fixtures cover all four resource kinds, imported resource
+re-exports, individual table/global/tag changes, type-index renumbering, and
+escaped export names. `resources-imports-start-changed` has the same resource
+surface but a start function with a visible side effect; the generated adapter
+must reject these unexpected bytes before executing that function.
+
+Run `pwsh -NoProfile -File scripts/verify-resources.ps1` to rebuild these WAT
+files in a temporary directory, validate them with `wasm-tools`, and compare
+their bytes with the committed `resources*.wasm` files. The gate also compiles
+freshly generated adapters with strict TypeScript and runs real Node resource
+and rejection tests. It does not overwrite the committed fixtures.
