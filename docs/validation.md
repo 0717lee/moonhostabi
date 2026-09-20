@@ -441,9 +441,21 @@ idempotent, version- and source-hash-guarded application script.
 - normalized patched source SHA-256:
   `a835b9e5a47587c4f5d1e6792313f59b2ebfc149156de5b388903007662397d0`.
 
-No upstream Issue or PR has been opened as of 2026-09-04, so there is no link to
-claim. Replacing the cache patch with an upstream release containing the fix is
-a release prerequisite.
+Upstream [Issue #512](https://github.com/Milky2018/wasmoon/issues/512) was closed
+as completed on September 18, 2026. Commit
+[`f0b01bd9`](https://github.com/Milky2018/wasmoon/commit/f0b01bd9b23ce6d3d3e36e978df37bc85f5ab980)
+was merged into `main` by [PR #519](https://github.com/Milky2018/wasmoon/pull/519).
+
+On September 20, the [Mooncakes manifest](https://mooncakes.io/api-new/v0/manifest/Milky2018/wasm_core@0.16.0)
+still listed `0.16.0` as the latest version, published on September 16. In a clean
+isolated project without the downstream patch, the implicit singleton
+self-reference probe failed with `invalid heap type`; the explicit `rec` control
+and malformed-mutability rejection control passed. Thus the fix is merged
+upstream but is not yet available in the latest published package tested here.
+
+The dependency stays pinned to `0.14.0`, and the guarded patch remains required
+for the current release. Removing it is blocked on a fixed published dependency
+passing the [unpatched regression and release checklist](../patches/README.md#upstream-status-and-removal-checklist).
 
 ## Source references
 

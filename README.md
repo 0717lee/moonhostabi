@@ -166,3 +166,10 @@ resolution step.
 The patch only teaches the upstream parser to resolve self-references in an
 implicit singleton recursive type. It is kept separate from MoonHostABI's own
 ABI logic so it can be removed when an upstream release contains the fix.
+
+As of September 20, 2026, wasmoon issue #512 is closed and the fix is merged
+through PR #519. The latest published `wasm_core` package, `0.16.0`, still fails
+the unpatched singleton regression.
+Keep the pinned `0.14.0` dependency and guarded patch until a published version
+passes that regression without the patch. See the
+[upstream status and removal checklist](patches/README.md#upstream-status-and-removal-checklist).
