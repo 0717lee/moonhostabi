@@ -1,10 +1,11 @@
 # Lock resources and generate a checked adapter
 
-This workflow is available from the current source checkout and is not included
-in the published `0717lee/moonhostabi@0.4.1` package. It gives memory, table,
-global, and exception-tag boundaries their own lock, contract, comparison
-report, and generated runtime checks. The function-only `verify` report and
-default `generate` path keep their existing behavior.
+Version `0.5.0` introduces this workflow; the `0717lee/moonhostabi@0.4.1` package
+does not include it. It gives memory, table, global, and exception-tag boundaries
+their own lock, contract, comparison report, and generated runtime checks. The
+function-only `verify` report and default `generate` path keep their existing
+behavior. Check the [Mooncakes package](https://mooncakes.io/docs/0717lee/moonhostabi)
+for published versions.
 
 ## Create a lock and contract from the fixture
 

@@ -11,7 +11,7 @@
 
 name = "0717lee/moonhostabi"
 
-version = "0.4.1"
+version = "0.5.0"
 
 readme = "README.md"
 

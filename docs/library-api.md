@@ -5,17 +5,19 @@ CLI is the recommended integration point for release pipelines. Library users
 can import the model, lockfile, compatibility, contract, generator, or
 verification packages when they need an in-process gate.
 
-Add the published module to a downstream MoonBit project:
+Use the `0.5.0` release in a downstream MoonBit project:
 
 ```powershell
-moon add 0717lee/moonhostabi@0.4.1
+moon add 0717lee/moonhostabi@0.5.0
 moon update
 moon check
 ```
 
-The resource surface v4, lockfile v4, contract v5, and artifact-bound generator
-below are unreleased APIs in this checkout. They are not part of the published
-`0.4.1` package.
+Version `0.5.0` introduces the resource surface v4, lockfile v4, contract v5, and
+artifact-bound generator below. The `0.4.1` package does not include these APIs.
+Check the [Mooncakes package](https://mooncakes.io/docs/0717lee/moonhostabi) and
+[GitHub releases](https://github.com/0717lee/moonhostabi/releases) for published
+versions.
 
 The core package boundaries are:
 
@@ -46,7 +48,7 @@ memory flags directly from the Wasm bytes; the pinned parser does not retain
 shared-memory metadata. The module-only helper marks that missing evidence as
 unsupported.
 
-The source resource APIs are:
+The resource APIs introduced in `0.5.0` are:
 
 | Operation | Entry points | Result |
 | --- | --- | --- |

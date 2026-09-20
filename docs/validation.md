@@ -7,7 +7,7 @@ Verification workflow has since completed successfully for both Windows and
 Linux on the release candidate commit
 (`https://github.com/0717lee/moonhostabi/actions/runs/34081779933`).
 
-## Unreleased resource workflow verification
+## Resource workflow verification for 0.5.0
 
 On September 20, 2026, the source-only resource workflow passed the full local
 Windows gate, followed by `moon build --target all`:
@@ -25,9 +25,11 @@ Windows gate, followed by `moon build --target all`:
 The final markers were `MOONHOSTABI_RESOURCE_E2E_STATUS=GO` and
 `MOONHOSTABI_SPIKE_STATUS=GO`. The resource gate is included in
 `scripts/verify-spike.ps1`, which the existing CI workflow invokes. These local
-results are not evidence of a new remote CI run or package publication:
-`0717lee/moonhostabi@0.4.1` does not include this unreleased workflow. A new
-release must repeat the Linux/Windows CI and release checks.
+results are not evidence of a new remote CI run or package publication.
+Version `0.5.0` is the release target for this workflow; `0.4.1` does not include
+it. The exact release commit must pass the Linux/Windows CI and release checks
+before publication. Its run URLs and archive provenance will be recorded in
+the [0.5.0 release](https://github.com/0717lee/moonhostabi/releases/tag/v0.5.0).
 
 See the [resource protocol](resource-protocol.md) for supported types, legacy
 lock migration, field-level report formats, and artifact-bound runtime checks.
@@ -409,7 +411,7 @@ for both platform packages and aggregate
 ## Current limitations
 
 - Default generation supports function imports/exports only. Public tables,
-  memories, globals and tags require the unreleased, explicit
+  memories, globals and tags require the explicit 0.5.0
   `--resource-contract` workflow; otherwise they fail closed.
 - Typed GC references and `v128` are modeled for ABI comparison but are not
   represented by the default JavaScript adapter.
@@ -425,7 +427,7 @@ for both platform packages and aggregate
   claimed.
 - The function ABI lockfile schema remains version 1. Host ABI contracts use canonical
   schema v2 and accept only a strictly validated v1-to-v2 migration; no later
-  function-contract migration is implemented. The separate unreleased resource
+  function-contract migration is implemented. The separate 0.5.0 resource
   workflow uses lockfile v4 and contract v5.
 - Runtime preflight validates required imports and, immediately after
   instantiation, verifies every required export is an own property whose value

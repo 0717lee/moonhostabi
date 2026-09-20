@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.0] - 2026-09-20
 
 ### Added
 
@@ -28,8 +28,11 @@
 
 ### Notes
 
-- These changes are source-only and are not included in the published
-  `0717lee/moonhostabi@0.4.1` package.
+- Use `0717lee/moonhostabi@0.5.0` for these APIs; they are not included in the
+  `0.4.1` package. Check the
+  [GitHub releases](https://github.com/0717lee/moonhostabi/releases) and
+  [Mooncakes package](https://mooncakes.io/docs/0717lee/moonhostabi) for publication
+  status.
 - Resource generation supports non-shared memory32 with 65,536-byte pages,
   table32 with `funcref`/`externref` elements, and scalar/`externref` globals and
   tag parameters. Analysis can record more types than generation supports.

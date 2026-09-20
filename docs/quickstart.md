@@ -54,7 +54,7 @@ Expected final marker:
 MOONHOSTABI_VERIFY_STATUS=GO
 ```
 
-The unreleased source resource workflow has its own lock and contract versions.
+The `0.5.0` resource workflow has its own lock and contract versions.
 To lock and verify the committed memory/table/global/tag fixture, create a fresh
 temporary directory first:
 
@@ -87,8 +87,8 @@ the MoonBit and `wasm-tools` setup described above. The generated adapter checks
 artifact bytes and imported resource types before application instantiation;
 both `instantiate` and `instantiateWithResources` perform those checks. See the
 [resource protocol walkthrough](resource-protocol.md) for supported types,
-runtime requirements, report fields, and legacy migration. These source changes
-are not included in the published `0.4.1` package.
+runtime requirements, report fields, and legacy migration. Use version `0.5.0`
+for this workflow; the `0.4.1` package does not include it.
 
 The CLI evidence script also prints the individual help, version, timeout, exit-code,
 canonical-report, Unicode-path, and no-host-execution markers. A successful
@@ -162,13 +162,17 @@ The committed local evidence is deliberately split:
   package negatives are observed and marked `GO`.
 - **Linux archive path:** tar/gzip metadata and aggregate behavior are checked by
   the local static/mock path; this is not a Linux native-binary result.
-- **Remote Linux native:** covered by successful public Verification matrix run
+- **Historical remote Linux native:** covered by successful public Verification matrix run
   `34081779933` (see the repository's Actions history). No tag or GitHub Release
   is implied by these markers.
-- **Release dry run:** passed for Linux, Windows, and aggregate in run
+- **Historical Release dry run:** passed for Linux, Windows, and aggregate in run
   `34081936398`; it is separate from the Verification matrix and does not publish
   a GitHub Release.
-- **Mooncakes publication:** `0717lee/moonhostabi@0.4.1` is the published package. The resource v4/v5 workflow in this checkout is unreleased. Future versions must repeat the checks before publication.
+- **Mooncakes publication:** the resource v4/v5 workflow targets
+  `0717lee/moonhostabi@0.5.0`; it is not included in `0.4.1`. Check the
+  [package availability](library-api.md) for published versions. The `0.5.0`
+  candidate must pass both remote gates on its exact release commit before
+  publication. Future versions must repeat the checks before publication.
 
 For a short live demonstration, run the repository-owned [judge demo](judge-demo.md).
 It uses the committed `externref` fixture to show inspection, lock creation,
