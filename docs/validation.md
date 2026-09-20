@@ -9,7 +9,7 @@ Linux on the release candidate commit
 
 ## Resource workflow verification for 0.5.0
 
-On September 20, 2026, the source-only resource workflow passed the full local
+On September 20, 2026, the resource workflow passed the full local
 Windows gate, followed by `moon build --target all`:
 
 - 147 MoonBit tests passed, with checks across the configured targets.
@@ -25,11 +25,31 @@ Windows gate, followed by `moon build --target all`:
 The final markers were `MOONHOSTABI_RESOURCE_E2E_STATUS=GO` and
 `MOONHOSTABI_SPIKE_STATUS=GO`. The resource gate is included in
 `scripts/verify-spike.ps1`, which the existing CI workflow invokes. These local
-results are not evidence of a new remote CI run or package publication.
-Version `0.5.0` is the release target for this workflow; `0.4.1` does not include
-it. The exact release commit must pass the Linux/Windows CI and release checks
-before publication. Its run URLs and archive provenance will be recorded in
-the [0.5.0 release](https://github.com/0717lee/moonhostabi/releases/tag/v0.5.0).
+results are separate from the remote release evidence recorded below.
+
+Version `0.5.0` was published on September 20 from commit
+`784e9fb4da540e07fbc9f8a239505b20c3c1866d` after both exact-commit gates passed:
+
+- [Verification run 35496324936](https://github.com/0717lee/moonhostabi/actions/runs/35496324936):
+  Linux and Windows full gates and clean-tree reproducibility checks passed.
+- [Release run 35496325425](https://github.com/0717lee/moonhostabi/actions/runs/35496325425):
+  both real platform packages, unpacked smoke tests, and aggregation passed.
+- [GitHub Release v0.5.0](https://github.com/0717lee/moonhostabi/releases/tag/v0.5.0):
+  both archives, `SHA256SUMS`, and `provenance.json` were uploaded. Their digests
+  match the downloaded CI artifacts, and provenance names the clean source
+  commit above. The downloaded Windows executable also passed resource lock,
+  breaking-change verification, contract creation, and adapter generation.
+- [Mooncakes manifest](https://mooncakes.io/api-new/v0/manifest/0717lee/moonhostabi@0.5.0):
+  publication and package build succeeded. The uploaded package SHA-256 is
+  `329b6cb9e34645d505f6915154a0c2a8022e3a38d661effa541710eae3c7c3e6`.
+- [Consumer run 35496580826](https://github.com/0717lee/moonhostabi-consumer/actions/runs/35496580826):
+  commit `83e4307393ca79aeadccfb55994d342833d689fd` resolves the published `0.5.0`
+  package and passes all three tests, including v4 lock/v5 contract roundtrips
+  and a changed-memory rejection. The same three tests passed locally against
+  the freshly downloaded package.
+
+Version `0.4.1` does not include this resource workflow. Future versions must
+repeat these gates for their own release commit before publication.
 
 See the [resource protocol](resource-protocol.md) for supported types, legacy
 lock migration, field-level report formats, and artifact-bound runtime checks.

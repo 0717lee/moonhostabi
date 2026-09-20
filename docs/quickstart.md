@@ -168,11 +168,12 @@ The committed local evidence is deliberately split:
 - **Historical Release dry run:** passed for Linux, Windows, and aggregate in run
   `34081936398`; it is separate from the Verification matrix and does not publish
   a GitHub Release.
-- **Mooncakes publication:** the resource v4/v5 workflow targets
-  `0717lee/moonhostabi@0.5.0`; it is not included in `0.4.1`. Check the
-  [package availability](library-api.md) for published versions. The `0.5.0`
-  candidate must pass both remote gates on its exact release commit before
-  publication. Future versions must repeat the checks before publication.
+- **Version 0.5.0:** published to Mooncakes and GitHub after Verification run
+  `35496324936` and Release dry run `35496325425` passed on release commit
+  `784e9fb`. Independent consumer run `35496580826` also passed against the
+  downloaded package. See the [release evidence](validation.md#resource-workflow-verification-for-050).
+  The resource v4/v5 workflow is not included in `0.4.1`. Future versions must repeat
+  the checks before publication.
 
 For a short live demonstration, run the repository-owned [judge demo](judge-demo.md).
 It uses the committed `externref` fixture to show inspection, lock creation,

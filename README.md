@@ -9,6 +9,8 @@ Spike is **GO** locally and on the public Linux/Windows CI matrix; see [the
 validation evidence](docs/validation.md) for hashes, the compatibility matrix,
 runtime observations, and limits.
 
+Published package: `0717lee/moonhostabi@0.5.0` on Mooncakes.
+
 Version `0.5.0` introduces resource surface v4, resource contract v5, and
 artifact-bound adapters. Use `0717lee/moonhostabi@0.5.0` for these APIs; the
 `0.4.1` package does not include them. See

@@ -21,7 +21,10 @@ The next ecosystem improvements are deliberately incremental:
 
 An independent downstream smoke project is available at
 [0717lee/moonhostabi-consumer](https://github.com/0717lee/moonhostabi-consumer).
-Its CI resolves `0717lee/moonhostabi@0.4.1` from Mooncakes in a clean project.
+Its CI resolves `0717lee/moonhostabi@0.5.0` from Mooncakes in a clean project.
+[Run 35496580826](https://github.com/0717lee/moonhostabi-consumer/actions/runs/35496580826)
+passed all three tests: the function ABI lock, recursive GC projection, and
+resource v4 lock/v5 contract APIs with compatible and breaking-memory checks.
 The parser compatibility issue
 [wasmoon#512](https://github.com/Milky2018/wasmoon/issues/512) was closed as fixed
 on September 18, 2026; [PR #519](https://github.com/Milky2018/wasmoon/pull/519)
