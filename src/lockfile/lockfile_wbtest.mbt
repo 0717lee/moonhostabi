@@ -102,11 +102,11 @@ test "crypto dependency hashes bytes as lowercase hexadecimal" {
 }
 
 ///|
-test "the same Host ABI encodes to byte-identical JSON" {
+test "the Host ABI canonical JSON matches its golden representation" {
   let abi = sample_scalar_abi([imported_clock()], [exported_add()])
   inspect(
-    encode_canonical_abi(abi) == encode_canonical_abi(abi),
-    content="true",
+    encode_canonical_abi(abi),
+    content="{\"schemaVersion\":1,\"imports\":[{\"module\":\"clock\",\"name\":\"now\",\"params\":[],\"results\":[\"f64\"]}],\"exports\":[{\"module\":null,\"name\":\"add\",\"params\":[\"i32\",\"i32\"],\"results\":[\"i32\"]}],\"types\":[],\"features\":[\"moonbit.make_closure\"]}",
   )
 }
 
@@ -180,7 +180,7 @@ test "artifact provenance does not change semantic ABI identity" {
 }
 
 ///|
-test "lockfile JSON escapes names and stays byte-identical" {
+test "lockfile JSON escapes names and stays valid" {
   let abi = sample_scalar_abi([], [
     @model.AbiFunction::{
       module_name: None,
@@ -191,8 +191,6 @@ test "lockfile JSON escapes names and stays byte-identical" {
   ])
   let lockfile = create_lockfile(abi, b"artifact")
   let first = encode_lockfile(lockfile)
-  let second = encode_lockfile(lockfile)
-  inspect(first == second, content="true")
   inspect(@json.valid(first), content="true")
   inspect(first.contains("quote\\\"slash\\\\line\\n"), content="true")
 }

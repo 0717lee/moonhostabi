@@ -35,7 +35,14 @@ if (-not [String]::IsNullOrEmpty($testToken) -and $testToken -cnotmatch '^[0-9a-
 }
 if (
   -not [String]::IsNullOrEmpty($testFault) -and
-  $testFault -cne 'after-archive-publish'
+  @(
+    'after-archive-preflight',
+    'partial-archive-before-publish',
+    'after-archive-move',
+    'after-archive-publish',
+    'after-archive-publish-evidence-collision',
+    'after-archive-publish-replaced'
+  ) -cnotcontains $testFault
 ) {
   throw 'Unknown MOONHOSTABI_INTERNAL_TEST_ONLY_RELEASE_FAULT value.'
 }
@@ -160,6 +167,42 @@ function Assert-PathAbsent {
   )
   if ($matches.Count -ne 0) {
     throw "$Description already exists; refusing overwrite: '$Path'."
+  }
+}
+
+function Publish-ValidatedArchive {
+  param(
+    [Parameter(Mandatory)] [string] $Stage,
+    [Parameter(Mandatory)] [string] $Destination,
+    [Parameter(Mandatory)] [string] $ExpectedHash,
+    [Parameter(Mandatory)] [Int64] $ExpectedSize
+  )
+
+  $stagePath = Get-StrictFile -Path $Stage -Description 'Validated release archive staging file'
+  $stageItem = Get-Item -LiteralPath $stagePath -Force
+  if ($stageItem.Length -ne $ExpectedSize) {
+    throw 'Validated release archive staging bytes changed before publication.'
+  }
+  if ((Get-Sha256 -Path $stagePath) -cne $ExpectedHash) {
+    throw 'Validated release archive staging bytes changed before publication.'
+  }
+
+  # Move the complete validated file into place without replacing a destination
+  # that appeared after the preflight check. This is the only final-path write.
+  [IO.File]::Move($stagePath, $Destination, $false)
+  $script:publishedArchiveHash = $ExpectedHash
+  $script:publishedArchiveSize = $ExpectedSize
+  $script:archiveNeedsRollback = $true
+
+  if ($script:testFault -ceq 'after-archive-move') {
+    throw 'Injected release package failure before final archive observation.'
+  }
+
+  # Keep this independent final observation coupled to the ownership metadata
+  # above so a read/hash failure still rolls back only this publication.
+  $publishedHash = Get-Sha256 -Path $Destination
+  if ($publishedHash -cne $ExpectedHash) {
+    throw 'Published release archive bytes differ from the validated archive.'
   }
 }
 
@@ -480,6 +523,14 @@ try {
     throw 'Package output directory must be empty.'
   }
   Assert-PathAbsent -Path $archivePath -Description 'Release archive'
+  if ($testFault -ceq 'after-archive-preflight') {
+    [IO.File]::WriteAllBytes(
+      $archivePath,
+      [Text.UTF8Encoding]::new($false, $true).GetBytes(
+        'destination-created-after-preflight'
+      )
+    )
+  }
   Assert-ExactStageFile `
     -Path $stagePath `
     -ExpectedParent $outputRoot `
@@ -693,20 +744,38 @@ try {
       -MoonrunVersion $moonrunVersion
   }
 
-  [IO.File]::WriteAllBytes($archivePath, $stagedArchiveBytes)
-  if ((Get-Sha256 -Path $archivePath) -cne $archiveHash) {
-    throw 'Published release archive bytes differ from the validated archive.'
+  if ($testFault -ceq 'partial-archive-before-publish') {
+    $partialLength = [Math]::Max(1, [int]($stagedArchiveBytes.Length / 2))
+    [IO.File]::WriteAllBytes(
+      $stagePath,
+      [byte[]]$stagedArchiveBytes[0..($partialLength - 1)]
+    )
   }
+  Publish-ValidatedArchive `
+    -Stage $stagePath `
+    -Destination $archivePath `
+    -ExpectedHash $archiveHash `
+    -ExpectedSize $archiveSize
   if ($null -ne $evidencePath) {
-    $publishedArchiveHash = $archiveHash
-    $publishedArchiveSize = $archiveSize
-    $archiveNeedsRollback = $true
     if ($testFault -ceq 'after-archive-publish') {
       throw 'Injected release package failure after archive publication.'
     }
+    if ($testFault -ceq 'after-archive-publish-replaced') {
+      [IO.File]::Delete($archivePath)
+      [IO.File]::WriteAllBytes(
+        $archivePath,
+        [Text.UTF8Encoding]::new($false, $true).GetBytes(
+          'replacement-created-after-archive-publication'
+        )
+      )
+      throw 'Injected release package failure after archive publication with replacement.'
+    }
+    if ($testFault -ceq 'after-archive-publish-evidence-collision') {
+      [IO.File]::WriteAllText($evidencePath, 'concurrent-evidence-sentinel', $utf8NoBom)
+    }
     [IO.File]::Move($evidenceStagePath, $evidencePath, $false)
-    $archiveNeedsRollback = $false
   }
+  $archiveNeedsRollback = $false
   Write-Output "MOONHOSTABI_PACKAGE_NAME=$archiveName"
   Write-Output "MOONHOSTABI_PACKAGE_SHA256=$archiveHash"
   Write-Output 'MOONHOSTABI_PACKAGE_SMOKE=GO'

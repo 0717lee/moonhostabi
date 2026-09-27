@@ -49,16 +49,20 @@ test "resource ABI canonicalization and memory contract" {
 
 ///|
 test "resource lockfile v2 is deterministic" {
-  let abi = ResourceAbi::{ schema_version: 2, memories: [], unsupported: [], }
-  let first = encode_lockfile(create_lockfile(abi, b"artifact"))
-  let second = encode_lockfile(create_lockfile(abi, b"artifact"))
+  let empty_abi = ResourceAbi::{
+    schema_version: 2,
+    memories: [],
+    unsupported: [],
+  }
+  let first = encode_lockfile(create_lockfile(empty_abi, b"artifact"))
+  let second = encode_lockfile(create_lockfile(empty_abi, b"artifact"))
   inspect(first == second, content="true")
   inspect(first.contains("\"lockfileVersion\":2"), content="true")
   inspect(
-    create_lockfile(abi, b"artifact").schema_sha256.length(),
+    create_lockfile(empty_abi, b"artifact").schema_sha256.length(),
     content="64",
   )
-  let lockfile = create_lockfile(abi, b"artifact")
+  let lockfile = create_lockfile(empty_abi, b"artifact")
   inspect(
     decode_lockfile(encode_lockfile(lockfile)) == lockfile,
     content="true",
@@ -83,6 +87,51 @@ test "resource lockfile v2 is deterministic" {
     } catch {
       _ => true
     },
+    content="true",
+  )
+
+  let memory_z : MemoryResource = {
+    path: "exports[z]",
+    module_name: None,
+    name: "z",
+    minimum_pages: 2L,
+    maximum_pages: Some(4L),
+    shared: false,
+    memory64: false,
+    page_size_log2: 16,
+  }
+  let memory_a : MemoryResource = {
+    path: "exports[a]",
+    module_name: None,
+    name: "a",
+    minimum_pages: 1L,
+    maximum_pages: Some(2L),
+    shared: false,
+    memory64: false,
+    page_size_log2: 16,
+  }
+  let reverse_abi = ResourceAbi::{
+    schema_version: 2,
+    memories: [memory_z, memory_a],
+    unsupported: ["reason-z", "reason-a"],
+  }
+  let sorted_abi = ResourceAbi::{
+    schema_version: 2,
+    memories: [memory_a, memory_z],
+    unsupported: ["reason-a", "reason-z"],
+  }
+  inspect(
+    encode_canonical_abi(reverse_abi),
+    content="{\"schemaVersion\":2,\"memories\":[{\"path\":\"exports[a]\",\"module\":null,\"name\":\"a\",\"minimumPages\":1,\"maximumPages\":2,\"shared\":false,\"memory64\":false,\"pageSizeLog2\":16},{\"path\":\"exports[z]\",\"module\":null,\"name\":\"z\",\"minimumPages\":2,\"maximumPages\":4,\"shared\":false,\"memory64\":false,\"pageSizeLog2\":16}],\"unsupported\":[\"reason-a\",\"reason-z\"]}",
+  )
+  let reverse_lockfile = create_lockfile(reverse_abi, b"artifact")
+  let sorted_lockfile = create_lockfile(sorted_abi, b"artifact")
+  inspect(
+    encode_lockfile(reverse_lockfile) == encode_lockfile(sorted_lockfile),
+    content="true",
+  )
+  inspect(
+    reverse_lockfile.abi_sha256 == sorted_lockfile.abi_sha256,
     content="true",
   )
 }
@@ -170,16 +219,21 @@ test "complete resource protocol rejects invalid limits and fingerprints" {
     },
     content="true",
   )
-  let bad_limit = encode_resource_lockfile(lockfile).replace(
-    old="\"maximumElements\":4",
-    new="\"maximumElements\":1",
-  )
+  let invalid_surface : ResourceSurface = {
+    ..surface,
+    tables: [{ ..surface.tables[0], maximum_elements: Some(1L), }],
+  }
+  let invalid_lockfile = create_resource_lockfile(invalid_surface, b"artifact")
   inspect(
     try {
-      ignore(decode_resource_lockfile(bad_limit))
+      ignore(
+        decode_resource_lockfile(encode_resource_lockfile(invalid_lockfile)),
+      )
       false
     } catch {
-      _ => true
+      InvalidResource(message) =>
+        message ==
+        "lockfile.abi.tables[0].maximumElements: must be at least minimumElements"
     },
     content="true",
   )

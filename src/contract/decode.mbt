@@ -130,9 +130,9 @@ fn validate_abi_fingerprint(
 ///|
 fn decode_v2_contract(
   abi : @model.HostAbi,
+  object : Map[String, Json],
   text : String,
 ) -> Contract raise ContractError {
-  let object = require_contract_object(parse_contract_json(text))
   require_keys(
     object,
     ["schemaVersion", "abiSha256", "externrefs", "imports"],
@@ -187,7 +187,7 @@ pub fn decode_contract(
   let object = require_contract_object(parse_contract_json(text))
   match contract_version(object) {
     1 => migrate_v1_contract(abi, text)
-    2 => decode_v2_contract(abi, text)
+    2 => decode_v2_contract(abi, object, text)
     _ => raise UnsupportedContractVersion
   }
 }

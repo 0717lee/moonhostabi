@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Preserve opaque resource JSON semantics, including nested `__proto__` keys,
+  when generating caller-guarded TypeScript adapters.
+- Publish validated release archives without overwriting a destination created
+  after preflight, and track rollback before post-publication checks.
+
+### Changed
+
+- Strengthen canonicalization and invalid-resource regression tests with
+  independent expected values, input permutations, and matching fingerprints.
+- Remove redundant compilation, JSON parsing, sorting, duplicate CLI coverage,
+  and unused private verification plumbing without changing public APIs.
+
 ## [0.5.0] - 2026-09-20
 
 ### Added

@@ -537,6 +537,26 @@ try {
     throw 'Each package output directory must contain exactly its versioned archive.'
   }
   Assert-BytesEqual -Left $archiveA -Right $archiveB -Description 'Independent platform archives'
+  $outputWithoutEvidence = Join-Path $runRoot 'package-without-evidence'
+  [IO.Directory]::CreateDirectory($outputWithoutEvidence) | Out-Null
+  $withoutEvidence = Invoke-CapturedProcess -FilePath $pwsh -Environment @{
+    MOONHOSTABI_INTERNAL_TEST_ONLY_RELEASE_TOKEN = $releaseTestToken
+  } -Arguments @(
+    '-NoProfile', '-NonInteractive',
+    '-File', (Join-Path $repositoryRoot 'scripts/package-release.ps1'),
+    '-RepositoryRoot', $repositoryRoot,
+    '-Version', $version, '-Output', $outputWithoutEvidence
+  )
+  $archiveWithoutEvidence = Join-Path $outputWithoutEvidence $archiveName
+  if (
+    $withoutEvidence.ExitCode -ne 0 -or $withoutEvidence.Stderr -cne '' -or
+    -not $withoutEvidence.Stdout.Contains('MOONHOSTABI_PACKAGE_STATUS=CREATED', [StringComparison]::Ordinal) -or
+    -not (Test-Path -LiteralPath $archiveWithoutEvidence -PathType Leaf) -or
+    @(Get-ChildItem -LiteralPath $outputWithoutEvidence -Force).Count -ne 1
+  ) {
+    throw 'Package publication without evidence failed or rolled back its archive.'
+  }
+  Assert-BytesEqual -Left $archiveA -Right $archiveWithoutEvidence -Description 'Archive without optional evidence'
   $hashA = Get-Sha256 -Path $archiveA
   $hashB = Get-Sha256 -Path $archiveB
   if ($hashA -cne $hashB) {
@@ -1028,6 +1048,77 @@ try {
     }
   }
 
+  $preflightRaceOutput = Join-Path $runRoot 'package-preflight-race'
+  [IO.Directory]::CreateDirectory($preflightRaceOutput) | Out-Null
+  $preflightRaceEvidence = Join-Path $runRoot 'preflight-race.evidence.json'
+  $preflightRaceResult = Invoke-Package `
+    -PowerShell $pwsh `
+    -Version $version `
+    -Output $preflightRaceOutput `
+    -Evidence $preflightRaceEvidence `
+    -Fault 'after-archive-preflight'
+  $preflightRaceArchive = Join-Path $preflightRaceOutput $archiveName
+  if (
+    $preflightRaceResult.ExitCode -eq 0 -or
+    [String]::IsNullOrWhiteSpace($preflightRaceResult.Stderr) -or
+    -not [String]::IsNullOrEmpty($preflightRaceResult.Stdout) -or
+    -not (Test-Path -LiteralPath $preflightRaceArchive -PathType Leaf) -or
+    (Test-Path -LiteralPath $preflightRaceEvidence) -or
+    @(Get-ChildItem -LiteralPath $preflightRaceOutput -Force).Count -ne 1 -or
+    [Text.UTF8Encoding]::new($false, $true).GetString(
+      [IO.File]::ReadAllBytes($preflightRaceArchive)
+    ) -cne 'destination-created-after-preflight'
+  ) {
+    throw 'Archive destination created after preflight was overwritten or not preserved.'
+  }
+
+  $partialPublishOutput = Join-Path $runRoot 'package-partial-publish'
+  [IO.Directory]::CreateDirectory($partialPublishOutput) | Out-Null
+  $partialPublishEvidence = Join-Path $runRoot 'partial-publish.evidence.json'
+  $partialPublishResult = Invoke-Package `
+    -PowerShell $pwsh `
+    -Version $version `
+    -Output $partialPublishOutput `
+    -Evidence $partialPublishEvidence `
+    -Fault 'partial-archive-before-publish'
+  if (
+    $partialPublishResult.ExitCode -eq 0 -or
+    $partialPublishResult.Stderr -notmatch 'staging bytes changed before publication' -or
+    -not [String]::IsNullOrEmpty($partialPublishResult.Stdout) -or
+    @(Get-ChildItem -LiteralPath $partialPublishOutput -Force).Count -ne 0 -or
+    (Test-Path -LiteralPath $partialPublishEvidence)
+  ) {
+    throw 'Partial archive publication preparation did not fail closed.'
+  }
+
+  foreach ($withEvidence in @($false, $true)) {
+    $moveFailureOutput = Join-Path $runRoot "package-move-failure-$withEvidence"
+    [IO.Directory]::CreateDirectory($moveFailureOutput) | Out-Null
+    $moveFailureEvidence = Join-Path $runRoot "move-failure-$withEvidence.evidence.json"
+    $moveFailureArguments = @(
+      '-NoProfile', '-NonInteractive',
+      '-File', (Join-Path $repositoryRoot 'scripts/package-release.ps1'),
+      '-RepositoryRoot', $repositoryRoot,
+      '-Version', $version, '-Output', $moveFailureOutput
+    )
+    if ($withEvidence) {
+      $moveFailureArguments += @('-EvidenceOut', $moveFailureEvidence)
+    }
+    $moveFailure = Invoke-CapturedProcess -FilePath $pwsh -Environment @{
+      MOONHOSTABI_INTERNAL_TEST_ONLY_RELEASE_TOKEN = $releaseTestToken
+      MOONHOSTABI_INTERNAL_TEST_ONLY_RELEASE_FAULT = 'after-archive-move'
+    } -Arguments $moveFailureArguments
+    if (
+      $moveFailure.ExitCode -eq 0 -or
+      $moveFailure.Stderr -notmatch '(?s)before\s+final\s+archive\s+observation' -or
+      -not [String]::IsNullOrEmpty($moveFailure.Stdout) -or
+      @(Get-ChildItem -LiteralPath $moveFailureOutput -Force).Count -ne 0 -or
+      (Test-Path -LiteralPath $moveFailureEvidence)
+    ) {
+      throw "Archive observation failure did not roll back publication (EvidenceOut=$withEvidence)."
+    }
+  }
+
   $rollbackOutput = Join-Path $runRoot 'package-publish-rollback'
   [IO.Directory]::CreateDirectory($rollbackOutput) | Out-Null
   $rollbackEvidence = Join-Path $runRoot 'publish-rollback.evidence.json'
@@ -1045,6 +1136,68 @@ try {
     (Test-Path -LiteralPath $rollbackEvidence)
   ) {
     throw 'Release archive/evidence partial-publication rollback failed.'
+  }
+
+  foreach ($collisionPhase in @('preflight', 'publication')) {
+    $collisionOutput = Join-Path $runRoot "package-evidence-collision-$collisionPhase"
+    [IO.Directory]::CreateDirectory($collisionOutput) | Out-Null
+    $collisionEvidence = Join-Path $runRoot "evidence-collision-$collisionPhase.json"
+    $collisionFault = ''
+    if ($collisionPhase -ceq 'preflight') {
+      [IO.File]::WriteAllText($collisionEvidence, 'concurrent-evidence-sentinel')
+    } else {
+      $collisionFault = 'after-archive-publish-evidence-collision'
+    }
+    $collision = Invoke-Package -PowerShell $pwsh -Version $version `
+      -Output $collisionOutput -Evidence $collisionEvidence -Fault $collisionFault
+    if (
+      $collision.ExitCode -eq 0 -or [String]::IsNullOrWhiteSpace($collision.Stderr) -or
+      -not [String]::IsNullOrEmpty($collision.Stdout) -or
+      @(Get-ChildItem -LiteralPath $collisionOutput -Force).Count -ne 0 -or
+      -not (Test-Path -LiteralPath $collisionEvidence -PathType Leaf) -or
+      [IO.File]::ReadAllText($collisionEvidence) -cne 'concurrent-evidence-sentinel'
+    ) {
+      throw "Evidence collision at $collisionPhase did not preserve evidence and roll back the archive."
+    }
+  }
+
+  $replacementOutput = Join-Path $runRoot 'package-publish-replacement'
+  [IO.Directory]::CreateDirectory($replacementOutput) | Out-Null
+  $replacementEvidence = Join-Path $runRoot 'publish-replacement.evidence.json'
+  $replacementResult = Invoke-Package `
+    -PowerShell $pwsh `
+    -Version $version `
+    -Output $replacementOutput `
+    -Evidence $replacementEvidence `
+    -Fault 'after-archive-publish-replaced'
+  $replacementArchive = Join-Path $replacementOutput $archiveName
+  $replacementFailures = [Collections.Generic.List[string]]::new()
+  if ($replacementResult.ExitCode -eq 0) {
+    [void]$replacementFailures.Add('package unexpectedly succeeded')
+  }
+  if ($replacementResult.Stderr -notmatch '(?s)Refusing\s+to\s+roll\s+back\s+an\s+archive\s+that\s+no.*longer\s+matches') {
+    [void]$replacementFailures.Add('rollback refusal was not reported')
+  }
+  if (-not [String]::IsNullOrEmpty($replacementResult.Stdout)) {
+    [void]$replacementFailures.Add('package wrote unexpected stdout')
+  }
+  if (-not (Test-Path -LiteralPath $replacementArchive -PathType Leaf)) {
+    [void]$replacementFailures.Add('replacement archive is missing')
+  } elseif (
+    [Text.UTF8Encoding]::new($false, $true).GetString(
+      [IO.File]::ReadAllBytes($replacementArchive)
+    ) -cne 'replacement-created-after-archive-publication'
+  ) {
+    [void]$replacementFailures.Add('replacement archive bytes changed')
+  }
+  if (Test-Path -LiteralPath $replacementEvidence) {
+    [void]$replacementFailures.Add('evidence was published')
+  }
+  if (@(Get-ChildItem -LiteralPath $replacementOutput -Force).Count -ne 1) {
+    [void]$replacementFailures.Add('replacement output set is not exact')
+  }
+  if ($replacementFailures.Count -ne 0) {
+    throw "Archive rollback deleted or failed to preserve a post-publication replacement: $($replacementFailures -join '; ')."
   }
 
   $nonemptyOutput = Join-Path $runRoot 'package-nonempty'

@@ -140,7 +140,12 @@ pub(all) struct ResourceContractSources {
 ///|
 fn resource_source(value : String?) -> String {
   match value {
-    Some(text) => if text.trim().is_empty() { "null" } else { text }
+    Some(text) =>
+      if text.trim().is_empty() {
+        "null"
+      } else {
+        "JSON.parse(\{contract_json_string(text)})"
+      }
     None => "null"
   }
 }

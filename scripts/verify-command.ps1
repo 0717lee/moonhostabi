@@ -351,7 +351,6 @@ try {
   $compatible = Invoke-MoonHostAbi -CliPath $cliPath -Arguments $compatibleArguments
   $compatibleRepeat = Invoke-MoonHostAbi -CliPath $cliPath -Arguments $compatibleArguments
   $compatibleReport = Assert-VerificationReport -Result $compatible -ExitCode 0 -Outcome 'compatible' -Description 'compatible contract verification'
-  $null = Assert-VerificationReport -Result $compatibleRepeat -ExitCode 0 -Outcome 'compatible' -Description 'repeated compatible contract verification'
   Assert-ExactProcessRepeat -First $compatible -Second $compatibleRepeat -Description 'Compatible canonical report'
   if (
     $compatibleReport.artifact.status -cne 'valid' -or
@@ -377,7 +376,6 @@ try {
   $breaking = Invoke-MoonHostAbi -CliPath $cliPath -Arguments $breakingArguments
   $breakingRepeat = Invoke-MoonHostAbi -CliPath $cliPath -Arguments $breakingArguments
   $breakingReport = Assert-VerificationReport -Result $breaking -ExitCode 2 -Outcome 'breaking' -Description 'breaking verification'
-  $null = Assert-VerificationReport -Result $breakingRepeat -ExitCode 2 -Outcome 'breaking' -Description 'repeated breaking verification'
   Assert-ExactProcessRepeat -First $breaking -Second $breakingRepeat -Description 'Breaking canonical report'
   if (-not (@($breakingReport.compatibility.changes) | Where-Object {
     $_.code -ceq 'MHA_SIGNATURE_CHANGED' -and $_.path -ceq 'exports[add].params'

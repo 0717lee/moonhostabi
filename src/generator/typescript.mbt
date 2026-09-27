@@ -338,21 +338,6 @@ fn append_make_closure_helper(lines : Array[String]) -> Unit {
 }
 
 ///|
-fn throwing_stub(function : @model.AbiFunction) -> Array[String] {
-  let params : Array[String] = []
-  for index in 0..<function.params.length() {
-    params.push("_arg\{index}")
-  }
-  let module_name = function.module_name.unwrap_or("")
-  let message = "MHA_ADAPTER_MISMATCH: missing host import \{module_name}.\{function.name} \{function_signature(function)}"
-  [
-    "\{typescript_object_literal_key(function.name)}: (\{params.join(", ")}) => {",
-    "  throw new Error(\{contract_json_string(message)});",
-    "},",
-  ]
-}
-
-///|
 fn append_host_import_factory(
   lines : Array[String],
   imports : Array[@model.AbiFunction],
@@ -377,10 +362,19 @@ fn append_host_import_factory(
             "      \{typescript_object_literal_key(function.name)}: (fn, context) => makeMoonBitClosure(fn, context),",
           )
         } else {
-          let stub = throwing_stub(function)
-          lines.push("      \{stub[0]}")
-          lines.push("      \{stub[1]}")
-          lines.push("      \{stub[2]}")
+          let params : Array[String] = []
+          for index in 0..<function.params.length() {
+            params.push("_arg\{index}")
+          }
+          let module_name = function.module_name.unwrap_or("")
+          let message = "MHA_ADAPTER_MISMATCH: missing host import \{module_name}.\{function.name} \{function_signature(function)}"
+          lines.push(
+            "      \{typescript_object_literal_key(function.name)}: (\{params.join(", ")}) => {",
+          )
+          lines.push(
+            "        throw new Error(\{contract_json_string(message)});",
+          )
+          lines.push("      },")
         }
       }
     }
