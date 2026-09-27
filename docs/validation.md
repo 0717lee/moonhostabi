@@ -7,6 +7,22 @@ Verification workflow has since completed successfully for both Windows and
 Linux on the release candidate commit
 (`https://github.com/0717lee/moonhostabi/actions/runs/34081779933`).
 
+## Patch release 0.5.1 verification scope
+
+Version `0.5.1` preserves the function ABI and resource v4/v5 protocols. It fixes
+opaque resource JSON embedding, no-overwrite archive publication, and structured
+CLI errors when an update directory disappears during validation. It strengthens
+canonicalization and publication-failure regression coverage.
+
+Release acceptance requires the full local Spike gate, native/JavaScript/Wasm-GC
+tests, the remote Windows/Linux Verification matrix, and the Release dry run on
+the exact release commit. The release notes record those immutable run URLs;
+`SHA256SUMS` and `provenance.json` bind the downloadable archives to that commit.
+After publication, validate a clean consumer against `0717lee/moonhostabi@0.5.1`
+without local dependency overrides. See the
+[0.5.1 release page](https://github.com/0717lee/moonhostabi/releases/tag/v0.5.1)
+for publication status and the exact-commit evidence.
+
 ## Resource workflow verification for 0.5.0
 
 On September 20, 2026, the resource workflow passed the full local
@@ -332,8 +348,8 @@ See [the release dry-run guide](releasing.md).
 This is local release-automation evidence. The public Verification workflow is
 green for both matrix jobs, and the separate Release dry run completed
 successfully for Linux, Windows, and aggregate
-(`https://github.com/0717lee/moonhostabi/actions/runs/34081936398`). No tag or
-GitHub Release `0.4.0` is published; `0.4.1` is the current release candidate.
+(`https://github.com/0717lee/moonhostabi/actions/runs/34081936398`). These are
+historical pre-publication results; later release evidence is recorded above.
 
 ## Task 8 judge quickstart evidence
 
@@ -425,8 +441,8 @@ that today's Node/Chromium adapter can exchange typed GC references.
 Local Spike decision: **GO**. The public Verification matrix decision is also
 **GO** for both Linux and Windows. The dispatch-only Release dry run also passed
 for both platform packages and aggregate
-(`https://github.com/0717lee/moonhostabi/actions/runs/34081936398`). The module
-`0717lee/moonhostabi@0.4.1` is the current Mooncakes release candidate.
+(`https://github.com/0717lee/moonhostabi/actions/runs/34081936398`). This records
+the historical `0.4.1` candidate; later release evidence is recorded above.
 
 ## Current limitations
 
@@ -475,8 +491,8 @@ for both platform packages and aggregate
   variation; the Verification matrix and the recorded Release dry run are green.
 - The Windows release ZIP path is locally executed and deterministic. Linux
   tar/gzip flags, modes, entry types, and aggregate behavior have local static or
-  simulated coverage; the dispatch-only Release dry run passed for this commit
-  and remains a required gate for future release commits.
+  simulated coverage. Earlier releases passed the remote Release dry run;
+  every new release commit must pass that gate independently.
 
 ## `wasm_core` parser patch and upstream status
 

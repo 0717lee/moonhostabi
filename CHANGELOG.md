@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.1] - 2026-09-27
 
 ### Fixed
 
@@ -8,6 +8,8 @@
   when generating caller-guarded TypeScript adapters.
 - Publish validated release archives without overwriting a destination created
   after preflight, and track rollback before post-publication checks.
+- Keep concurrent `generate --update` failures as structured JSON by checking
+  owned directory entries with a quiet, single-pass native scan.
 
 ### Changed
 

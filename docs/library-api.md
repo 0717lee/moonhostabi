@@ -5,10 +5,10 @@ CLI is the recommended integration point for release pipelines. Library users
 can import the model, lockfile, compatibility, contract, generator, or
 verification packages when they need an in-process gate.
 
-Use the `0.5.0` release in a downstream MoonBit project:
+Use the `0.5.1` release in a downstream MoonBit project:
 
 ```powershell
-moon add 0717lee/moonhostabi@0.5.0
+moon add 0717lee/moonhostabi@0.5.1
 moon update
 moon check
 ```
@@ -18,6 +18,10 @@ artifact-bound generator below. The `0.4.1` package does not include these APIs.
 Check the [Mooncakes package](https://mooncakes.io/docs/0717lee/moonhostabi) and
 [GitHub releases](https://github.com/0717lee/moonhostabi/releases) for published
 versions.
+
+When upgrading the CLI, regenerate adapters into a fresh output directory.
+`--update` accepts manifests from the exact current generator version, so it
+does not update an output directory produced by `0.5.0` using the `0.5.1` CLI.
 
 The core package boundaries are:
 
