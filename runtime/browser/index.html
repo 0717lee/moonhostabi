@@ -60,6 +60,14 @@
         );
       }
 
+      async function fetchExternrefFixture() {
+        const response = await fetch("/fixtures/artifacts/externref.wasm");
+        if (!response.ok) {
+          throw new Error(`fixture request failed with HTTP ${response.status}`);
+        }
+        return response.arrayBuffer();
+      }
+
       async function expectAdapterMismatch(bytes, imports, expectedMessage) {
         let observed;
         try {
@@ -85,13 +93,8 @@
         testCase === "negative" || exportNegativeCase !== undefined;
 
       try {
-        const response = await fetch("/fixtures/artifacts/externref.wasm");
-        if (!response.ok) {
-          throw new Error(`fixture request failed with HTTP ${response.status}`);
-        }
-        const bytes = await response.arrayBuffer();
-
         if (testCase === "negative") {
+          const bytes = await fetchExternrefFixture();
           await expectAdapterMismatch(
             bytes,
             { host: {} },
@@ -106,6 +109,7 @@
             exportNegativeCase.expected,
           );
         } else {
+          const bytes = await fetchExternrefFixture();
           const token = Object.freeze({ marker: "moonhostabi-browser-token" });
           const trace = [];
           const imports = createHostImports();

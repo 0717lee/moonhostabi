@@ -2,7 +2,7 @@
 const GENERATION_MANIFEST_VERSION : Int = 1
 
 ///|
-pub const MOONHOSTABI_VERSION : String = "0.5.0"
+pub const MOONHOSTABI_VERSION : String = "0.5.1"
 
 ///|
 const MAX_GENERATION_MANIFEST_LENGTH : Int = 64 * 1024

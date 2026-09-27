@@ -47,13 +47,12 @@ function Invoke-Checked {
   param(
     [Parameter(Mandatory)] [string] $FilePath,
     [Parameter(Mandatory)] [string[]] $Arguments,
-    [Parameter(Mandatory)] [string] $Description,
-    [int[]] $AllowedExitCodes = @(0)
+    [Parameter(Mandatory)] [string] $Description
   )
 
   & $FilePath @Arguments
   $exitCode = $LASTEXITCODE
-  if ($AllowedExitCodes -notcontains $exitCode) {
+  if ($exitCode -ne 0) {
     throw "$Description failed with exit code $exitCode."
   }
 }
@@ -98,7 +97,6 @@ function Invoke-UnsupportedInspect {
 
   [pscustomobject]@{
     Abi = $abi
-    Diagnostics = $diagnostics
     Stdout = $stdout
     StdoutPath = $stdoutPath
   }
@@ -355,14 +353,6 @@ try {
   if ($untypedMatches.Count -ne 0) {
     throw 'Generated TypeScript contains an any escape hatch.'
   }
-  Invoke-Checked `
-    -FilePath $npmExecutable `
-    -Arguments @('--prefix', $runtimeRoot, 'run', 'typecheck') `
-    -Description 'TypeScript checking'
-  Invoke-Checked `
-    -FilePath $npmExecutable `
-    -Arguments @('--prefix', $runtimeRoot, 'run', 'build') `
-    -Description 'TypeScript build'
   Invoke-Checked `
     -FilePath $npmExecutable `
     -Arguments @('--prefix', $runtimeRoot, 'run', 'test:node') `

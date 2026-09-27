@@ -67,7 +67,7 @@ $packageOutput = Join-Path ([IO.Path]::GetTempPath()) 'moonhostabi-package-new'
 $evidenceOutput = Join-Path ([IO.Path]::GetTempPath()) 'windows.evidence.json'
 [IO.Directory]::CreateDirectory($packageOutput) | Out-Null
 pwsh -NoProfile -File scripts/package-release.ps1 `
-  -Version 0.5.0 `
+  -Version 0.5.1 `
   -Output $packageOutput `
   -EvidenceOut $evidenceOutput
 ```
@@ -91,8 +91,9 @@ evidence, cannot claim smoke success, and is rejected by production aggregation
 unless the test-only switch is explicit. The workflow is configured to perform
 the real Linux package path on Ubuntu. Historical Verification and dispatch-only
 Release dry-run evidence is recorded in runs `34081779933` and `34081936398`.
-Repeat both gates for the exact `0.5.0` release commit before publication and
-record their run URLs in [the validation record](validation.md).
+Repeat both gates for the exact `0.5.1` release commit before publication and
+record their immutable run URLs in the GitHub release notes linked from
+[the validation record](validation.md).
 Future versions must repeat both gates for their own release commit.
 
 ## Deterministic archive rules
@@ -119,7 +120,7 @@ authorization to run remote CI, it preflights the fixed Linux/Windows MoonBit
 binary archives, installs the pinned snapshot, resolves dependencies with
 `moon check` before applying the guarded parser patch, and rejects a
 moon/moonc/moonrun version mismatch before building. Use the following acceptance
-procedure for `0.5.0` and future candidates:
+procedure for `0.5.1` and future candidates:
 
 1. Open **Actions → Release dry run → Run workflow**.
 2. Enter the exact version from `moon.mod`.
@@ -155,7 +156,7 @@ Before any future publication, a human must confirm:
 - module, CLI, generator manifest, input, archive, and provenance versions agree;
 - local full gate and package-layout negatives pass;
 - remote Windows and Linux jobs are green for the same commit, with immutable
-  run URLs recorded in `docs/validation.md`;
+  run URLs in the release notes linked from `docs/validation.md`;
 - both platform archives pass unpacked smoke on their target OS;
 - `SHA256SUMS` and `provenance.json` independently match downloaded bytes;
 - no archive contains caches, `.git`, `.codex`, node_modules, local paths,

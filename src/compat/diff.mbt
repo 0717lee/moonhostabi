@@ -77,10 +77,8 @@ fn append_surface_changes(
   policy : CompatibilityPolicy,
   changes : Array[AbiChange],
 ) -> Unit {
-  let baseline_imports = @model.sort_abi_functions(baseline.imports)
-  let current_imports = @model.sort_abi_functions(current.imports)
-  for function in baseline_imports {
-    if find_import(current_imports, function) is None {
+  for function in baseline.imports {
+    if find_import(current.imports, function) is None {
       append_change(
         changes,
         strict_change_classification(policy),
@@ -90,8 +88,8 @@ fn append_surface_changes(
       )
     }
   }
-  for function in current_imports {
-    if find_import(baseline_imports, function) is None {
+  for function in current.imports {
+    if find_import(baseline.imports, function) is None {
       append_change(
         changes,
         Breaking,
@@ -102,10 +100,8 @@ fn append_surface_changes(
     }
   }
 
-  let baseline_exports = @model.sort_abi_functions(baseline.exports)
-  let current_exports = @model.sort_abi_functions(current.exports)
-  for function in baseline_exports {
-    if find_export(current_exports, function) is None {
+  for function in baseline.exports {
+    if find_export(current.exports, function) is None {
       append_change(
         changes,
         Breaking,
@@ -115,8 +111,8 @@ fn append_surface_changes(
       )
     }
   }
-  for function in current_exports {
-    if find_export(baseline_exports, function) is None {
+  for function in current.exports {
+    if find_export(baseline.exports, function) is None {
       append_change(
         changes,
         strict_change_classification(policy),

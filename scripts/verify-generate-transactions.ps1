@@ -119,7 +119,12 @@ function Assert-FailureResult {
   if ($Result.Stdout -cne '') {
     throw "$Description must keep stdout strictly empty; received '$($Result.Stdout)'."
   }
-  $failure = $Result.Stderr | ConvertFrom-Json
+  try {
+    $failure = $Result.Stderr | ConvertFrom-Json
+  }
+  catch {
+    throw "$Description must emit a single JSON error; received stderr='$($Result.Stderr)'. $($_.Exception.Message)"
+  }
   if ($ExpectedCodes -cnotcontains $failure.code) {
     throw "$Description reported unexpected code '$($failure.code)'; expected $($ExpectedCodes -join ', ')."
   }
@@ -308,6 +313,15 @@ try {
   $updateArguments = @(
     'generate', $artifact, '--out', $outputRoot, '--update'
   )
+  $scanFaultRun = Start-CliProcess -CliPath $cliPath -Arguments $updateArguments -Fault 'disappear-before-scan'
+  $scanFaultResult = Complete-CliProcess -Running $scanFaultRun
+  Assert-FingerprintEqual -Expected $beforeFaults -Actual (Get-GenerationFingerprint -Directory $outputRoot -Names $expectedFiles) -Description 'Directory disappearance before enumeration'
+  $scanFaultResiduals = @(Get-TransactionResiduals -OutputLeaf $outputLeaf)
+  if ($scanFaultResiduals.Count -ne 0) {
+    throw "Directory disappearance before enumeration retained unexpected transaction paths: $($scanFaultResiduals.Name -join ', ')."
+  }
+  $null = Assert-FailureResult -Result $scanFaultResult -ExpectedCodes @('MHA_OUTPUT_UNOWNED') -Description 'Directory disappearance before enumeration'
+
   $firstUpdate = Start-CliProcess -CliPath $cliPath -Arguments $updateArguments
   $secondUpdate = Start-CliProcess -CliPath $cliPath -Arguments $updateArguments
   $updateResults = @(

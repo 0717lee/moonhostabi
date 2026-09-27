@@ -219,7 +219,7 @@ try {
   $escapedReport = Invoke-Cli @('resource-verify', $escaped, '--against', $escapedLock, '--format', 'json')
   Assert-Report $escapedReport 'compatible' 0
 
-  $contracts = @{}
+  $resourceContract = Join-Path $runRoot 'resources.contract.json'
   [IO.Directory]::CreateDirectory((Join-Path $runRoot 'generated')) | Out-Null
   foreach ($name in @('resources', 'resources-imports', 'resources-escaped')) {
     $artifact = Join-Path $fixtureRoot "$name.wasm"
@@ -227,7 +227,6 @@ try {
     $null = Invoke-Cli @('resource-contract', $artifact, '--out', $contract)
     $contractDocument = Get-Content -LiteralPath $contract -Raw | ConvertFrom-Json -Depth 100
     if ($contractDocument.schemaVersion -ne 5) { throw 'Expected resource contract schema version 5.' }
-    $contracts[$name] = $contract
     $generated = Join-Path $runRoot "generated/$name"
     $null = Invoke-Cli @('generate', $artifact, '--resource-contract', $contract, '--out', $generated)
     foreach ($json in Get-ChildItem -LiteralPath $generated -Filter '*.json' -File) {
@@ -246,7 +245,7 @@ try {
   [IO.File]::WriteAllText($invalidContract, '{"schemaVersion":5}')
   foreach ($case in @(
     @{ Name = 'invalid'; Artifact = $baseline; Contract = $invalidContract },
-    @{ Name = 'mismatch'; Artifact = $changedArtifact; Contract = $contracts['resources'] }
+    @{ Name = 'mismatch'; Artifact = $changedArtifact; Contract = $resourceContract }
   )) {
     $outputDirectory = Join-Path $runRoot "rejected-$($case.Name)"
     $null = Invoke-Cli @('generate', $case.Artifact, '--resource-contract', $case.Contract, '--out', $outputDirectory) -ExpectedExit 3 -TextOutput

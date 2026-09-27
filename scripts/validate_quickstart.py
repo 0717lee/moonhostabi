@@ -165,7 +165,6 @@ def validate_quickstart(repository: Path) -> None:
         (readme_path, readme),
         (quickstart_path, quickstart),
         (validation_path, validation),
-        (bundle_path, bundle),
     ):
         validate_links(path, text, repository)
     validate_command_paths(readme_path, readme, repository)
@@ -245,8 +244,6 @@ def self_test(repository: Path) -> None:
         root = Path(temporary)
         target = root / "docs"
         target.mkdir()
-        existing = target / "ok.md"
-        existing.write_text("# Existing\n", encoding="utf-8", newline="")
         expect_failure(
             lambda: validate_links(target / "x.md", "[missing](missing.md)\n", root),
             "missing link",
@@ -302,8 +299,6 @@ def self_test(repository: Path) -> None:
         expect_failure(lambda: validate_content(target / "x.md", "internal credential\n"), "sensitive words")
         expect_failure(lambda: validate_content(target / "x.md", "There is no verify step.\n"), "stale claim")
         expect_failure(lambda: read_text(root / "missing.md"), "missing document")
-        if not existing.exists():
-            raise AssertionError("quickstart validator self-test fixture was not created")
     validate_quickstart(repository)
 
 

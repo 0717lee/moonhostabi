@@ -81,8 +81,9 @@ static wchar_t *moonhostabi_join_windows_path(
   return result;
 }
 
-static int moonhostabi_cleanup_generation_directory_windows(
-    const wchar_t *directory) {
+static int moonhostabi_generation_directory_windows(
+    const wchar_t *directory,
+    int cleanup) {
   /* Omitting FILE_SHARE_DELETE pins the root path while path-based Win32
      enumeration and deletion run. OPEN_REPARSE_POINT keeps links opaque. */
   HANDLE directory_handle = CreateFileW(
@@ -149,6 +150,10 @@ static int moonhostabi_cleanup_generation_directory_windows(
     CloseHandle(directory_handle);
     return scan_result;
   }
+  if (!cleanup) {
+    CloseHandle(directory_handle);
+    return seen[0] && seen[1] && seen[2] ? 0 : 1;
+  }
 
   /* The complete directory is validated before the first destructive call. */
   for (int index = 0; index < 3; index++) {
@@ -195,8 +200,9 @@ static int moonhostabi_owned_name_index(const char *name) {
   return -1;
 }
 
-static int moonhostabi_cleanup_generation_directory_unix(
-    const char *directory) {
+static int moonhostabi_generation_directory_unix(
+    const char *directory,
+    int cleanup) {
   /* The directory fd pins the verified inode; every child operation remains
      relative to it, so replacing the path with a symlink cannot redirect us. */
   int open_flags = O_RDONLY | O_DIRECTORY | O_NOFOLLOW;
@@ -263,6 +269,10 @@ static int moonhostabi_cleanup_generation_directory_unix(
   if (scan_result != 0) {
     close(directory_fd);
     return scan_result;
+  }
+  if (!cleanup) {
+    close(directory_fd);
+    return seen[0] && seen[1] && seen[2] ? 0 : 1;
   }
 
   for (int index = 0; index < 3; index++) {
@@ -342,11 +352,24 @@ MOONBIT_FFI_EXPORT int moonhostabi_directory_kind(moonhostabi_path_t path) {
 MOONBIT_FFI_EXPORT int moonhostabi_cleanup_generation_directory(
     moonhostabi_path_t directory) {
 #ifdef _WIN32
-  return moonhostabi_cleanup_generation_directory_windows(
-      (const wchar_t *)directory);
+  return moonhostabi_generation_directory_windows(
+      (const wchar_t *)directory, 1);
 #else
-  return moonhostabi_cleanup_generation_directory_unix(
-      (const char *)directory);
+  return moonhostabi_generation_directory_unix(
+      (const char *)directory, 1);
+#endif
+}
+
+/* Quiet, single-pass ownership check: filesystem races are returned to the
+   MoonBit caller, which owns the CLI's structured error output. */
+MOONBIT_FFI_EXPORT int moonhostabi_validate_generation_directory(
+    moonhostabi_path_t directory) {
+#ifdef _WIN32
+  return moonhostabi_generation_directory_windows(
+      (const wchar_t *)directory, 0);
+#else
+  return moonhostabi_generation_directory_unix(
+      (const char *)directory, 0);
 #endif
 }
 

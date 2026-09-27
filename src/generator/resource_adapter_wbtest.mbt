@@ -35,6 +35,34 @@ test "opaque resource guards fail closed before instantiation and use semantic a
 }
 
 ///|
+test "opaque resource sources parse JSON without losing prototype keys" {
+  let abi = generator_fixture_abi()
+  let generated = generate_typescript_adapter_with_resources(
+    abi,
+    @contract.create_contract_draft(abi),
+    {
+      memory: Some("{\"__proto__\":{\"sentinel\":1}}"),
+      table: Some("{\"nested\":{\"__proto__\":{\"sentinel\":2}}}"),
+      global: None,
+      tag: None,
+    },
+  )
+  inspect(generated.diagnostics.length(), content="0")
+  let root_contract =
+    #|const memoryResourceContract: unknown = JSON.parse("{\"__proto__\":{\"sentinel\":1}}");
+    #|
+  let nested_contract =
+    #|const tableResourceContract: unknown = JSON.parse("{\"nested\":{\"__proto__\":{\"sentinel\":2}}}");
+    #|
+  inspect(generated.typescript.contains(root_contract), content="true")
+  inspect(generated.typescript.contains(nested_contract), content="true")
+  let raw_root_contract =
+    #|const memoryResourceContract: unknown = {"__proto__":{"sentinel":1}};
+    #|
+  inspect(generated.typescript.contains(raw_root_contract), content="false")
+}
+
+///|
 fn resource_adapter_surface() -> @resource.ResourceSurfaceV4 {
   {
     schema_version: 4,

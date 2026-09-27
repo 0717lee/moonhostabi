@@ -87,7 +87,7 @@ the MoonBit and `wasm-tools` setup described above. The generated adapter checks
 artifact bytes and imported resource types before application instantiation;
 both `instantiate` and `instantiateWithResources` perform those checks. See the
 [resource protocol walkthrough](resource-protocol.md) for supported types,
-runtime requirements, report fields, and legacy migration. Use version `0.5.0`
+runtime requirements, report fields, and legacy migration. Use version `0.5.1`
 for this workflow; the `0.4.1` package does not include it.
 
 The CLI evidence script also prints the individual help, version, timeout, exit-code,

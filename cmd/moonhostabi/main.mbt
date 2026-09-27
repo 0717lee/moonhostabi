@@ -546,6 +546,7 @@ priv enum GenerationFault {
   FailAfterBackup
   RetainStaging
   ReplaceBeforeClaim
+  DisappearBeforeScan
 } derive(Eq)
 
 ///|
@@ -567,11 +568,6 @@ priv enum UpdateTransactionState {
 }
 
 ///|
-fn generation_file_names() -> Array[String] {
-  ["adapter.ts", "moonhostabi.contract.json", "moonhostabi.manifest.json"]
-}
-
-///|
 /// Internal, failure-only seam used by real-process transaction tests.
 fn generation_fault_from_environment() -> GenerationFault? raise CliExecutionError {
   match @env.get_env_var("MOONHOSTABI_INTERNAL_TEST_ONLY_FAULT") {
@@ -580,6 +576,7 @@ fn generation_fault_from_environment() -> GenerationFault? raise CliExecutionErr
     Some("after-backup") => Some(FailAfterBackup)
     Some("retain-staging") => Some(RetainStaging)
     Some("replace-before-claim") => Some(ReplaceBeforeClaim)
+    Some("disappear-before-scan") => Some(DisappearBeforeScan)
     Some(_) =>
       raise CliExecutionError(
         MHA_OUTPUT_IO,
@@ -752,25 +749,63 @@ fn read_owned_generation_bytes(
 }
 
 ///|
-fn validate_owned_generation_directory(
+#borrow(directory)
+extern "C" fn validate_generation_directory_ffi(directory : NativePath) -> Int = "moonhostabi_validate_generation_directory"
+
+///|
+fn validate_generation_file_set(
   directory : String,
-  expected_abi_sha256 : String,
-) -> OwnedGenerationSnapshot raise CliExecutionError {
-  require_real_owned_directory(directory)
-  let entries = @fs.read_dir(directory) catch {
+) -> Unit raise CliExecutionError {
+  match validate_generation_directory_ffi(NativePath::from_string(directory)) {
+    0 => ()
+    1 =>
+      raise CliExecutionError(
+        MHA_OUTPUT_UNOWNED,
+        "output directory contains missing, unknown, or non-regular files",
+      )
     _ =>
       raise CliExecutionError(
         MHA_OUTPUT_UNOWNED,
         "output directory is missing or unreadable",
       )
   }
-  entries.sort_by(fn(left, right) { left.compare(right) })
-  if entries != generation_file_names() {
-    raise CliExecutionError(
-      MHA_OUTPUT_UNOWNED,
-      "output directory contains missing or unknown files",
+}
+
+///|
+fn validate_owned_generation_directory(
+  directory : String,
+  expected_abi_sha256 : String,
+  fault : GenerationFault?,
+) -> OwnedGenerationSnapshot raise CliExecutionError {
+  require_real_owned_directory(directory)
+  if fault == Some(DisappearBeforeScan) {
+    let OwnedGenerationDirectory(backup_path) = move_output_to_unique_backup(
+      directory,
     )
+    let failure = try {
+      validate_generation_file_set(directory)
+      None
+    } catch {
+      CliExecutionError(code, message) => Some((code, message))
+    }
+    if rename_directory_noreplace(backup_path, directory) != 0 {
+      raise CliExecutionError(
+        MHA_OUTPUT_IO,
+        transaction_path_failure_detail(
+          "failed to restore directory-scan fault", "backup", backup_path,
+        ),
+      )
+    }
+    match failure {
+      Some((code, message)) => raise CliExecutionError(code, message)
+      None =>
+        raise CliExecutionError(
+          MHA_OUTPUT_IO,
+          "directory-scan fault injection did not fail",
+        )
+    }
   }
+  validate_generation_file_set(directory)
   let manifest_path = generation_file_path(
     directory, "moonhostabi.manifest.json",
   )
@@ -1045,7 +1080,9 @@ fn cleanup_claimed_backup(
 ) -> Bool {
   let OwnedGenerationDirectory(backup_path) = backup
   let snapshot = validate_owned_generation_directory(
-    backup_path, expected_abi_sha256,
+    backup_path,
+    expected_abi_sha256,
+    None,
   ) catch {
     _ => return false
   }
@@ -1092,7 +1129,7 @@ fn publish_updated_generation(
   state = TargetClaimed(staging, backup)
   let OwnedGenerationDirectory(backup_path) = backup
   let revalidated : Result[OwnedGenerationSnapshot, (String, String)] = Ok(
-    validate_owned_generation_directory(backup_path, expected_abi_sha256),
+    validate_owned_generation_directory(backup_path, expected_abi_sha256, None),
   ) catch {
     CliExecutionError(code, message) => Err((code, message))
   }
@@ -1392,11 +1429,16 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       if !diagnostics.is_empty() {
         return unsupported_result(diagnostics, "")
       }
+      let fault = match mode {
+        DryRun => None
+        Fresh | Update => generation_fault_from_environment()
+      }
       let expected_snapshot = match mode {
         Update => {
           let snapshot = validate_owned_generation_directory(
             output_directory,
             @lockfile.host_abi_sha256(analysis.abi),
+            fault,
           )
           let adapter = @utf8.decode(snapshot.adapter_bytes[:]) catch {
             _ =>
@@ -1446,11 +1488,7 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
         DryRun => require_absent_output_path(output_directory)
         Fresh | Update =>
           publish_generated_directory(
-            output_directory,
-            generated,
-            mode,
-            generation_fault_from_environment(),
-            expected_snapshot,
+            output_directory, generated, mode, fault, expected_snapshot,
           )
       }
       {

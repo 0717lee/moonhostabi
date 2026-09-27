@@ -163,6 +163,7 @@ test "resource-lock writes a canonical inventory lockfile" {
   inspect(lock.lockfile_version, content="2")
   inspect(lock.abi.memories.length(), content="0")
   inspect(lock.abi.unsupported.length(), content="0")
+  inspect(result.stdout.contains("\"unsupported\":0"), content="true")
   @fs.remove_file(path)
 }
 
@@ -318,26 +319,6 @@ test "lock and check preserve the baseline and classify breaking ABI" {
   inspect(breaking.stdout.contains("exports[add].params"), content="true")
   inspect(@fs.read_file_to_bytes(lock_path) == before, content="true")
   @fs.remove_file(lock_path)
-}
-
-///|
-test "resource-lock writes standalone resource schema" {
-  let path = "_build/task-resource-lock.json"
-  if @fs.path_exists(path) {
-    @fs.remove_file(path)
-  }
-  let result = dispatch([
-    "resource-lock", "fixtures/artifacts/scalar.wasm", "--out", path,
-  ])
-  inspect(result.exit_code, content="0")
-  inspect(result.stdout.contains("\"unsupported\":0"), content="true")
-  inspect(@fs.is_file(path), content="true")
-  let decoded = @resource.decode_lockfile(
-    @utf8.decode(@fs.read_file_to_bytes(path)[:]),
-  )
-  inspect(decoded.lockfile_version, content="2")
-  inspect(decoded.abi.memories.length(), content="0")
-  @fs.remove_file(path)
 }
 
 ///|
@@ -605,7 +586,13 @@ fn publish_error(
   try {
     let expected_snapshot = match mode {
       Update =>
-        Some(validate_owned_generation_directory(output, generated.abi_sha256))
+        Some(
+          validate_owned_generation_directory(
+            output,
+            generated.abi_sha256,
+            None,
+          ),
+        )
       Fresh | DryRun => None
     }
     publish_generated_directory(
@@ -855,6 +842,7 @@ test "update rejects a valid concurrent replacement after validation" {
   let replacement_snapshot = validate_owned_generation_directory(
     output,
     generated.abi_sha256,
+    None,
   )
   inspect(
     transaction_siblings("task12-snapshot-race").is_empty(),

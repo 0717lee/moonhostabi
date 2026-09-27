@@ -355,7 +355,7 @@ test "special JavaScript property keys are emitted as computed own properties" {
     #|  }
     #|
   inspect(generated.typescript.contains(proto_export_check), content="true")
-  let escaped_export_key = contract_json_string(escaped_export_name)
+  let escaped_export_key = "\"odd\\\"\\\\\\nname\""
   inspect(
     generated.typescript.contains(
       "Object.prototype.hasOwnProperty.call(root, \{escaped_export_key})",
