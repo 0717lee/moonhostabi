@@ -586,7 +586,13 @@ fn publish_error(
   try {
     let expected_snapshot = match mode {
       Update =>
-        Some(validate_owned_generation_directory(output, generated.abi_sha256))
+        Some(
+          validate_owned_generation_directory(
+            output,
+            generated.abi_sha256,
+            None,
+          ),
+        )
       Fresh | DryRun => None
     }
     publish_generated_directory(
@@ -836,6 +842,7 @@ test "update rejects a valid concurrent replacement after validation" {
   let replacement_snapshot = validate_owned_generation_directory(
     output,
     generated.abi_sha256,
+    None,
   )
   inspect(
     transaction_siblings("task12-snapshot-race").is_empty(),
