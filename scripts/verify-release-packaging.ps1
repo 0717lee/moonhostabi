@@ -474,6 +474,39 @@ function Assert-AggregateFailure {
   }
 }
 
+function Test-ContainsLocalMetadata {
+  param(
+    [Parameter(Mandatory)] [string] $Text,
+    [Parameter(Mandatory)] [string[]] $Paths,
+    [string] $UserName = [Environment]::UserName
+  )
+
+  # Match concrete paths, including JSON-escaped Windows paths, not account
+  # names that may also be ordinary documentation words such as "runner".
+  $normalizedText = [regex]::Replace($Text, '[\\/]+', '/')
+  foreach ($path in $Paths) {
+    if (
+      -not [String]::IsNullOrWhiteSpace($path) -and
+      $normalizedText.Contains(
+        [regex]::Replace($path, '[\\/]+', '/'),
+        [StringComparison]::OrdinalIgnoreCase
+      )
+    ) {
+      return $true
+    }
+  }
+  # A labeled account value is identifying metadata even without a home path.
+  $identityPrefix = '(?i)\b(?:user(?:_?name)?|account|login)["'']?\s*[:=]\s*["'']?'
+  $identityEnd = '(?=["''\s,}]|$)'
+  return (
+    -not [String]::IsNullOrWhiteSpace($UserName) -and
+    [regex]::IsMatch(
+      $Text,
+      $identityPrefix + [regex]::Escape($UserName) + $identityEnd
+    )
+  )
+}
+
 function Remove-DirectoryLink {
   param([Parameter(Mandatory)] [string] $Path)
 
@@ -489,6 +522,28 @@ function Remove-DirectoryLink {
 try {
   [IO.Directory]::CreateDirectory($runRoot) | Out-Null
   Assert-ExactRunRoot
+  $localPaths = @(
+    $repositoryRoot,
+    $runRoot,
+    [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+  )
+  $testProfiles = @('/home/runner', 'C:\Users\runner')
+  if (Test-ContainsLocalMetadata -Text 'benchmark runner self-tests; username: runner-test' -Paths $testProfiles -UserName 'runner') {
+    throw 'Release path guard rejected ordinary documentation text.'
+  }
+  foreach ($leak in @(
+    '/home/runner/private.txt',
+    'C:\Users\runner\private.txt',
+    'c:/users/runner/private.txt',
+    '{"path":"C:\\Users\\runner\\private.txt"}',
+    '{"username":"runner"}',
+    'user_name = Runner',
+    "login: 'runner'"
+  )) {
+    if (-not (Test-ContainsLocalMetadata -Text $leak -Paths $testProfiles -UserName 'runner')) {
+      throw 'Release path guard accepted a concrete home path or account value.'
+    }
+  }
   $pwsh = @(Get-Command pwsh -CommandType Application -ErrorAction Stop)[0].Source
   $version = Get-ModuleVersion
   $platform = if ($IsWindows) { 'windows' } elseif ($IsLinux) { 'linux' } else {
@@ -638,19 +693,8 @@ try {
     $text = [Text.UTF8Encoding]::new($false, $false).GetString(
       [IO.File]::ReadAllBytes($path)
     )
-    foreach ($forbidden in @(
-      $repositoryRoot,
-      $repositoryRoot.Replace('\', '/'),
-      $runRoot,
-      $runRoot.Replace('\', '/'),
-      [Environment]::UserName
-    )) {
-      if (
-        -not [String]::IsNullOrWhiteSpace($forbidden) -and
-        $text.Contains($forbidden, [StringComparison]::OrdinalIgnoreCase)
-      ) {
-        throw "Release archive file '$file' leaked '$forbidden'."
-      }
+    if (Test-ContainsLocalMetadata -Text $text -Paths $localPaths) {
+      throw "Release archive file '$file' leaked local build metadata."
     }
     if (
       $text -match '(?i)(?:^|[\\/])\.codex(?:[\\/]|$)' -or
@@ -843,20 +887,11 @@ try {
       throw "provenance artifact '$expectedPlatform' identity/hash/size mismatch."
     }
   }
-  foreach ($forbidden in @(
-    $repositoryRoot,
-    $repositoryRoot.Replace('\', '/'),
-    $runRoot,
-    $runRoot.Replace('\', '/'),
-    [Environment]::UserName,
-    '.codex'
-  )) {
-    if (
-      -not [String]::IsNullOrWhiteSpace($forbidden) -and
-      $provenanceText.Contains($forbidden, [StringComparison]::OrdinalIgnoreCase)
-    ) {
-      throw "provenance.json leaked forbidden content '$forbidden'."
-    }
+  if (
+    (Test-ContainsLocalMetadata -Text $provenanceText -Paths $localPaths) -or
+    $provenanceText.Contains('.codex', [StringComparison]::OrdinalIgnoreCase)
+  ) {
+    throw 'provenance.json leaked local build metadata or forbidden content.'
   }
 
   $negativeRoot = Join-Path $runRoot 'aggregate-negatives'

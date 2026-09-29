@@ -274,7 +274,8 @@ class ResultTests(unittest.TestCase):
 class PairedBenchmarkTests(unittest.TestCase):
     def run_pair(self, directory, mismatch=None, mutate_baseline=False, resource_case=False,
                  selected=None):
-        root = Path(directory)
+        # The runner resolves executable paths, including Windows temp short names.
+        root = Path(directory).resolve(strict=True)
         candidate = root / "candidate.exe"
         baseline = root / "baseline.exe"
         candidate.write_bytes(b"candidate executable")
@@ -380,6 +381,23 @@ class PairedBenchmarkTests(unittest.TestCase):
                     self.run_pair(directory, mismatch=mismatch)
                 report = json.loads((Path(directory) / "output" / "results.json").read_text())
                 self.assertEqual(report["status"], "failed")
+
+    def test_paired_fixture_resolves_path_aliases(self):
+        for mismatch in (None, "response", "files"):
+            with self.subTest(mismatch=mismatch), tempfile.TemporaryDirectory() as directory:
+                child = Path(directory) / "child"
+                child.mkdir()
+                alias = child / ".."
+                self.assertNotEqual(alias, alias.resolve())
+                self.assertTrue(alias.samefile(Path(directory)))
+                if mismatch is None:
+                    report, _ = self.run_pair(alias)
+                    for result in report["cases"]:
+                        self.assertEqual(result["sampleMs"], [1.0] * 3)
+                        self.assertEqual(result["baseline"]["sampleMs"], [2.0] * 3)
+                else:
+                    with self.assertRaisesRegex(ValueError, "between baseline and candidate"):
+                        self.run_pair(alias, mismatch=mismatch)
 
     def test_changed_baseline_binary_fails_closed(self):
         with tempfile.TemporaryDirectory() as directory:
