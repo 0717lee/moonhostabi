@@ -1,0 +1,226 @@
+{
+  "_comment": "SPDX-License-Identifier: Apache-2.0. MoonHostABI vendoring provenance for the Milky2018/wasmoon parser.",
+  "schema_version": 1,
+  "upstream": {
+    "module": "Milky2018/wasm_core",
+    "version": "0.14.0",
+    "repository": "https://github.com/Milky2018/wasmoon",
+    "archive_url": "https://download.mooncakes.io/user/Milky2018%2Fwasm_core%2F0.14.0.zip",
+    "archive_sha256": "3de253ae7c9889566363a0f8615d2ad6763f60c355f7a33059261ee020421c2a",
+    "parser_path": "parser/",
+    "license": "Apache-2.0",
+    "license_source_url": "https://raw.githubusercontent.com/Milky2018/wasmoon/74a02453afefbb5ba9c9476838ac0a0ba349e84a/LICENSE",
+    "license_source_commit": "74a02453afefbb5ba9c9476838ac0a0ba349e84a",
+    "license_vendored_path": "third_party/wasm_core_parser/LICENSE",
+    "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "license_copy": "Byte-for-byte copy of the pinned upstream LICENSE.",
+    "archive_license_and_notice_files": []
+  },
+  "hash_rules": {
+    "algorithm": "SHA-256",
+    "source_normalization": "Decode UTF-8; replace CRLF and CR with LF; preserve all other characters, whitespace and final newlines; encode UTF-8.",
+    "original_normalized_sha256": "Normalized original archive member, before any local patch or provenance header.",
+    "reviewed_normalized_sha256": "Normalized reviewed dependency-cache source, including both existing fixes and the instructions.mbt capability wrapper before removal.",
+    "vendored_sha256": "Normalized complete vendored file, including SPDX/provenance and modification comments.",
+    "archive_and_license_sha256": "Raw downloaded bytes, without normalization."
+  },
+  "internal_contract": {
+    "package": "0717lee/moonhostabi/src/internal/wasm_parser",
+    "consumer_api_supported": false,
+    "entrypoint": "parse_module",
+    "return_type": "Milky2018/wasm_core/types.Module",
+    "types_dependency_version": "0.14.0",
+    "imports": [
+      "Milky2018/wasm_core/types",
+      "moonbitlang/core/debug"
+    ],
+    "diagnostics": "ParserError variants, Show implementation and Show extensions are unchanged from 0.14.0; the error type belongs to the internal parser package."
+  },
+  "implementation_changed_files": [
+    "parser/instructions.mbt",
+    "parser/rec_group_types.mbt"
+  ],
+  "source_files": [
+    {
+      "source_path": "parser/basic_types.mbt",
+      "vendored_path": "src/internal/wasm_parser/basic_types.mbt",
+      "original_normalized_sha256": "46ecd078175328d18f97179ef3883d8c8d9be90fcbfb8dff3c588728a1d69a94",
+      "reviewed_normalized_sha256": "46ecd078175328d18f97179ef3883d8c8d9be90fcbfb8dff3c588728a1d69a94",
+      "vendored_sha256": "6c2918bde1e75472aba6f052a3b50f4e8a71df8f2ee7d9eac4433a2443aac8d9",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    },
+    {
+      "source_path": "parser/elem_segment.mbt",
+      "vendored_path": "src/internal/wasm_parser/elem_segment.mbt",
+      "original_normalized_sha256": "9e00deb5595a09adf4b961282426b5e2d2f85c2211d93d0899ad96c8c24df360",
+      "reviewed_normalized_sha256": "9e00deb5595a09adf4b961282426b5e2d2f85c2211d93d0899ad96c8c24df360",
+      "vendored_sha256": "a9d09e4f33e8b922e768cb99f0d54db48215e8fd45222accabeeffbb7e991061",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    },
+    {
+      "source_path": "parser/error.mbt",
+      "vendored_path": "src/internal/wasm_parser/error.mbt",
+      "original_normalized_sha256": "981f59a384770a913e5f1d97b5533c8ea2be9e9adb67dbd4d9d9688ccbcd3dca",
+      "reviewed_normalized_sha256": "981f59a384770a913e5f1d97b5533c8ea2be9e9adb67dbd4d9d9688ccbcd3dca",
+      "vendored_sha256": "3632e615e8f1fc3170b2ae4cae7bffae6beb5954c7d3db5b5fd5f8f6c74d46ef",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    },
+    {
+      "source_path": "parser/func_type_vec.mbt",
+      "vendored_path": "src/internal/wasm_parser/func_type_vec.mbt",
+      "original_normalized_sha256": "e3492f52876c8f962ad4ebc52cb0f294282cb5d8e18b5ce3499f3853d4cc522b",
+      "reviewed_normalized_sha256": "e3492f52876c8f962ad4ebc52cb0f294282cb5d8e18b5ce3499f3853d4cc522b",
+      "vendored_sha256": "ea38ef50018d436616ce12cd4db0ae48d115b3f918722964e7d0d345a18b09e3",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    },
+    {
+      "source_path": "parser/instructions.mbt",
+      "vendored_path": "src/internal/wasm_parser/instructions.mbt",
+      "original_normalized_sha256": "b80083580f7b12847500c4836ab3f2b6c09494bb87868d249b88e31f148dfcac",
+      "reviewed_normalized_sha256": "33cd63aa4a69fc410c9e600cc7e84cee048abc6cd756cfd11aa36232ff0468e8",
+      "vendored_sha256": "dad5ee02ed601c2a9739a1cbd7d9332eb4dffc4dc41f90e53f82401378f14b99",
+      "implementation_changed_from_archive": true,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF.",
+        "Replace recursive read_expr/read_if_then_body and structured read_instruction cases with an ExprFrame stack for Block, Loop, IfThen, IfElse and TryTable; retain complete AST bodies, block types and catch handlers without adding a depth limit.",
+        "Preserve non-control opcode/immediate parsing and catch-handler decoding; unmatched or repeated else raises UnknownOpcode(0x05), end closes a frame or the outer expression, and truncated input raises UnexpectedEndOfInput.",
+        "Remove the reviewed cache's parse_module_iterative capability wrapper; keep the original parse_module entrypoint in sections.mbt.",
+        "Make the implementation-only ExprFrame enum private to satisfy first-party missing_priv warning checks; format its tuple fields with pinned moon fmt; behavior is unchanged.",
+        "Route ref.null heaptype resolution through resolve_heap_type_as_ref_value_type(nullable=true), preserving the existing read order, AST constructors and invalid heap type errors."
+      ]
+    },
+    {
+      "source_path": "parser/leb128.mbt",
+      "vendored_path": "src/internal/wasm_parser/leb128.mbt",
+      "original_normalized_sha256": "d52e3df9821512529976f0936d70755939ad5cc0e075c859a73142516563afe9",
+      "reviewed_normalized_sha256": "d52e3df9821512529976f0936d70755939ad5cc0e075c859a73142516563afe9",
+      "vendored_sha256": "d9248341c8f1272a668bf962c1a43a5ceea3d7b2b9322433c41f479d23eb1f2c",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    },
+    {
+      "source_path": "parser/rec_group_types.mbt",
+      "vendored_path": "src/internal/wasm_parser/rec_group_types.mbt",
+      "original_normalized_sha256": "d2d70401532ce13ed844ce2e70f64702ff6591bd9188848f85b8ea2115807417",
+      "reviewed_normalized_sha256": "a835b9e5a47587c4f5d1e6792313f59b2ebfc149156de5b388903007662397d0",
+      "vendored_sha256": "1ccbfd17c06b973d97e2f4f2c29223f14c2fba8012fab64c45f8278dbe4fd3d9",
+      "implementation_changed_from_archive": true,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF.",
+        "In read_rec_group's implicit singleton branch, save the base index, scan the subtype without resolving references, insert a composite-kind placeholder, parse the subtype, and replace the reserved slot instead of appending it."
+      ]
+    },
+    {
+      "source_path": "parser/sections.mbt",
+      "vendored_path": "src/internal/wasm_parser/sections.mbt",
+      "original_normalized_sha256": "106cd95487b7e3209fb1eccc1cb45012f392f0a7844321415bddef6d5c37d42d",
+      "reviewed_normalized_sha256": "106cd95487b7e3209fb1eccc1cb45012f392f0a7844321415bddef6d5c37d42d",
+      "vendored_sha256": "8e17fe15da6c937daa88aaab62d33c4c63109518073b0d5545243a0aa9ac8b29",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    },
+    {
+      "source_path": "parser/state.mbt",
+      "vendored_path": "src/internal/wasm_parser/state.mbt",
+      "original_normalized_sha256": "35b59da9a7c1a60e0da6f553f325eddc1c5da24476015df3ad6c633e1ad6ae79",
+      "reviewed_normalized_sha256": "35b59da9a7c1a60e0da6f553f325eddc1c5da24476015df3ad6c633e1ad6ae79",
+      "vendored_sha256": "1b9f4a417d420eaef67d8f9a9448a9075a5e9da8f88067d2234f07b51b650e43",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    },
+    {
+      "source_path": "parser/table_memory_types.mbt",
+      "vendored_path": "src/internal/wasm_parser/table_memory_types.mbt",
+      "original_normalized_sha256": "aae2e97d5ccfda35995ab3ee9299f068a5dd719b571ce2ea27b1cfe310657aed",
+      "reviewed_normalized_sha256": "aae2e97d5ccfda35995ab3ee9299f068a5dd719b571ce2ea27b1cfe310657aed",
+      "vendored_sha256": "74e0f3f1f0da5006ee1c26445b7d891b609bdd029a7599480b2a4554d5a8eecc",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    },
+    {
+      "source_path": "parser/trait_extensions.mbt",
+      "vendored_path": "src/internal/wasm_parser/trait_extensions.mbt",
+      "original_normalized_sha256": "3e17215abc9d9b6b75853dabe88ff7f8887d0433105e1cf0a12e2e395b9ba4b3",
+      "reviewed_normalized_sha256": "3e17215abc9d9b6b75853dabe88ff7f8887d0433105e1cf0a12e2e395b9ba4b3",
+      "vendored_sha256": "cdebf11f05f2f691e82d7af6b49a5c533de9b982679f33a17088e61f60c5e7cf",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    },
+    {
+      "source_path": "parser/value_types.mbt",
+      "vendored_path": "src/internal/wasm_parser/value_types.mbt",
+      "original_normalized_sha256": "054cf5df21d1cac1ca51599b65bcd276de98f023c4910cc50db24941c3a4d8a0",
+      "reviewed_normalized_sha256": "054cf5df21d1cac1ca51599b65bcd276de98f023c4910cc50db24941c3a4d8a0",
+      "vendored_sha256": "18f6b0c1cb56bf5e002b2222a4bcdbade6487b21f512aee5f1e9d814caa39817",
+      "implementation_changed_from_archive": false,
+      "local_modifications": [
+        "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF."
+      ]
+    }
+  ],
+  "package_manifest": {
+    "source_path": "parser/moon.pkg",
+    "vendored_path": "src/internal/wasm_parser/moon.pkg",
+    "original_normalized_sha256": "1a5232083254486a4be17edf5c8b913d68101df18c5b7c1a5d9816419055a2cf",
+    "vendored_sha256": "9f1adc08c6549e3f7c00c74ea08246c068e84d40be7c7e0cba9775dc3f8d1edf",
+    "local_modifications": [
+      "Add SPDX/provenance and internal-API comments; preserve both imports."
+    ]
+  },
+  "exclusions": [
+    "parser/parser.mbt (comments only)",
+    "parser/parser_test.mbt",
+    "parser/leb128_wbtest.mbt",
+    "parser/pkg.generated.mbti",
+    "All encoder, WAT, validator and types implementation files."
+  ],
+  "upstream_source_references": [
+    {
+      "change": "singleton_type_placeholder",
+      "commit": "f0b01bd9b23ce6d3d3e36e978df37bc85f5ab980",
+      "committed_at": "2026-09-18T05:39:08Z",
+      "url": "https://github.com/Milky2018/wasmoon/commit/f0b01bd9b23ce6d3d3e36e978df37bc85f5ab980",
+      "source_path": "modules/wasm_core/parser/rec_group_types.mbt",
+      "relationship": "Upstream source fix for the same singleton self-reference bug. This vendor retains the reviewed local 0.14.0 placeholder patch, not the upstream refactoring of both branches."
+    },
+    {
+      "change": "iterative_expression_parser",
+      "commit": "ff98fb9bd0e732059e7f8a4f151f5739a57e45c7",
+      "committed_at": "2026-09-18T06:32:57Z",
+      "url": "https://github.com/Milky2018/wasmoon/commit/ff98fb9bd0e732059e7f8a4f151f5739a57e45c7",
+      "source_path": "modules/wasm_core/parser/instructions.mbt",
+      "relationship": "Upstream source reference for explicit expression frames. This vendor retains the reviewed local 0.14.0 ExprFrame implementation, with inline catch-handler decoding and without the downstream capability wrapper."
+    }
+  ],
+  "publication_status": {
+    "checked_on": "2026-09-29",
+    "registry_manifest_url": "https://mooncakes.io/api-new/v0/manifest/Milky2018/wasm_core@0.16.0",
+    "latest_version": "0.16.0",
+    "latest_published_at": "2026-09-16T03:59:19.703427+00:00",
+    "latest_archive_sha256": "21a895f3c1298f89c0e6143cf84dd4cd1a1d5b708fb649c36d0da9b4b468b289",
+    "published_release_after_upstream_fixes": null,
+    "note": "The registry lists 0.16.0 as latest, published before both 2026-09-18 source commits. No later published replacement is listed. Source commits are provenance references, not evidence of a published replacement dependency."
+  }
+}

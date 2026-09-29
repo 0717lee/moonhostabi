@@ -216,22 +216,23 @@ def run_text(steps: list[dict[str, Any]]) -> str:
 def assert_dependency_resolution_order(
     text: str,
     label: str,
-    update_marker: str = "moon update",
-    check_marker: str = "moon check",
-    patch_marker: str = "apply-wasm-core-patch.ps1",
+    update_marker: str = "moon update\n",
+    provenance_marker: str = "python -B scripts/verify-vendored-parser.py\n",
+    check_marker: str = "moon check\n",
+    build_marker: str = "scripts/package-release.ps1",
 ) -> None:
+    if "apply-wasm-core-patch.ps1" in text or "test_wasm_core_patch.py" in text:
+        raise ValueError(f"{label}: dependency cache patch commands are retired")
+    if "moon check --dry-run" in text or "Arguments @('check', '--dry-run')" in text:
+        raise ValueError(f"{label}: dependency checks must execute, not use --dry-run")
     update_index = text.find(update_marker)
+    provenance_index = text.find(provenance_marker)
     check_index = text.find(check_marker)
-    patch_index = text.find(patch_marker)
-    if (
-        update_index < 0
-        or check_index < 0
-        or patch_index < 0
-        or not update_index < check_index < patch_index
-    ):
+    build_index = text.find(build_marker)
+    if not 0 <= update_index < provenance_index < check_index < build_index:
         raise ValueError(
-            f"{label}: dependency resolution must run moon update, moon check, "
-            "then the guarded wasm_core patch"
+            f"{label}: run moon update, bundled parser provenance verification, "
+            "and normal moon check before building"
         )
 
 
@@ -241,6 +242,35 @@ def assert_resource_gate(text: str) -> None:
     success_index = text.find("MOONHOSTABI_SPIKE_STATUS=GO")
     if not 0 <= dependency_index < resource_index < success_index:
         raise ValueError("verify-spike.ps1: resource E2E gate must run after npm ci and before GO")
+
+
+def validate_spike(text: str) -> None:
+    assert_resource_gate(text)
+    provenance_marker = "Arguments @('-B', 'scripts/verify-vendored-parser.py')"
+    check_marker = "Arguments @('check') -Description 'moon check'"
+    assert_dependency_resolution_order(
+        text,
+        "verify-spike.ps1",
+        update_marker="Arguments @('update')",
+        provenance_marker=provenance_marker,
+        check_marker=check_marker,
+        build_marker="Arguments @('test', '--target', 'native')",
+    )
+    parser_tests = text.find(
+        "Arguments @('-B', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_vendored_parser.py', '-v')"
+    )
+    if not text.find(provenance_marker) < parser_tests < text.find(check_marker):
+        raise ValueError("verify-spike.ps1: bundled parser self-tests must run before moon check")
+    consumer_tests = text.find(
+        "Arguments @('-B', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_package_consumer.py', '-v')"
+    )
+    dependency_index = text.find("-Description 'npm ci'")
+    consumer_index = text.find("Arguments @('-B', 'scripts/verify-package-consumer.py')")
+    success_index = text.find("MOONHOSTABI_SPIKE_STATUS=GO")
+    if not 0 <= consumer_tests < dependency_index < consumer_index < success_index:
+        raise ValueError(
+            "verify-spike.ps1: package consumer must run after its self-tests and npm ci, before GO"
+        )
 
 
 def assert_moonbit_contract(job: dict[str, Any], text: str, label: str) -> None:
@@ -501,13 +531,49 @@ def self_test(ci: dict[str, Any], release: dict[str, Any], repository: Path) -> 
     resolve_step = next(
         step
         for step in missing_dependency_check["jobs"]["package"]["steps"]
-        if step.get("name") == "Resolve dependencies and guarded parser patch"
+        if step.get("name") == "Resolve dependencies and verify bundled parser"
     )
     resolve_step["run"] = resolve_step["run"].replace(
         "moon check\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\n",
         "",
     )
-    expect_failure(lambda: validate_release(missing_dependency_check), "patch before dependency resolution")
+    expect_failure(lambda: validate_release(missing_dependency_check), "release missing dependency check")
+
+    for marker, label in (
+        ("moon update\n", "release missing dependency update"),
+        ("python -B scripts/verify-vendored-parser.py\n", "release missing parser provenance"),
+    ):
+        missing_step = copy.deepcopy(release)
+        resolve_step = next(
+            step
+            for step in missing_step["jobs"]["package"]["steps"]
+            if step.get("name") == "Resolve dependencies and verify bundled parser"
+        )
+        resolve_step["run"] = resolve_step["run"].replace(marker, "")
+        expect_failure(lambda: validate_release(missing_step), label)
+
+    for replacement, label in (
+        ("moon check --dry-run\n", "release dry-run dependency check"),
+        ("moon check\n& ./scripts/apply-wasm-core-patch.ps1\n", "release dependency cache patch"),
+    ):
+        invalid_setup = copy.deepcopy(release)
+        resolve_step = next(
+            step
+            for step in invalid_setup["jobs"]["package"]["steps"]
+            if step.get("name") == "Resolve dependencies and verify bundled parser"
+        )
+        resolve_step["run"] = resolve_step["run"].replace("moon check\n", replacement)
+        expect_failure(lambda: validate_release(invalid_setup), label)
+
+    late_setup = copy.deepcopy(release)
+    package_steps = late_setup["jobs"]["package"]["steps"]
+    resolve_step = next(
+        step for step in package_steps
+        if step.get("name") == "Resolve dependencies and verify bundled parser"
+    )
+    package_steps.remove(resolve_step)
+    package_steps.append(resolve_step)
+    expect_failure(lambda: validate_release(late_setup), "release setup after packaging")
 
     first_line_only = copy.deepcopy(release)
     verify_step = next(
@@ -537,29 +603,48 @@ def self_test(ci: dict[str, Any], release: dict[str, Any], repository: Path) -> 
     expect_failure(lambda: validate_release(missing_download), "missing artifact download")
 
     verify_spike = (repository / "scripts" / "verify-spike.ps1").read_text(encoding="utf-8")
-    assert_resource_gate(verify_spike)
+    validate_spike(verify_spike)
     expect_failure(
-        lambda: assert_resource_gate(verify_spike.replace("scripts/verify-resources.ps1", "scripts/skipped-resource-gate.ps1")),
+        lambda: validate_spike(verify_spike.replace("scripts/verify-resources.ps1", "scripts/skipped-resource-gate.ps1")),
         "resource end-to-end gate omitted",
     )
-    assert_dependency_resolution_order(
-        verify_spike,
-        "verify-spike.ps1",
-        update_marker="Arguments @('update')",
-        check_marker="Arguments @('check') -Description 'moon check (dependency resolution)'",
-    )
-    missing_verify_check = verify_spike.replace(
-        "  Invoke-Checked -FilePath $moonExecutable -Arguments @('check') -Description 'moon check (dependency resolution)'\n",
-        "",
+    for marker in (
+        "Arguments @('update')",
+        "Arguments @('check') -Description 'moon check'",
+        "scripts/verify-vendored-parser.py",
+        "test_vendored_parser.py",
+        "test_package_consumer.py",
+        "scripts/verify-package-consumer.py",
+    ):
+        expect_failure(
+            lambda: validate_spike(verify_spike.replace(marker, "omitted-gate")),
+            f"verify-spike omitted {marker}",
+        )
+    for marker in (
+        "scripts/verify-vendored-parser.py",
+        "test_vendored_parser.py",
+        "scripts/verify-package-consumer.py",
+    ):
+        line = next(line for line in verify_spike.splitlines(keepends=True) if marker in line)
+        expect_failure(
+            lambda: validate_spike(verify_spike.replace(line, "") + line),
+            f"verify-spike late {marker}",
+        )
+    consumer_line = next(
+        line for line in verify_spike.splitlines(keepends=True)
+        if "scripts/verify-package-consumer.py" in line
     )
     expect_failure(
-        lambda: assert_dependency_resolution_order(
-            missing_verify_check,
-            "verify-spike.ps1",
-            update_marker="Arguments @('update')",
-            check_marker="Arguments @('check') -Description 'moon check (dependency resolution)'",
-        ),
-        "verify-spike patch before dependency resolution",
+        lambda: validate_spike(consumer_line + verify_spike.replace(consumer_line, "")),
+        "verify-spike package consumer before dependencies",
+    )
+    expect_failure(
+        lambda: validate_spike(verify_spike + "\n& ./scripts/apply-wasm-core-patch.ps1\n"),
+        "verify-spike dependency cache patch",
+    )
+    expect_failure(
+        lambda: validate_spike(verify_spike.replace("Arguments @('check')", "Arguments @('check', '--dry-run')")),
+        "verify-spike dry-run dependency check",
     )
 
 
@@ -573,13 +658,7 @@ def main() -> int:
     workflow_root = args.repository.resolve() / ".github" / "workflows"
     repository = args.repository.resolve()
     verify_spike = (repository / "scripts" / "verify-spike.ps1").read_text(encoding="utf-8")
-    assert_resource_gate(verify_spike)
-    assert_dependency_resolution_order(
-        verify_spike,
-        "verify-spike.ps1",
-        update_marker="Arguments @('update')",
-        check_marker="Arguments @('check') -Description 'moon check (dependency resolution)'",
-    )
+    validate_spike(verify_spike)
     ci = load_workflow(workflow_root / "ci.yml")
     release = load_workflow(workflow_root / "release.yml")
     validate_ci(ci)

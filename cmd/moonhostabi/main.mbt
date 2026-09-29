@@ -64,6 +64,9 @@ pub impl Show for CliExecutionError with fn output(self, logger) {
 const MHA_INPUT_IO : String = "MHA_INPUT_IO"
 
 ///|
+const MHA_INPUT_TOO_LARGE : String = "MHA_INPUT_TOO_LARGE"
+
+///|
 const MHA_OUTPUT_IO : String = "MHA_OUTPUT_IO"
 
 ///|
@@ -284,9 +287,23 @@ fn unsupported_result(
 }
 
 ///|
-fn read_bytes(path : String) -> Bytes raise CliExecutionError {
-  @fs.read_file_to_bytes(path) catch {
-    @fs.IOError(message) => raise CliExecutionError(MHA_INPUT_IO, message)
+fn read_bytes(
+  path : String,
+  limit? : Int = @wasm_adapter.MAX_ARTIFACT_BYTES,
+) -> Bytes raise CliExecutionError {
+  let result = read_file_bounded_ffi(NativePath::from_string(path), limit)
+  match result[0][0].to_int() {
+    0 => result[1]
+    2 =>
+      raise CliExecutionError(
+        MHA_INPUT_TOO_LARGE,
+        "input exceeds \{limit} byte limit",
+      )
+    _ =>
+      raise CliExecutionError(
+        MHA_INPUT_IO,
+        "input is unreadable, not a regular file, or changed while reading",
+      )
   }
 }
 
@@ -294,14 +311,23 @@ fn read_bytes(path : String) -> Bytes raise CliExecutionError {
 fn analyze_artifact(
   bytes : Bytes,
 ) -> @projector.ProjectionAnalysis raise CliExecutionError {
-  let wasm_module = @wasm_adapter.parse_artifact(bytes) catch {
-    error =>
-      raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
-  }
+  let wasm_module = parse_checked_artifact(bytes)
   @projector.analyze_host_abi(
     wasm_module,
     @projector.default_js_capability_policy(),
   )
+}
+
+///|
+fn parse_checked_artifact(
+  bytes : Bytes,
+) -> @wasm_types.Module raise CliExecutionError {
+  @wasm_adapter.parse_artifact_checked(bytes) catch {
+    @wasm_adapter.LimitExceeded(message) =>
+      raise CliExecutionError("MHA_INPUT_LIMIT", message)
+    @wasm_adapter.InvalidArtifact(message) =>
+      raise CliExecutionError(@model.MHA_PARSE_MALFORMED, message)
+  }
 }
 
 ///|
@@ -417,7 +443,19 @@ extern "C" fn write_new_file_ffi(
 ) -> Int = "moonhostabi_write_new_file"
 
 ///|
+#borrow(path)
+extern "C" fn read_file_bounded_ffi(
+  path : NativePath,
+  limit : Int,
+) -> FixedArray[Bytes] = "moonhostabi_read_file_bounded"
+
+///|
 fn write_new_file(path : String, bytes : Bytes) -> Unit raise CliExecutionError {
+  if bytes.length() > 8 * 1024 * 1024 {
+    raise CliExecutionError(
+      "MHA_OUTPUT_LIMIT", "generated file exceeds 8 MiB limit",
+    )
+  }
   match
     write_new_file_ffi(NativePath::from_string(path), bytes, bytes.length()) {
     0 => ()
@@ -497,7 +535,8 @@ fn decode_verification_contract_bytes(
 
 ///|
 fn decode_contract_file(path : String) -> String raise CliExecutionError {
-  @utf8.decode(read_bytes(path)[:]) catch {
+  let bytes = read_bytes(path)
+  @utf8.decode(bytes[:]) catch {
     _ =>
       raise CliExecutionError(
         MHA_CONTRACT_INVALID,
@@ -739,7 +778,7 @@ fn read_owned_generation_bytes(
   directory : String,
   name : String,
 ) -> Bytes raise CliExecutionError {
-  @fs.read_file_to_bytes(generation_file_path(directory, name)) catch {
+  read_bytes(generation_file_path(directory, name)) catch {
     _ =>
       raise CliExecutionError(
         MHA_OUTPUT_UNOWNED,
@@ -809,7 +848,7 @@ fn validate_owned_generation_directory(
   let manifest_path = generation_file_path(
     directory, "moonhostabi.manifest.json",
   )
-  let manifest_bytes = @fs.read_file_to_bytes(manifest_path) catch {
+  let manifest_bytes = read_bytes(manifest_path, limit=64 * 1024) catch {
     _ =>
       raise CliExecutionError(
         MHA_OUTPUT_UNOWNED,
@@ -872,6 +911,11 @@ fn write_staged_generation(
   fault : GenerationFault?,
 ) -> Unit raise CliExecutionError {
   let OwnedGenerationDirectory(path) = staging
+  if @utf8.encode(generated.contract).length() > 1024 * 1024 {
+    raise CliExecutionError(
+      "MHA_OUTPUT_LIMIT", "generated contract exceeds 1 MiB decoder limit",
+    )
+  }
   if directory_kind(path) != 0 {
     raise CliExecutionError(
       MHA_OUTPUT_IO,
@@ -1290,17 +1334,12 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
     }
     ResourceLock(artifact_path, output_path) => {
       let artifact = read_bytes(artifact_path)
-      let analysis = analyze_artifact(artifact)
-      let resource_abi = resource_abi_from_analysis(
-        analysis,
-        @wasm_adapter.parse_artifact(artifact) catch {
-          error =>
-            raise CliExecutionError(
-              @model.MHA_PARSE_MALFORMED,
-              error.to_string(),
-            )
-        },
+      let wasm = parse_checked_artifact(artifact)
+      let analysis = @projector.analyze_host_abi(
+        wasm,
+        @projector.default_js_capability_policy(),
       )
+      let resource_abi = resource_abi_from_analysis(analysis, wasm)
       let encoded = @resource.encode_lockfile(
         @resource.create_lockfile(resource_abi, artifact),
       )
@@ -1313,11 +1352,14 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
     }
     ResourceLockV3(artifact_path, output_path) => {
       let artifact = read_bytes(artifact_path)
-      let wasm = @wasm_adapter.parse_artifact(artifact) catch {
+      let wasm = parse_checked_artifact(artifact)
+      let projected = @resource.project_resource_artifact_from_module(
+        artifact, wasm,
+      ) catch {
         error =>
-          raise CliExecutionError(@model.MHA_PARSE_MALFORMED, error.to_string())
+          raise CliExecutionError("MHA_RESOURCE_INVALID", error.to_string())
       }
-      let surface = legacy_resource_surface(resource_projection(artifact), wasm)
+      let surface = legacy_resource_surface(projected, wasm)
       let encoded = @resource.encode_resource_lockfile(
         @resource.create_resource_lockfile(surface, artifact),
       )
@@ -1359,7 +1401,8 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       }
     }
     ResourceVerify(artifact_path, baseline_path, format) => {
-      let baseline_text = @utf8.decode(read_bytes(baseline_path)[:]) catch {
+      let baseline_bytes = read_bytes(baseline_path)
+      let baseline_text = @utf8.decode(baseline_bytes[:]) catch {
         _ =>
           raise CliExecutionError(
             MHA_LOCKFILE_INVALID,
@@ -1403,7 +1446,14 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
         Some(path) => decode_verification_contract_bytes(read_bytes(path))
         None => @verification.ContractNotProvided
       }
-      let report = @verification.verify_artifact(artifact, baseline, contract)
+      let report = @verification.verify_artifact_checked(
+        artifact, baseline, contract,
+      ) catch {
+        @wasm_adapter.LimitExceeded(message) =>
+          raise CliExecutionError("MHA_INPUT_LIMIT", message)
+        @wasm_adapter.InvalidArtifact(message) =>
+          raise CliExecutionError(@model.MHA_PARSE_MALFORMED, message)
+      }
       {
         exit_code: report.recommended_exit_code(),
         stdout: @verification.encode_verification_report(report),
@@ -1418,7 +1468,11 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       mode
     ) => {
       let artifact = read_bytes(artifact_path)
-      let analysis = analyze_artifact(artifact)
+      let wasm = parse_checked_artifact(artifact)
+      let analysis = @projector.analyze_host_abi(
+        wasm,
+        @projector.default_js_capability_policy(),
+      )
       let diagnostics = match resource_contract_path {
         None => analysis.diagnostics
         Some(_) =>
@@ -1467,7 +1521,12 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       }
       let resource_contract = match resource_contract_path {
         Some(path) => {
-          let surface = resource_projection(artifact)
+          let surface = @resource.project_resource_artifact_from_module(
+            artifact, wasm,
+          ) catch {
+            error =>
+              raise CliExecutionError("MHA_RESOURCE_INVALID", error.to_string())
+          }
           let contract = resource_contract_for_surface(
             decode_contract_file(path),
             surface,

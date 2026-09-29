@@ -130,6 +130,7 @@ try {
 
   $moonExecutable = Resolve-Application -Name 'moon'
   $nodeExecutable = Resolve-Application -Name 'node'
+  $pythonExecutable = Resolve-Application -Name 'python'
   $pwshExecutable = Resolve-Application -Name 'pwsh'
   $npmExecutable = if ($IsWindows) {
     Resolve-Application -Name 'npm.cmd'
@@ -174,17 +175,18 @@ try {
   }
 
   Invoke-Checked -FilePath $moonExecutable -Arguments @('update') -Description 'moon update'
-  Invoke-Checked -FilePath $moonExecutable -Arguments @('check') -Description 'moon check (dependency resolution)'
-  Invoke-Checked `
-    -FilePath $pwshExecutable `
-    -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/apply-wasm-core-patch.ps1')) `
-    -Description 'wasm_core patch application'
+  Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', 'scripts/verify-vendored-parser.py') -Description 'bundled parser provenance verification'
+  Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_vendored_parser.py', '-v') -Description 'bundled parser provenance self-tests'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('fmt', '--check') -Description 'moon fmt --check'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('check') -Description 'moon check'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('check', '--target', 'wasm', '--deny-warn') -Description 'moon check (wasm library target)'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('check', '--target', 'js', '--deny-warn') -Description 'moon check (js library target)'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('check', '--target', 'wasm-gc', '--deny-warn') -Description 'moon check (wasm-gc library target)'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('test', '--target', 'native') -Description 'moon test'
+  Invoke-Checked -FilePath $moonExecutable -Arguments @('test', '--target', 'js', '--deny-warn') -Description 'moon test (js library target)'
+  Invoke-Checked -FilePath $moonExecutable -Arguments @('test', '--target', 'wasm-gc', '--deny-warn') -Description 'moon test (wasm-gc library target)'
+  Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_benchmark_corpus.py', '-v') -Description 'benchmark corpus and runner self-tests'
+  Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_package_consumer.py', '-v') -Description 'isolated package consumer self-tests'
   Invoke-Checked -FilePath $pwshExecutable -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-command.ps1'), '-RepositoryRoot', $repositoryRoot) -Description 'one-command Host ABI verification'
   Invoke-Checked -FilePath $pwshExecutable -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-reproduction-bundle.ps1'), '-RepositoryRoot', $repositoryRoot) -Description 'deterministic reproduction bundle verification'
   Invoke-Checked -FilePath $pwshExecutable -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-release-packaging.ps1'), '-RepositoryRoot', $repositoryRoot) -Description 'release packaging and workflow verification'
@@ -366,6 +368,27 @@ try {
     -FilePath $pwshExecutable `
     -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-resources.ps1')) `
     -Description 'Resource protocol and generated adapter end-to-end verification'
+
+  $cliFileName = if ($IsWindows) { 'moonhostabi.exe' } else { 'moonhostabi' }
+  Invoke-Checked `
+    -FilePath $pwshExecutable `
+    -Arguments @(
+      '-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-type-policy.ps1'),
+      '-CliPath', (Join-Path $repositoryRoot "_build/native/debug/build/cmd/moonhostabi/$cliFileName"),
+      '-WasmToolsPath', $wasmToolsExecutable
+    ) `
+    -Description 'large compiled artifact type policy verification'
+
+  if ($IsWindows) {
+    Invoke-Checked `
+      -FilePath $pwshExecutable `
+      -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-consumer.ps1')) `
+      -Description 'compiled source SDK consumer verification'
+  } else {
+    Write-Output 'MOONHOSTABI_SOURCE_CONSUMER_STATUS=SKIP (Windows gate)'
+  }
+
+  Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', 'scripts/verify-package-consumer.py') -Description 'isolated package distribution consumer verification'
 
   Write-Output 'MOONHOSTABI_SPIKE_STATUS=GO'
 }

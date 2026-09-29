@@ -5,15 +5,16 @@ CLI is the recommended integration point for release pipelines. Library users
 can import the model, lockfile, compatibility, contract, generator, or
 verification packages when they need an in-process gate.
 
-Use the `0.5.1` release in a downstream MoonBit project:
+For `0.6.0`, use the following commands in a downstream MoonBit project after
+confirming publication availability below:
 
 ```powershell
-moon add 0717lee/moonhostabi@0.5.1
+moon add 0717lee/moonhostabi@0.6.0
 moon update
 moon check
 ```
 
-Version `0.5.0` introduces the resource surface v4, lockfile v4, contract v5, and
+Version `0.5.0` introduced the resource surface v4, lockfile v4, contract v5, and
 artifact-bound generator below. The `0.4.1` package does not include these APIs.
 Check the [Mooncakes package](https://mooncakes.io/docs/0717lee/moonhostabi) and
 [GitHub releases](https://github.com/0717lee/moonhostabi/releases) for published
@@ -21,21 +22,21 @@ versions.
 
 When upgrading the CLI, regenerate adapters into a fresh output directory.
 `--update` accepts manifests from the exact current generator version, so it
-does not update an output directory produced by `0.5.0` using the `0.5.1` CLI.
+does not update an output directory produced by `0.5.1` using the `0.6.0` CLI.
 
 The core package boundaries are:
 
 | Package            | Stable entry points                                                                                                                 | Purpose                                                                      |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `src/model`        | `HostAbi`, `AbiFunction`, `AbiValueType`, `AbiResource`, diagnostics                                                                | Domain values, host resource inventory, and diagnostic codes                 |
-| `src/wasm_adapter` | `parse_artifact`                                                                                                                    | Parse compiled Wasm bytes                                                    |
+| `src/wasm_adapter` | `parse_artifact`, `parse_artifact_checked`, `ArtifactError`                                                                           | Parse compiled Wasm bytes with explicit trusted or bounded input policies     |
 | `src/projector`    | `analyze_host_abi` (`ProjectionAnalysis.resources`)                                                                                 | Project function ABI and inventory table, memory, global, and tag boundaries |
 | `src/resource`     | `ResourceAbi`, `create_lockfile`, `decode_lockfile`, `create_memory_contract`, `decode_memory_contract`, `generate_memory_contract` | Versioned memory resource lock and contract protocol                         |
 | `src/lockfile`     | `canonicalize_host_abi`, `host_abi_sha256`, `create_lockfile`, `encode_lockfile`                                                    | Canonical fingerprints and lockfiles                                         |
 | `src/compat`       | `semantic_policy`, `strict_policy`, `compare_host_abi`, `compare_lockfiles`                                                         | Compatibility decisions                                                      |
 | `src/contract`     | `create_contract_draft`, `decode_contract`, `validate_contract`, `migrate_v1_contract`                                              | Host contract validation                                                     |
 | `src/generator`    | `generate_typescript_adapter`, `generate_typescript_adapter_with_memory`, `generate_typescript_adapter_with_resources`              | Strict TypeScript adapter and resource preflight generation                  |
-| `src/verification` | `verify_artifact`, `encode_verification_report`                                                                                     | Aggregate machine-readable release reports                                   |
+| `src/verification` | `verify_artifact`, `verify_artifact_checked`, `encode_verification_report`                                                          | Aggregate machine-readable release reports                                   |
 
 The `cmd/moonhostabi` CLI targets `native`; reusable library packages can be
 checked for supported MoonBit targets. The generated TypeScript adapter runs in
@@ -43,6 +44,54 @@ a JavaScript/TypeScript host; MoonHostABI does not provide a Wasm runtime or
 application-specific host behavior.
 
 ## Use the artifact-bound resource API
+
+### Parser distribution and error migration
+
+Version `0.6.0` bundles its parser in `src/internal/wasm_parser`; normal
+`moon update` and `moon check` resolve its dependencies without editing
+`.mooncakes`. Both `parse_artifact` and `parse_artifact_checked` use that parser,
+including the singleton-recursive and iterative-expression fixes. The returned
+module retains the `Milky2018/wasm_core/types.Module` identity from version
+`0.14.0`. The internal parser is not a supported consumer API. Its
+[Apache-2.0 provenance and modifications](../third_party/wasm_core_parser/README.md)
+are shipped with the source.
+
+**Source API migration:** `parse_artifact` now raises MoonHostABI's
+`ArtifactError` instead of the opaque upstream `ParserError`. Update typed
+`raise` declarations and error handling accordingly. A parser failure is wrapped
+as `ArtifactError::InvalidArtifact(detail)`, preserving the parser's diagnostic
+text in `detail`; its `Show` output is now `invalid artifact: <detail>`.
+Code matching rendered error strings must account for that prefix. Preserving
+the returned module type does not make this an unchanged error API.
+
+This is a source migration from `0.5.1`. The raw `parse_artifact` entrypoint
+remains unbounded and requires trusted, caller-budgeted input.
+
+### Checked entrypoints
+
+Version `0.6.0` adds `src/wasm_adapter.parse_artifact_checked` and
+`src/verification.verify_artifact_checked`. The parser raises the project-owned
+`ArtifactError` for explicit policy/parse failures. Checked verification raises
+an early byte-limit failure; other bounded parse failures retain report diagnostics.
+Use these for bounded input processing. Their limits deliberately reject some
+valid large or deeply nested Wasm inputs.
+The existing high-level `project_resource_artifact` now uses checked parsing.
+See [input limits](input-limits.md) for exact budgets, error behavior, and the
+trusted-input boundaries of the low-level APIs.
+
+For per-operation reuse, the new
+`project_resource_artifact_from_module(bytes, module)` accepts an already
+parsed module plus its exact original bytes. The caller must preserve that
+pair; this helper does not reparse or verify their equivalence. The CLI derives
+both together and still performs the necessary raw resource-metadata scan.
+The [consumer gates](consumer-example.md) distinguish a workspace-based source
+example from a packaged candidate installed through an isolated local registry.
+The source example exercises a compiled application upgrade and generated
+adapter. The registry consumer checks installed parser ASTs, owned errors, and
+compatible/breaking lock verification on native, JS and Wasm-GC. Publication
+requires separate release evidence.
+
+### Resource API
 
 Use `src/resource.project_resource_artifact(bytes)` to build a
 `ResourceSurfaceV4`. It resolves imported and defined resource indices before

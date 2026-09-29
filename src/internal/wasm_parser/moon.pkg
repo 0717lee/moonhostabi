@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+// Vendored from Milky2018/wasm_core@0.14.0, parser/moon.pkg.
+// Upstream: https://github.com/Milky2018/wasmoon
+// Modified for MoonHostABI: provenance header only; imports unchanged.
+// Internal implementation package; not a supported consumer API.
+// License and provenance: third_party/wasm_core_parser/ (repository root).
+
+import {
+  "Milky2018/wasm_core/types",
+  "moonbitlang/core/debug",
+}

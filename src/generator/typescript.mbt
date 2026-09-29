@@ -545,28 +545,45 @@ pub fn generate_typescript_adapter(
   abi : @model.HostAbi,
   contract : @contract.Contract,
 ) -> GenerationResult raise @contract.ContractError {
+  let (canonical_abi, prepared) = prepare_generation(abi, contract)
+  if !prepared.diagnostics.is_empty() {
+    return prepared
+  }
+  let typescript = render_typescript(
+    canonical_abi,
+    prepared.abi_sha256,
+    contract,
+  )
+  let manifest = encode_generation_manifest(
+    create_generation_manifest(
+      prepared.abi_sha256,
+      prepared.contract,
+      typescript,
+    ),
+  )
+  { ..prepared, typescript, manifest, }
+}
+
+///|
+/// Validate once before choosing the function-only or resource-aware renderer.
+/// The partial result stays private until its final source/manifest is rendered.
+fn prepare_generation(
+  abi : @model.HostAbi,
+  contract : @contract.Contract,
+) -> (@model.HostAbi, GenerationResult) raise @contract.ContractError {
   let canonical_abi = @lockfile.canonicalize_host_abi(abi)
   let abi_sha256 = @lockfile.host_abi_sha256(canonical_abi)
   @contract.validate_contract(canonical_abi, contract)
   let diagnostics = validate_generator_abi(canonical_abi)
   let normalized_contract = @contract.encode_contract(contract)
-  let typescript = if diagnostics.is_empty() {
-    render_typescript(canonical_abi, abi_sha256, contract)
-  } else {
-    ""
-  }
-  let manifest = if diagnostics.is_empty() {
-    encode_generation_manifest(
-      create_generation_manifest(abi_sha256, normalized_contract, typescript),
-    )
-  } else {
-    ""
-  }
-  {
-    typescript,
-    contract: normalized_contract,
-    manifest,
-    abi_sha256,
-    diagnostics,
-  }
+  (
+    canonical_abi,
+    {
+      typescript: "",
+      contract: normalized_contract,
+      manifest: "",
+      abi_sha256,
+      diagnostics,
+    },
+  )
 }

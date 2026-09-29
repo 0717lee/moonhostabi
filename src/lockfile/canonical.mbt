@@ -11,14 +11,13 @@ fn assign_canonical_id(
   source_id : String,
   assigned : Map[String, String],
   worklist : Array[String],
-) -> String {
+) -> Unit {
   match assigned.get(source_id) {
-    Some(canonical_id) => canonical_id
+    Some(_) => ()
     None => {
       let canonical_id = "type[\{worklist.length()}]"
       assigned[source_id] = canonical_id
       worklist.push(source_id)
-      canonical_id
     }
   }
 }
@@ -30,8 +29,7 @@ fn discover_value_type(
   worklist : Array[String],
 ) -> Unit {
   match value_type {
-    TypedRef(source_id, _) =>
-      ignore(assign_canonical_id(source_id, assigned, worklist))
+    TypedRef(source_id, _) => assign_canonical_id(source_id, assigned, worklist)
     _ => ()
   }
 }
@@ -71,7 +69,7 @@ fn discover_definition_types(
   match definition {
     Struct(value) => {
       for supertype in value.supertypes {
-        ignore(assign_canonical_id(supertype, assigned, worklist))
+        assign_canonical_id(supertype, assigned, worklist)
       }
       for field in value.fields {
         discover_field_type(field, assigned, worklist)
@@ -79,7 +77,7 @@ fn discover_definition_types(
     }
     Array(value) => {
       for supertype in value.supertypes {
-        ignore(assign_canonical_id(supertype, assigned, worklist))
+        assign_canonical_id(supertype, assigned, worklist)
       }
       discover_field_type(value.element, assigned, worklist)
     }

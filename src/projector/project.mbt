@@ -315,10 +315,18 @@ fn project_reachable_types(
 
 ///|
 fn project_host_abi(wasm_module : @wasm_types.Module) -> @model.HostAbi {
-  let canonical_type_indices = @wasm_types.compute_canonical_type_indices(
-    wasm_module.types,
-    type_rec_groups=wasm_module.type_rec_groups,
-  )
+  let canonical_type_indices = if @wasm_adapter.host_abi_needs_type_canonicalization(
+      wasm_module,
+    ) {
+    @wasm_types.compute_canonical_type_indices(
+      wasm_module.types,
+      type_rec_groups=wasm_module.type_rec_groups,
+    )
+  } else {
+    // The predicate proves that no public value uses a type ID and no public
+    // root reaches a GC definition. An empty map avoids private canonical work.
+    []
+  }
   let imports : Array[@model.AbiFunction] = []
   for imported in wasm_module.imports {
     match imported.desc {

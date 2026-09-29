@@ -1,11 +1,13 @@
 # Release dry-run guide
 
 MoonHostABI's release workflow builds and aggregates immutable artifacts but
-does not publish a tag or GitHub Release automatically. The `v0.1.1` tag and
-GitHub Release were published manually after the remote matrix jobs passed.
-Future releases should repeat that approval step for the exact commit.
+does not publish a tag or GitHub Release automatically. Publication remains a
+separate, authorized manual step after the release gates pass for the exact
+commit. Use this guide for the `0.6.0` candidate and subsequent releases.
 
-See the [v0.1.1 GitHub Release](https://github.com/0717lee/moonhostabi/releases/tag/v0.1.1).
+See [GitHub releases](https://github.com/0717lee/moonhostabi/releases) and
+[Mooncakes](https://mooncakes.io/docs/0717lee/moonhostabi) for publication
+availability. Historical run evidence is recorded in [validation.md](validation.md).
 
 ## Release outputs
 
@@ -67,7 +69,7 @@ $packageOutput = Join-Path ([IO.Path]::GetTempPath()) 'moonhostabi-package-new'
 $evidenceOutput = Join-Path ([IO.Path]::GetTempPath()) 'windows.evidence.json'
 [IO.Directory]::CreateDirectory($packageOutput) | Out-Null
 pwsh -NoProfile -File scripts/package-release.ps1 `
-  -Version 0.5.1 `
+  -Version 0.6.0 `
   -Output $packageOutput `
   -EvidenceOut $evidenceOutput
 ```
@@ -91,7 +93,7 @@ evidence, cannot claim smoke success, and is rejected by production aggregation
 unless the test-only switch is explicit. The workflow is configured to perform
 the real Linux package path on Ubuntu. Historical Verification and dispatch-only
 Release dry-run evidence is recorded in runs `34081779933` and `34081936398`.
-Repeat both gates for the exact `0.5.1` release commit before publication and
+Repeat both gates for the exact `0.6.0` release commit before publication and
 record their immutable run URLs in the GitHub release notes linked from
 [the validation record](validation.md).
 Future versions must repeat both gates for their own release commit.
@@ -117,10 +119,11 @@ the same hash.
 `.github/workflows/release.yml` has only `workflow_dispatch`, top-level
 `contents: read`, no secrets, and no GitHub Release API. With explicit
 authorization to run remote CI, it preflights the fixed Linux/Windows MoonBit
-binary archives, installs the pinned snapshot, resolves dependencies with
-`moon check` before applying the guarded parser patch, and rejects a
-moon/moonc/moonrun version mismatch before building. Use the following acceptance
-procedure for `0.5.1` and future candidates:
+binary archives, installs the pinned snapshot, runs `moon update`, verifies
+bundled-parser provenance with `python -B scripts/verify-vendored-parser.py`,
+and runs `moon check`. It rejects a moon/moonc/moonrun version mismatch before
+building. No dependency-cache patch is applied. Use the following acceptance
+procedure for `0.6.0` and future candidates:
 
 1. Open **Actions → Release dry run → Run workflow**.
 2. Enter the exact version from `moon.mod`.

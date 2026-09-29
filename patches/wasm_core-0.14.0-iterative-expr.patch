@@ -1,0 +1,228 @@
+diff --git a/parser/instructions.mbt b/parser/instructions.mbt
+index c3d545c..f000c04 100644
+--- a/parser/instructions.mbt
++++ b/parser/instructions.mbt
+@@ -3,45 +3,123 @@
+ // ============================================================
+ 
+ ///|
+-fn Parser::read_expr(
+-  self : Parser,
+-) -> Array[@types.Instruction] raise ParserError {
+-  let instructions : Array[@types.Instruction] = []
+-  while true {
+-    let opcode = self.read_byte()
+-    if opcode == 0x0B {
+-      // end
+-      break
+-    } else {
+-      instructions.push(self.read_instruction(opcode))
+-    }
+-  }
+-  instructions
++/// Downstream patch capability: callers of this entrypoint require the
++/// non-recursive control-expression parser at compile time.
++pub fn parse_module_iterative(bytes : Bytes) -> @types.Module raise ParserError {
++  parse_module(bytes)
++}
++
++///|
++/// Suspended structured instructions, with their enclosing expression bodies.
++enum ExprFrame {
++  Block(Array[@types.Instruction], @types.BlockType)
++  Loop(Array[@types.Instruction], @types.BlockType)
++  IfThen(Array[@types.Instruction], @types.BlockType)
++  IfElse(
++    Array[@types.Instruction],
++    @types.BlockType,
++    Array[@types.Instruction],
++  )
++  TryTable(
++    Array[@types.Instruction],
++    @types.BlockType,
++    Array[@types.CatchHandler],
++  )
+ }
+ 
+ ///|
+-/// Read if-then body, stopping at either 0x05 (else) or 0x0B (end)
+-/// Returns (body, has_else) where has_else is true if we stopped at else
+-fn Parser::read_if_then_body(
++fn Parser::read_expr(
+   self : Parser,
+-) -> (Array[@types.Instruction], Bool) raise ParserError {
+-  let instructions : Array[@types.Instruction] = []
+-  let mut has_else = false
++) -> Array[@types.Instruction] raise ParserError {
++  let mut instructions : Array[@types.Instruction] = []
++  let frames : Array[ExprFrame] = []
+   while true {
+     let opcode = self.read_byte()
+-    if opcode == 0x0B {
+-      // end - no else clause
+-      has_else = false
+-      break
+-    } else if opcode == 0x05 {
+-      // else
+-      has_else = true
+-      break
+-    } else {
+-      instructions.push(self.read_instruction(opcode))
++    match opcode {
++      0x02 => {
++        let bt = self.read_block_type()
++        frames.push(Block(instructions, bt))
++        instructions = []
++      }
++      0x03 => {
++        let bt = self.read_block_type()
++        frames.push(Loop(instructions, bt))
++        instructions = []
++      }
++      0x04 => {
++        let bt = self.read_block_type()
++        frames.push(IfThen(instructions, bt))
++        instructions = []
++      }
++      0x05 =>
++        match frames.pop() {
++          Some(IfThen(parent, bt)) => {
++            frames.push(IfElse(parent, bt, instructions))
++            instructions = []
++          }
++          _ => raise UnknownOpcode(opcode)
++        }
++      0x0B => {
++        let frame = match frames.pop() {
++          None => break
++          Some(frame) => frame
++        }
++        let (parent, instruction) : (
++          Array[@types.Instruction],
++          @types.Instruction,
++        ) = match frame {
++          Block(parent, bt) => (parent, Block(bt, instructions))
++          Loop(parent, bt) => (parent, Loop(bt, instructions))
++          IfThen(parent, bt) => (parent, If(bt, instructions, []))
++          IfElse(parent, bt, then_body) =>
++            (parent, If(bt, then_body, instructions))
++          TryTable(parent, bt, handlers) =>
++            (parent, TryTable(bt, handlers, instructions))
++        }
++        parent.push(instruction)
++        instructions = parent
++      }
++      0x1F => {
++        // try_table: blocktype, catch_handlers*, body
++        let bt = self.read_block_type()
++        let handler_count = self.read_u32()
++        let handlers : Array[@types.CatchHandler] = []
++        for _ in 0..<handler_count {
++          let catch_kind = self.read_byte()
++          let handler = match catch_kind {
++            0x00 => {
++              // catch: tag_idx, label_idx
++              let tag_idx = self.read_u32()
++              let label_idx = self.read_u32()
++              @types.CatchHandler::Catch(tag_idx, label_idx)
++            }
++            0x01 => {
++              // catch_ref: tag_idx, label_idx
++              let tag_idx = self.read_u32()
++              let label_idx = self.read_u32()
++              CatchRef(tag_idx, label_idx)
++            }
++            0x02 => {
++              // catch_all: label_idx
++              let label_idx = self.read_u32()
++              CatchAll(label_idx)
++            }
++            0x03 => {
++              // catch_all_ref: label_idx
++              let label_idx = self.read_u32()
++              CatchAllRef(label_idx)
++            }
++            _ => raise ParseError("invalid catch handler kind: \{catch_kind}")
++          }
++          handlers.push(handler)
++        }
++        frames.push(TryTable(instructions, bt, handlers))
++        instructions = []
++      }
++      _ => instructions.push(self.read_instruction(opcode))
+     }
+   }
+-  (instructions, has_else)
++  instructions
+ }
+ 
+ ///|
+@@ -53,68 +131,9 @@ fn Parser::read_instruction(
+     // Control instructions
+     0x00 => Unreachable
+     0x01 => Nop
+-    0x02 => {
+-      let bt = self.read_block_type()
+-      let body = self.read_expr()
+-      Block(bt, body)
+-    }
+-    0x03 => {
+-      let bt = self.read_block_type()
+-      let body = self.read_expr()
+-      Loop(bt, body)
+-    }
+-    0x04 => {
+-      let bt = self.read_block_type()
+-      // Read then body, which ends at either 0x05 (else) or 0x0B (end)
+-      let (then_body, has_else) = self.read_if_then_body()
+-      if has_else {
+-        // Read else body until 0x0B (end)
+-        let else_body = self.read_expr()
+-        If(bt, then_body, else_body)
+-      } else {
+-        If(bt, then_body, [])
+-      }
+-    }
+     // Exception handling instructions
+     0x08 => Throw(self.read_u32()) // throw tag_idx
+     0x0A => ThrowRef // throw_ref
+-    0x1F => {
+-      // try_table: blocktype, catch_handlers*, body
+-      let bt = self.read_block_type()
+-      let handler_count = self.read_u32()
+-      let handlers : Array[@types.CatchHandler] = []
+-      for _ in 0..<handler_count {
+-        let catch_kind = self.read_byte()
+-        let handler = match catch_kind {
+-          0x00 => {
+-            // catch: tag_idx, label_idx
+-            let tag_idx = self.read_u32()
+-            let label_idx = self.read_u32()
+-            @types.CatchHandler::Catch(tag_idx, label_idx)
+-          }
+-          0x01 => {
+-            // catch_ref: tag_idx, label_idx
+-            let tag_idx = self.read_u32()
+-            let label_idx = self.read_u32()
+-            CatchRef(tag_idx, label_idx)
+-          }
+-          0x02 => {
+-            // catch_all: label_idx
+-            let label_idx = self.read_u32()
+-            CatchAll(label_idx)
+-          }
+-          0x03 => {
+-            // catch_all_ref: label_idx
+-            let label_idx = self.read_u32()
+-            CatchAllRef(label_idx)
+-          }
+-          _ => raise ParseError("invalid catch handler kind: \{catch_kind}")
+-        }
+-        handlers.push(handler)
+-      }
+-      let body = self.read_expr()
+-      TryTable(bt, handlers, body)
+-    }
+     0x0C => Br(self.read_u32())
+     0x0D => BrIf(self.read_u32())
+     0x0E => {

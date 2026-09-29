@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.6.0] - 2026-09-29
+
+### Added
+
+- Separate 2,048-type parsing capacity from the 1,024-type canonicalization
+  budget, skipping private type equivalence when the public boundary needs none.
+- An internal Apache-2.0 parser adapted from `wasm_core@0.14.0`, including
+  singleton-recursive and iterative-expression fixes, source provenance, and
+  256-frame depth regression cases.
+- A package consumer gate using `moon package`, an isolated local registry, and
+  a fresh `MOON_HOME` to exercise real downstream installation and execution.
+- Alternating paired benchmarks and a rebuilt large compiler-artifact gate.
+- Checked Wasm parsing and verification entrypoints with structural budgets,
+  expanded-local and public-signature limits, and explicit policy errors.
+- Deterministic scale benchmarks with native process timing, output checks,
+  exact executable/corpus identities, and Windows peak working-set observations.
+- Chromium resource-adapter tests and a compiled MoonBit pricing consumer that
+  checks an ABI upgrade before strict TypeScript/Node host execution.
+
+### Changed
+
+- **Source API migration:** `parse_artifact` raises the project-owned
+  `ArtifactError` instead of upstream `ParserError`. Parser diagnostic text is
+  retained in `InvalidArtifact(detail)`, whose `Show` output adds
+  `invalid artifact: `. Callers must update typed error handling and any
+  comparisons of rendered errors; unchanged `types.Module` identity does not
+  imply source compatibility for the error API.
+- Both raw and checked parsing use the bundled internal parser. Normal
+  `moon update` / `moon check` setup no longer applies patches to `.mooncakes`;
+  the old diffs remain as history. The pinned `wasm_core@0.14.0` types dependency
+  remains in use.
+- Bound CLI file reads and generated output sizes; preserve input I/O versus
+  limit/decoding diagnostics and avoid copying the entire input payload.
+- Reuse a parsed module in resource-aware commands and render/hash the final
+  resource adapter once, preserving supported output bytes.
+- Execute JS and Wasm-GC library tests in the existing verification gate.
+- Remove dead branches, private wrappers, duplicate dependency/browser setup,
+  and repeated runner configuration; reuse existing aggregate and heap-type
+  helpers while retaining regression assertions and parser provenance checks.
+
+### Notes
+
+- The new default input policies reject some valid large/deep Wasm inputs.
+  See [input limits](docs/input-limits.md) for exact budgets and trusted-input
+  API boundaries.
+- Regenerate adapters into a new directory after upgrading. `--update` requires
+  the exact current generator manifest version and cannot update older outputs.
+- See the [API migration guide](docs/library-api.md#parser-distribution-and-error-migration)
+  before upgrading from `0.5.1`. Historical benchmark and CI results retain
+  their original version and commit identities; publication availability is
+  listed on [Mooncakes](https://mooncakes.io/docs/0717lee/moonhostabi) and
+  [GitHub releases](https://github.com/0717lee/moonhostabi/releases).
+
 ## [0.5.1] - 2026-09-27
 
 ### Fixed

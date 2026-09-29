@@ -397,7 +397,7 @@ pub fn generate_typescript_adapter_with_resource_contract(
   resource_contract : @resource.ResourceContractV5,
   artifact_sha256 : String,
 ) -> GenerationResult raise @contract.ContractError {
-  let base = generate_typescript_adapter(abi, contract)
+  let (_, base) = prepare_generation(abi, contract)
   let diagnostics = base.diagnostics.copy()
   for semantic_name in contract.semantic_aliases() {
     if ["HostImportsWithResources", "ModuleExportsWithResources"].contains(

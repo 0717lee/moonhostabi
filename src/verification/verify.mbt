@@ -133,16 +133,16 @@ fn outcome_from_sections(
   if baseline is BaselineInvalid(_) {
     return VerificationInvalid
   }
-  match compatibility {
+  let report = match compatibility {
     None => return VerificationInvalid
-    Some(report) =>
-      if report.classification == @compat.Unknown {
-        return VerificationUnknown
-      }
+    Some(report) => report
+  }
+  if report.classification == @compat.Unknown {
+    return VerificationUnknown
   }
   match resource_compatibility {
-    Some(report) =>
-      if report.classification == @compat.Unknown {
+    Some(resource_report) =>
+      if resource_report.classification == @compat.Unknown {
         return VerificationUnknown
       }
     None => ()
@@ -151,22 +151,17 @@ fn outcome_from_sections(
     generator is GeneratorUnrepresentable(_) {
     return VerificationAdapterMismatch
   }
-  match compatibility {
-    Some(report) =>
-      if report.classification == @compat.Breaking {
+  if report.classification == @compat.Breaking {
+    return VerificationBreaking
+  }
+  match resource_compatibility {
+    Some(resource_report) =>
+      if resource_report.classification == @compat.Breaking {
         VerificationBreaking
       } else {
-        match resource_compatibility {
-          Some(resource_report) =>
-            if resource_report.classification == @compat.Breaking {
-              VerificationBreaking
-            } else {
-              VerificationCompatible
-            }
-          None => VerificationCompatible
-        }
+        VerificationCompatible
       }
-    None => VerificationInvalid
+    None => VerificationCompatible
   }
 }
 
@@ -185,6 +180,21 @@ pub fn verify_artifact(
 }
 
 ///|
+/// Verify with the artifact byte budget checked before fingerprinting.
+/// Legacy report-only entrypoints retain their full-input provenance behavior;
+/// callers accepting untrusted bytes should use this checked entrypoint.
+pub fn verify_artifact_checked(
+  artifact : Bytes,
+  baseline_input : VerificationBaselineInput,
+  contract_input : VerificationContractInput,
+) -> VerificationReport raise @wasm_adapter.ArtifactError {
+  if artifact.length() > @wasm_adapter.MAX_ARTIFACT_BYTES {
+    raise @wasm_adapter.LimitExceeded("artifact bytes")
+  }
+  verify_artifact(artifact, baseline_input, contract_input)
+}
+
+///|
 /// Verify an artifact and optionally compare its non-function resources with a
 /// caller-provided baseline. The optional section keeps the original v1 report
 /// and function-only verification API fully backward compatible.
@@ -196,16 +206,18 @@ pub fn verify_artifact_with_resources(
 ) -> VerificationReport {
   let artifact_sha256 = @lockfile.sha256_hex(artifact)
   let baseline = baseline_report(baseline_input)
-  let analysis_result : Result[@projector.ProjectionAnalysis, String] = Ok(
+  let analysis_result : Result[@projector.ProjectionAnalysis, (String, String)] = Ok(
     @projector.analyze_host_abi(
-      @wasm_adapter.parse_artifact(artifact),
+      @wasm_adapter.parse_artifact_checked(artifact),
       @projector.default_js_capability_policy(),
     ),
   ) catch {
-    error => Err(error.to_string())
+    @wasm_adapter.LimitExceeded(message) => Err(("MHA_INPUT_LIMIT", message))
+    @wasm_adapter.InvalidArtifact(message) =>
+      Err((@model.MHA_PARSE_MALFORMED, message))
   }
   match analysis_result {
-    Err(message) => {
+    Err((code, message)) => {
       let contract = match contract_input {
         ContractNotProvided => ContractNotProvidedReport
         ContractText(_) | InvalidContractInput(_) => ContractNotEvaluatedReport
@@ -216,11 +228,7 @@ pub fn verify_artifact_with_resources(
         artifact_sha256,
         artifact_abi_sha256: None,
         artifact_diagnostics: [
-          verification_diagnostic(
-            @model.MHA_PARSE_MALFORMED,
-            "artifact",
-            message,
-          ),
+          verification_diagnostic(code, "artifact", message),
         ],
         baseline,
         provenance_artifact_match: None,

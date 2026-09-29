@@ -1,9 +1,4 @@
 ///|
-priv struct LegacySettings {
-  externref_generic : String?
-}
-
-///|
 fn legacy_function_signature(function : @model.AbiFunction) -> String {
   let params = function.params.map(fn(value) { value.stable_text() }).join(",")
   let results = function.results
@@ -20,9 +15,9 @@ fn legacy_is_make_closure(function : @model.AbiFunction) -> Bool {
 ///|
 fn legacy_unresolved_locations(
   function : @model.AbiFunction,
-  settings : LegacySettings,
+  externref_generic : String?,
 ) -> Array[String] {
-  if settings.externref_generic is Some(_) {
+  if externref_generic is Some(_) {
     return []
   }
   let locations : Array[String] = []
@@ -42,29 +37,29 @@ fn legacy_unresolved_locations(
 ///|
 fn encode_legacy_import(
   function : @model.AbiFunction,
-  settings : LegacySettings,
+  externref_generic : String?,
 ) -> String {
   let implementation = if legacy_is_make_closure(function) {
     "generated"
   } else {
     "required"
   }
-  let unresolved = legacy_unresolved_locations(function, settings)
+  let unresolved = legacy_unresolved_locations(function, externref_generic)
   "{\"module\":\{contract_json_string(function.module_name.unwrap_or(""))},\"name\":\{contract_json_string(function.name)},\"signature\":\{contract_json_string(legacy_function_signature(function))},\"implementation\":\{contract_json_string(implementation)},\"unresolvedSemanticNames\":[\{unresolved.map(fn(value) { contract_json_string(value) }).join(",")}]}"
 }
 
 ///|
 fn encode_legacy_contract(
   abi : @model.HostAbi,
-  settings : LegacySettings,
+  externref_generic : String?,
 ) -> String {
   let fingerprint = @lockfile.host_abi_sha256(abi)
-  let generic = match settings.externref_generic {
+  let generic = match externref_generic {
     Some(name) => contract_json_string(name)
     None => "null"
   }
   let imports = @model.sort_abi_functions(abi.imports)
-  "{\"schemaVersion\":1,\"abiSha256\":\{contract_json_string(fingerprint)},\"externrefGeneric\":\{generic},\"imports\":[\{imports.map(fn(function) { encode_legacy_import(function, settings) }).join(",")}]}\n"
+  "{\"schemaVersion\":1,\"abiSha256\":\{contract_json_string(fingerprint)},\"externrefGeneric\":\{generic},\"imports\":[\{imports.map(fn(function) { encode_legacy_import(function, externref_generic) }).join(",")}]}\n"
 }
 
 ///|
@@ -97,7 +92,6 @@ pub fn migrate_v1_contract(
     }
     _ => invalid_shape("contract.externrefGeneric: expected string or null")
   }
-  let settings = LegacySettings::{ externref_generic, }
   guard contract_value(object, "imports", "contract") is Array(imports) else {
     return invalid_shape("contract.imports: expected array")
   }
@@ -133,11 +127,11 @@ pub fn migrate_v1_contract(
         contract_value(import_object, "unresolvedSemanticNames", path),
         "\{path}.unresolvedSemanticNames",
       ) !=
-      legacy_unresolved_locations(function, settings) {
+      legacy_unresolved_locations(function, externref_generic) {
       raise InvalidLegacyImport(path)
     }
   }
-  if encode_legacy_contract(canonical, settings) != text {
+  if encode_legacy_contract(canonical, externref_generic) != text {
     raise NonCanonicalContract
   }
   let paths = expected_externref_paths(canonical)

@@ -10,6 +10,7 @@ runtime/node_modules/
 runtime/dist/
 runtime/playwright-report/
 runtime/test-results/
+scripts/__pycache__/
 
 # MoonBit-generated package interface metadata from `moon info`/build.
 pkg.generated.mbti

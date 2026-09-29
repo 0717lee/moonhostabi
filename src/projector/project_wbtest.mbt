@@ -493,3 +493,71 @@ test "wasm_core projects the real MoonBit recursive GC artifact" {
   )
   inspect(node.fields[1].mutable, content="true")
 }
+
+///|
+test "private type fast path matches full canonical projection at large boundaries" {
+  for count in [1644, 2048] {
+    let module_ = @wasm_types.Module::empty()
+    module_.types.push(@wasm_types.SubType::func([I32, ExternRef], [I64]))
+    for index in 1..<count {
+      module_.types.push(
+        match index % 3 {
+          0 => @wasm_types.SubType::func([F64], [])
+          1 => @wasm_types.SubType::simple(Struct({ fields: [], }))
+          _ =>
+            @wasm_types.SubType::simple(
+              Array({ element: { storage_type: Val(I32), mutable: false, }, }),
+            )
+        },
+      )
+    }
+    for index in 0..<count {
+      module_.type_rec_groups.push(index)
+    }
+    module_.imports.push({ mod_name: "env", name: "f", desc: Func(0), })
+    module_.exports.push({ name: "f", desc: Func(0), })
+    assert_false(@wasm_adapter.host_abi_needs_type_canonicalization(module_))
+    let full_map = @wasm_types.compute_canonical_type_indices(
+      module_.types,
+      type_rec_groups=module_.type_rec_groups,
+    )
+    let full_types = project_reachable_types(module_, full_map)
+    assert_eq(full_types.length(), 0)
+    guard module_.func_type_at(0) is Some(signature) else {
+      fail("expected scalar signature")
+    }
+    let projected = project_host_abi(module_)
+    assert_eq(projected.types, full_types)
+    assert_eq(
+      projected.imports[0],
+      project_function(Some("env"), "f", signature, full_map),
+    )
+    assert_eq(
+      projected.exports[0],
+      project_function(None, "f", signature, full_map),
+    )
+  }
+}
+
+///|
+test "invalid public function roots keep unknown signatures and reachable GC definitions" {
+  let module_ = @wasm_types.Module::empty()
+  module_.types.push(@wasm_types.SubType::simple(Struct({ fields: [], })))
+  module_.imports.push({ mod_name: "env", name: "gc_root", desc: Func(0), })
+  module_.imports.push({ mod_name: "env", name: "missing", desc: Func(-1), })
+  module_.exports.push({ name: "missing_function", desc: Func(99), })
+  let abi = project_host_abi(module_)
+  assert_eq(abi.types.length(), 1)
+  assert_eq(
+    abi.imports[0].stable_text(),
+    "func import env.gc_root(unknown(imports[env.gc_root].type[0]))->()",
+  )
+  assert_eq(
+    abi.imports[1].stable_text(),
+    "func import env.missing(unknown(imports[env.missing].type[-1]))->()",
+  )
+  assert_eq(
+    abi.exports[0].stable_text(),
+    "func export missing_function(unknown(exports[missing_function].functions[99]))->()",
+  )
+}

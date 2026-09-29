@@ -241,6 +241,21 @@ try {
   [IO.File]::WriteAllText((Join-Path $compiledRoot 'package.json'), '{"type":"module"}')
   Invoke-Checked $node @((Join-Path $runtimeRoot 'node/resource-adapter-e2e.mjs'), $compiledRoot, $fixtureRoot)
 
+  $previousGeneratedDirectory = $env:MOONHOSTABI_RESOURCE_GENERATED_DIR
+  $previousFixtureDirectory = $env:MOONHOSTABI_RESOURCE_FIXTURE_DIR
+  try {
+    $env:MOONHOSTABI_RESOURCE_GENERATED_DIR = $compiledRoot
+    $env:MOONHOSTABI_RESOURCE_FIXTURE_DIR = $fixtureRoot
+    Invoke-Checked $node @(
+      (Join-Path $runtimeRoot 'node_modules/playwright/cli.js'), 'test',
+      '--config', (Join-Path $runtimeRoot 'browser/resources.config.ts')
+    )
+  }
+  finally {
+    $env:MOONHOSTABI_RESOURCE_GENERATED_DIR = $previousGeneratedDirectory
+    $env:MOONHOSTABI_RESOURCE_FIXTURE_DIR = $previousFixtureDirectory
+  }
+
   $invalidContract = Join-Path $runRoot 'invalid.contract.json'
   [IO.File]::WriteAllText($invalidContract, '{"schemaVersion":5}')
   foreach ($case in @(

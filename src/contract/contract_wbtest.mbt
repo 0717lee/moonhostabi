@@ -217,6 +217,53 @@ test "v1 migration validates imports and emits one exact v2 byte sequence" {
 }
 
 ///|
+test "v1 null alias migration preserves unresolved paths and exact v2 bytes" {
+  let abi = contract_fixture_abi()
+  let legacy = @fs.read_file_to_string(
+      "fixtures/contracts/externref-v1.contract.json",
+    )
+    .replace(
+      old="\"externrefGeneric\":\"HostToken\"",
+      new="\"externrefGeneric\":null",
+    )
+    .replace(
+      old="\"unresolvedSemanticNames\":[]",
+      new="\"unresolvedSemanticNames\":[\"params[0]\",\"results[0]\"]",
+    )
+  let expected = "{\"schemaVersion\":2,\"abiSha256\":\"" +
+    @lockfile.host_abi_sha256(abi) +
+    "\",\"externrefs\":{\"imports[host.echo].params[0]\":\"TExtern0\",\"imports[host.echo].results[0]\":\"TExtern1\",\"exports[roundtrip].params[0]\":\"TExtern2\",\"exports[roundtrip].results[0]\":\"TExtern3\"},\"imports\":[]}\n"
+  assert_eq(encode_contract(migrate_v1_contract(abi, legacy)), expected)
+  assert_eq(encode_contract(decode_contract(abi, legacy)), expected)
+  inspect(
+    decode_error(
+      abi,
+      legacy.replace(
+        old="\"unresolvedSemanticNames\":[\"params[0]\",\"results[0]\"]",
+        new="\"unresolvedSemanticNames\":[]",
+      ),
+    ),
+    content="contract.imports[0]: import contract does not match ABI",
+  )
+}
+
+///|
+test "v1 migration rejects unsafe and generator-conflicting aliases" {
+  let abi = contract_fixture_abi()
+  let legacy = @fs.read_file_to_string(
+    "fixtures/contracts/externref-v1.contract.json",
+  )
+  inspect(
+    decode_error(abi, legacy.replace(old="HostToken", new="bad-name")),
+    content="contract.externrefs[*]: expected a safe TypeScript identifier",
+  )
+  inspect(
+    decode_error(abi, legacy.replace(old="HostToken", new="Record")),
+    content="contract.externrefs[*]: alias conflicts with generated TypeScript identifiers",
+  )
+}
+
+///|
 test "ambiguous canonical paths fail closed" {
   let abi = @model.HostAbi::{
     schema_version: 1,

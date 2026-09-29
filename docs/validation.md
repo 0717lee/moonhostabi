@@ -7,6 +7,94 @@ Verification workflow has since completed successfully for both Windows and
 Linux on the release candidate commit
 (`https://github.com/0717lee/moonhostabi/actions/runs/34081779933`).
 
+## Version 0.6.0 release verification
+
+The 0.6.0 release line includes the bounded-input APIs, bundled parser,
+source-error migration, resource generation optimizations and cleanup described
+below. It preserves the function ABI and resource v4/v5 wire protocols.
+The exact release commit must pass the full local Spike, the remote
+Windows/Linux Verification matrix and Release dry run before publication.
+The [0.6.0 release notes](https://github.com/0717lee/moonhostabi/releases/tag/v0.6.0)
+record the immutable workflow run URLs; downloadable `SHA256SUMS` and
+`provenance.json` bind both archives to that same clean commit.
+Public Mooncakes installation is a separate post-publication check.
+Future versions must repeat these gates for their own exact release commit.
+
+## Historical pre-release source validation
+
+### Bundled parser candidate, 2026-09-29
+
+The candidate now ships its fixed parser inside `src/internal/wasm_parser`.
+Both public parsing entrypoints use it, retain `wasm_core@0.14.0` module types,
+and raise the owned `ArtifactError`; the raw entrypoint's error type and `Show`
+format are an explicit [source API migration](library-api.md#parser-distribution-and-error-migration).
+Normal consumers do not modify `.mooncakes`.
+
+The full Windows Spike passed after bundling with
+`MOONHOSTABI_SPIKE_STATUS=GO`: 189 native, 152 JS and 152 Wasm-GC tests,
+6 function-browser and 27 resource-browser tests, plus the CLI, bundle,
+deterministic package, transaction, large-artifact, source-consumer and isolated
+package-consumer gates. Its log is `_build/distribution-spike.log`.
+The 35 parser tests also passed in native release mode;
+`moon check --target all --deny-warn`, `moon build --target all --deny-warn`
+and `moon info` passed against unmodified upstream dependencies.
+
+The provenance gate checked all 12 source files, the two adapted implementation
+bodies and LICENSE against the checksum-verified original ZIP. Its four unit
+tests, the 19 package-consumer harness tests and 19 benchmark tests passed.
+The parser suite includes a 15-fixture comparison with the pristine upstream
+parser; singleton and structured-expression fixes have explicit expected-AST
+assertions. Independent parser and distribution-gate reviews approved this scope.
+
+The isolated package gate passed twice, including the full Spike run:
+`_build/package-consumer/20260929T090552Z-41d9ca19/report.json` records a real
+`moon package` archive installed via `moon add` into a fresh `MOON_HOME`.
+Native, JS and Wasm-GC each passed four consumer tests and all runtime markers.
+Exactly three loopback archive downloads occurred; every installed source
+matched its archive before and after testing, and temporary cleanup passed.
+There was no `moon.work`, path override or dependency-cache patch.
+
+Replaying the retained pre-wiring archive produced the expected failure:
+`_build/package-consumer/20260929T090304Z-765779df/report.json` and
+`check-native.stderr.txt` identify the missing `parse_module_iterative` API.
+This is an actual old-package failure against pristine dependencies, not a
+synthetic negative result.
+
+The newly compiled large-artifact probe is 737,182 bytes, with 1,631 type groups
+and SHA-256 `c866383c1010be21f3b0ebfc5c459bc8820cf5a3c883ffa2358bdbe34cf17e97`.
+Independent Wasm validation and checked resource lock/verify pass.
+No new remote CI, Linux execution or public publication is claimed.
+The local archive retains version metadata `0.5.1` only for this isolated test;
+it is not the public package. A new version and explicit API migration are
+required before publication.
+
+### Earlier source hardening run, before parser bundling
+
+The full Windows Spike passed with 186 native, 149 JS, and 149 Wasm-GC tests,
+6 function-browser and 27 resource-browser tests, plus the CLI, bundle, package,
+transaction and fresh source-consumer gates. The parser also passed 32 tests
+in native release mode. Nineteen benchmark tests and three isolated patch-guard
+tests passed. This September 29 run used the former dependency-patch setup;
+it is historical evidence, not a full validation of the bundled-parser revision.
+No remote CI or new publication is claimed by this local record.
+
+The rebuilt resource test driver is 734,405 bytes with 1,631 type groups
+(a lower bound on actual types), SHA-256
+`c7e84f60cf8c03bf6aaca1d3cf6cd671ae5166b44ce008d6cb23f4920f7e7286`.
+It passes independent Wasm validation and checked resource lock/verify; function
+inspection retains its known tag-capability diagnostic. The original 693,081-byte
+probe also passes. See [input limits](input-limits.md), the
+[paired performance results](performance.md), and the two
+[historical dependency patches](../patches/README.md).
+
+That pre-release checkout added [input budgets](input-limits.md),
+[scale benchmarks](performance.md), and the [source consumer](consumer-example.md).
+Its Spike gate now executes native, JS and Wasm-GC tests, the benchmark runner
+self-tests, and the resource browser suite. The compiled consumer is included
+on Windows; the Linux entry explicitly reports that consumer scope as skipped.
+These local source changes do not inherit the published release's remote CI or
+package evidence. Repeat exact-commit remote and package gates before release.
+
 ## Patch release 0.5.1 verification scope
 
 Version `0.5.1` preserves the function ABI and resource v4/v5 protocols. It fixes
@@ -76,11 +164,13 @@ The host must provide PowerShell 7, a MoonBit toolchain reporting the exact
 identities below, Node.js `24.12.0` with npm `11.6.2`, and `wasm-tools 1.258.0`.
 CI obtains those identities from the official MoonBit installer snapshot
 `0.10.11+6ff76a5f9`; the snapshot selector is not the same value as the
-reported `moon` version. The script resolves dependencies, applies the guarded
-`wasm_core` patch, rebuilds all fixtures, installs the locked npm graph and
-Chromium, and stops at the first unexpected result. On a clean checkout, the
-dependency sequence is `moon update`, `moon check`, then the guarded patch;
-`moon check` materializes `.mooncakes/Milky2018/wasm_core` before patching.
+reported `moon` version. The script resolves dependencies, rebuilds all fixtures,
+installs the locked npm graph and Chromium, and stops at the first unexpected
+result. On a clean checkout, normal dependency setup is `moon update` followed
+by `moon check`. The parser fixes are part of the candidate package; no cache
+patch or patch-only dependency API is required. The Spike definition also runs
+the isolated package consumer gate; the workspace source example remains a
+separate Windows check.
 
 ```powershell
 pwsh -NoProfile -File scripts/verify-spike.ps1
@@ -254,8 +344,9 @@ bytes, and malformed Wasm. In the real-process gate:
   reporting `artifactMatchesBaseline: false` and
   `abiMatchesBaseline: true`.
 
-Readable semantic inputs always use the canonical report on stdout. CLI usage
-errors and unreadable paths remain stderr-only. Verification has no fallback,
+Readable semantic inputs within the file-size policy use the canonical report
+on stdout. CLI usage errors, unreadable paths, and oversized input files remain
+stderr-only. Verification has no fallback,
 mock host, or artifact execution path.
 
 ## Deterministic reproduction bundle
@@ -494,12 +585,16 @@ the historical `0.4.1` candidate; later release evidence is recorded above.
   simulated coverage. Earlier releases passed the remote Release dry run;
   every new release commit must pass that gate independently.
 
-## `wasm_core` parser patch and upstream status
+## Parser distribution and upstream status
 
 MoonBit 0.10.11 emits a valid implicit singleton recursive type whose typed
 self-reference exposes an ordering defect in `Milky2018/wasm_core@0.14.0`.
-MoonHostABI carries `patches/wasm_core-0.14.0-singleton-rec.patch` plus an
-idempotent, version- and source-hash-guarded application script.
+The 0.5.1 release used a guarded dependency patch. Version 0.6.0
+instead bundles the 12 required parser source files with the singleton and
+iterative-expression fixes; its dependency stays at `0.14.0` for the shared
+types. The [provenance and license record](../third_party/wasm_core_parser/README.md)
+separates original upstream source from the adapted implementation. Historical
+singleton patch hashes are retained here:
 
 - normalized upstream source SHA-256:
   `d2d70401532ce13ed844ce2e70f64702ff6591bd9188848f85b8ea2115807417`;
@@ -518,9 +613,14 @@ self-reference probe failed with `invalid heap type`; the explicit `rec` control
 and malformed-mutability rejection control passed. Thus the fix is merged
 upstream but is not yet available in the latest published package tested here.
 
-The dependency stays pinned to `0.14.0`, and the guarded patch remains required
-for the current release. Removing it is blocked on a fixed published dependency
-passing the [unpatched regression and release checklist](../patches/README.md#upstream-status-and-removal-checklist).
+The September 29 source/package comparison confirms that upstream
+[`main` at `74a02453`](https://github.com/Milky2018/wasmoon/tree/74a02453afefbb5ba9c9476838ac0a0ba349e84a/modules/wasm_core/parser)
+contains both fixes, including iterative expression parsing introduced by
+[`ff98fb9b`](https://github.com/Milky2018/wasmoon/commit/ff98fb9bd0e732059e7f8a4f151f5739a57e45c7).
+The official `0.16.0` archive still contains neither fix. The candidate removes
+consumer patching by distributing the adapted parser, not by upgrading to an
+unpublished upstream checkout. A future published replacement must pass the
+[parser and package regression checklist](../patches/README.md#upstream-status-and-removal-checklist).
 
 ## Source references
 

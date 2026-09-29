@@ -25,9 +25,9 @@ test "wasm_core parser rejects truncated module" {
     _ => None
   }
   guard parse_error is Some(err) else {
-    fail("expected ParserError for a truncated Wasm module")
+    fail("expected ArtifactError for a truncated Wasm module")
   }
-  inspect(err.to_string(), content="unexpected end of input")
+  inspect(err.to_string(), content="invalid artifact: unexpected end of input")
 }
 
 ///|

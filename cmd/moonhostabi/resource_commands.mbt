@@ -2,7 +2,13 @@
 fn resource_projection(
   artifact : Bytes,
 ) -> @resource.ResourceSurfaceV4 raise CliExecutionError {
-  @resource.project_resource_artifact(artifact) catch {
+  let wasm = @wasm_adapter.parse_artifact_checked(artifact) catch {
+    @wasm_adapter.LimitExceeded(message) =>
+      raise CliExecutionError("MHA_INPUT_LIMIT", message)
+    @wasm_adapter.InvalidArtifact(message) =>
+      raise CliExecutionError("MHA_RESOURCE_INVALID", "artifact: \{message}")
+  }
+  @resource.project_resource_artifact_from_module(artifact, wasm) catch {
     error => raise CliExecutionError("MHA_RESOURCE_INVALID", error.to_string())
   }
 }

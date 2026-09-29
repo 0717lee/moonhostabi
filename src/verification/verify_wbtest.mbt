@@ -248,12 +248,9 @@ test "verification report golden: malformed artifact" {
   let artifact_sha256 = @lockfile.sha256_hex(artifact)
   let baseline_artifact_sha256 = @lockfile.sha256_hex(baseline_artifact)
   let baseline_abi_sha256 = @lockfile.host_abi_sha256(baseline_analysis.abi)
-  let parse_message = try {
-    ignore(@wasm_adapter.parse_artifact(artifact))
-    "unexpected parse success"
-  } catch {
-    error => error.to_string()
-  }
+  // The wire report carries the reason, not ArtifactError's display prefix.
+  // Pin the existing diagnostic independently of the raw parser's Show API.
+  let parse_message = "unexpected end of input"
   let report = verify_artifact(
     artifact,
     verification_test_baseline(baseline_artifact),

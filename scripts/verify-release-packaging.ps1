@@ -697,16 +697,11 @@ try {
     -ExpectedSize (Get-Item -LiteralPath $otherArchive).Length `
     -ExpectedSimulated $true
 
-  $aggregate = Invoke-CapturedProcess -FilePath $pwsh -Arguments @(
-    '-NoProfile',
-    '-NonInteractive',
-    '-File', (Join-Path $repositoryRoot 'scripts/create-release-aggregate.ps1'),
-    '-RepositoryRoot', $repositoryRoot,
-    '-Version', $version,
-    '-Input', $aggregateInput,
-    '-Output', $aggregateOutput,
-    '-AllowSimulatedEvidence'
-  )
+  $aggregate = Invoke-Aggregate `
+    -PowerShell $pwsh `
+    -InputDirectory $aggregateInput `
+    -OutputDirectory $aggregateOutput `
+    -AllowSimulatedEvidence $true
   if ($aggregate.ExitCode -ne 0 -or $aggregate.Stderr -cne '') {
     throw "Release aggregate creation failed. exit=$($aggregate.ExitCode) stderr='$($aggregate.Stderr)'"
   }

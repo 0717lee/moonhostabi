@@ -4,18 +4,27 @@ Artifact-first MoonBit Wasm-GC Host ABI lock, adapter, and validation toolchain.
 
 MoonHostABI projects a runtime-facing ABI from compiled MoonBit Wasm-GC,
 canonicalizes recursive types independently of raw indices, detects breaking
-host-contract drift, and emits a strict TypeScript/ESM adapter. The proof-grade
-Spike is **GO** locally and on the public Linux/Windows CI matrix; see [the
-validation evidence](docs/validation.md) for hashes, the compatibility matrix,
-runtime observations, and limits.
+host-contract drift, and emits a strict TypeScript/ESM adapter. See [the
+validation evidence](docs/validation.md) for local results, historical public
+Linux/Windows CI runs, hashes, runtime observations, and limits.
 
-Package version: `0717lee/moonhostabi@0.5.1` on Mooncakes.
-
-Version `0.5.0` introduces resource surface v4, resource contract v5, and
-artifact-bound adapters. Use `0717lee/moonhostabi@0.5.1` for these APIs and the
-JSON and release-publication fixes in the patch release; the
-`0.4.1` package does not include them. See
+Release version: `0717lee/moonhostabi@0.6.0`. See
 [release availability and installation](docs/library-api.md).
+
+Version `0.6.0` adds [checked input limits](docs/input-limits.md),
+[reproducible native benchmarks](docs/performance.md), and
+[source and packaged consumer gates](docs/consumer-example.md). It bundles the
+required parser fixes inside the library, with an explicit
+[`parse_artifact` error-type migration](docs/library-api.md#parser-distribution-and-error-migration).
+The new limits may reject valid large or deeply nested inputs. The source
+verification gate also executes JS/Wasm-GC library tests and Chromium
+resource-adapter tests.
+
+Version `0.5.0` introduced resource surface v4, resource contract v5, and
+artifact-bound adapters; `0.5.1` added JSON and release-publication fixes.
+Version `0.6.0` retains these capabilities. Regenerate adapters into a new
+directory when upgrading: `--update` requires the exact current generator
+manifest version. See [installation and API migration](docs/library-api.md).
 
 ## Independent scope
 
@@ -40,9 +49,10 @@ repository root, run the three focused checks below and look for their exact
 | Reproduction bundle | `pwsh -NoProfile -File scripts/verify-reproduction-bundle.ps1` | `MOONHOSTABI_BUNDLE_STATUS=GO` |
 | Platform package | `pwsh -NoProfile -File scripts/verify-release-packaging.ps1` | `MOONHOSTABI_PACKAGE_STATUS=GO` |
 
-The package check is locally observed on Windows, while the public Verification
-matrix exercises the native CLI path on both Linux and Windows. Release archive
-aggregation remains a separate dispatch-only dry run documented below.
+The package check has local Windows evidence, while historical public
+Verification runs cover the native CLI path on Linux and Windows. Each release
+requires new checks for its exact commit. Release archive aggregation remains
+a separate dispatch-only dry run documented below.
 
 For a short end-to-end presentation, run the [judge demo](docs/judge-demo.md):
 it inspects a compiled artifact, creates a lockfile, verifies a contract, and
@@ -168,6 +178,7 @@ Run the source resource gate after installing the locked runtime dependencies:
 
 ```powershell
 npm --prefix runtime ci
+npm --prefix runtime exec -- playwright install chromium
 pwsh -NoProfile -File scripts/verify-resources.ps1
 ```
 
@@ -187,27 +198,29 @@ replace their resource checks with a function-only adapter.
 
 ## Development setup
 
-MoonHostABI currently carries a minimal, version-checked patch for a
-`Milky2018/wasm_core@0.14.0` parser defect exposed by recursive Wasm-GC output
-from MoonBit 0.10.11. Apply it after dependency resolution:
+Resolve dependencies and check this checkout normally:
 
 ```powershell
 moon update
+python -B scripts/verify-vendored-parser.py
 moon check
-pwsh -NoProfile -File scripts/apply-wasm-core-patch.ps1
 ```
 
-On a clean checkout, `moon update` refreshes dependency metadata while `moon check`
-materializes the source under `.mooncakes`; the guarded patch runs after that
-resolution step.
+The `0.6.0` library includes 12 parser source files adapted from the
+Apache-2.0 `Milky2018/wasm_core@0.14.0` package, with singleton-recursive type
+resolution and iterative expression parsing. Both parsing entrypoints use this
+bundled implementation and retain the dependency's `types.Module` identity.
+Consumers do not patch `.mooncakes`. The checked entrypoint additionally enforces
+finite input and work budgets.
 
-The patch only teaches the upstream parser to resolve self-references in an
-implicit singleton recursive type. It is kept separate from MoonHostABI's own
-ABI logic so it can be removed when an upstream release contains the fix.
+MoonHostABI's ABI model, locks, compatibility reports, and adapters are its own
+implementation; the bundled parser is adapted third-party code. Its
+[source provenance, modifications, and license](third_party/wasm_core_parser/README.md)
+identify that boundary. The historical diffs remain as
+[patch history](patches/README.md) and are not part of dependency setup.
 
-As of September 20, 2026, wasmoon issue #512 is closed and the fix is merged
-through PR #519. The latest published `wasm_core` package, `0.16.0`, still fails
-the unpatched singleton regression.
-Keep the pinned `0.14.0` dependency and guarded patch until a published version
-passes that regression without the patch. See the
-[upstream status and removal checklist](patches/README.md#upstream-status-and-removal-checklist).
+As verified on September 29, 2026, upstream source contains both parser fixes,
+while the latest published `wasm_core@0.16.0` archive contains neither. The
+`0.6.0` distribution removes consumer patching by bundling the parser, while
+retaining the `0.14.0` types dependency. See the
+[upstream status and replacement checklist](patches/README.md#upstream-status-and-removal-checklist).

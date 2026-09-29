@@ -3,6 +3,8 @@
 #endif
 
 #include <errno.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +44,69 @@ typedef moonbit_string_t moonhostabi_path_t;
 #else
 typedef moonbit_bytes_t moonhostabi_path_t;
 #endif
+
+static moonbit_bytes_t *moonhostabi_read_result(int status, moonbit_bytes_t payload) {
+  moonbit_bytes_t *result = (moonbit_bytes_t *)moonbit_make_ref_array(2, NULL);
+  result[0] = moonbit_make_bytes(1, status);
+  result[1] = payload;
+  return result;
+}
+
+/* Two byte arrays carry status (0 success, 1 I/O, 2 limit) and owned payload.
+   Size and reads use the same open file. A racing growth cannot enlarge the
+   allocation, and a short read or extra byte is rejected rather than truncated.
+   Returning the owned payload separately avoids copying the entire input. */
+MOONBIT_FFI_EXPORT moonbit_bytes_t *moonhostabi_read_file_bounded(
+    moonhostabi_path_t path,
+    int limit) {
+  if (limit < 0 || limit == INT_MAX) {
+    return moonhostabi_read_result(2, moonbit_make_bytes(0, 0));
+  }
+#ifdef _WIN32
+  FILE *file = _wfopen((const wchar_t *)path, L"rb");
+#else
+  /* O_NONBLOCK avoids waiting on a FIFO before we can reject non-regular input. */
+  int fd = open((const char *)path, O_RDONLY | O_NONBLOCK);
+  struct stat info;
+  if (fd < 0) {
+    return moonhostabi_read_result(1, moonbit_make_bytes(0, 0));
+  }
+  if (fstat(fd, &info) != 0 || !S_ISREG(info.st_mode)) {
+    close(fd);
+    return moonhostabi_read_result(1, moonbit_make_bytes(0, 0));
+  }
+  FILE *file = fdopen(fd, "rb");
+  if (file == NULL) {
+    close(fd);
+  }
+#endif
+  if (file == NULL) {
+    return moonhostabi_read_result(1, moonbit_make_bytes(0, 0));
+  }
+#ifdef _WIN32
+  int seek_result = _fseeki64(file, 0, SEEK_END);
+  int64_t size = seek_result == 0 ? _ftelli64(file) : -1;
+#else
+  int seek_result = fseeko(file, 0, SEEK_END);
+  int64_t size = seek_result == 0 ? (int64_t)ftello(file) : -1;
+#endif
+  if (size < 0 || size > limit) {
+    fclose(file);
+    return moonhostabi_read_result(size > limit ? 2 : 1, moonbit_make_bytes(0, 0));
+  }
+  if (fseek(file, 0, SEEK_SET) != 0) {
+    fclose(file);
+    return moonhostabi_read_result(1, moonbit_make_bytes(0, 0));
+  }
+  moonbit_bytes_t payload = moonbit_make_bytes((int)size, 0);
+  size_t read_count = fread(payload, 1, (size_t)size, file);
+  int extra = fgetc(file);
+  int failed = read_count != (size_t)size || extra != EOF || ferror(file);
+  if (fclose(file) != 0) {
+    failed = 1;
+  }
+  return moonhostabi_read_result(failed ? 1 : 0, payload);
+}
 
 #ifdef _WIN32
 static const wchar_t *moonhostabi_owned_names[] = {

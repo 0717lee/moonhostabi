@@ -1,4 +1,22 @@
-# Dependency patches
+# Historical parser patches
+
+MoonHostABI `0.6.0` bundles its parser in `src/internal/wasm_parser`.
+Both public parsing entrypoints use it. Normal dependency setup is
+`moon update` followed by `moon check`; consumers do not patch `.mooncakes`.
+The application script has been retired. The two `.patch` files in this
+directory are retained as historical diffs and are not applied by source,
+package, or CI setup. Version `0.5.1` does not contain this change.
+
+The bundled source's [provenance, modifications, and Apache-2.0 license](../third_party/wasm_core_parser/README.md)
+are the current distribution record. It contains 12 production parser source
+files and reuses the pinned `wasm_core@0.14.0` types; the parser is adapted
+third-party code, distinct from MoonHostABI's own ABI implementation.
+
+Both historical patches modify `Milky2018/wasm_core@0.14.0`, from the
+[Milky2018/wasmoon project](https://github.com/Milky2018/wasmoon). The upstream
+package declares the Apache-2.0 license; these downstream modifications retain
+that license and attribution to the upstream contributors. Original source
+headers are preserved.
 
 ## `wasm_core-0.14.0-singleton-rec.patch`
 
@@ -8,26 +26,66 @@ type. The artifact is valid according to `wasm-tools 1.258.0`, but
 inserting the current type into its parser table and raises `invalid heap type`.
 
 The patch applies the placeholder strategy already used by `wasm_core` for an
-explicit `rec` group to the implicit singleton branch. It is intentionally kept
-as a standalone upstream-shaped diff rather than copied into MoonHostABI's
-parser adapter.
+explicit `rec` group to the implicit singleton branch. The bundled parser now
+contains this reviewed change; the standalone diff records its history.
 
 The regression is exercised with the compiler-produced
 `fixtures/artifacts/recursive.wasm`:
 
 ```powershell
-pwsh -NoProfile -File scripts/apply-wasm-core-patch.ps1
 moon test src/projector --target native
+moon test src/wasm_adapter --target native
 ```
 
-The application script is idempotent and refuses versions other than `0.14.0`
-or a target source file whose normalized UTF-8/LF SHA-256 is neither the
-reviewed baseline nor the reviewed patched result. Newline normalization keeps
-the guard cross-platform while all non-newline source drift is rejected. Remove
-this patch and the script after upgrading to an upstream release containing the
-same fix.
+These tests exercise the bundled parser without changing the dependency cache.
+
+## `wasm_core-0.14.0-iterative-expr.patch`
+
+Structured expressions previously recursed through `read_expr`,
+`read_instruction`, and `read_if_then_body`, consuming the native call stack
+for each nested block. This patch replaces that recursion with an explicit
+heap stack of `Block`, `Loop`, `IfThen`, `IfElse`, and `TryTable` frames. Each
+frame retains its parent body, block type, and any then body or catch handlers;
+closing a frame appends the complete structured instruction to its parent.
+
+The same `read_expr` entry point serves function bodies, global and table
+initializers, element expressions and offsets, and data offsets. Non-control
+opcode and immediate parsing remains upstream code, including GC, SIMD, and
+atomic instructions. Catch-handler decoding and its errors are unchanged.
+An unmatched or repeated `else` still raises `UnknownOpcode(0x05)`; an `end`
+closes the current frame, or returns the expression when no frame remains.
+Truncated input still raises `UnexpectedEndOfInput`. The unused
+`read_if_then_body` and recursive structured cases in `read_instruction` are
+removed. This patch retains the full AST and introduces no expression-depth
+limit.
+
+## Historical guarded application
+
+Before bundling, the retired application script accepted only version `0.14.0`
+and validated both target sources before applying either patch. Each source
+had to match its original or patched SHA-256 below. This section records that
+earlier setup; it is not an installation step for `0.6.0`.
+
+Hashes use UTF-8 source with CRLF/CR converted to LF. Other whitespace,
+including the final newline, is preserved during hashing; the former guard
+rejected all other source drift.
+
+| Target under `parser/` | Original SHA-256 | Patched SHA-256 |
+| --- | --- | --- |
+| `rec_group_types.mbt` | `d2d70401532ce13ed844ce2e70f64702ff6591bd9188848f85b8ea2115807417` | `a835b9e5a47587c4f5d1e6792313f59b2ebfc149156de5b388903007662397d0` |
+| `instructions.mbt` | `b80083580f7b12847500c4836ab3f2b6c09494bb87868d249b88e31f148dfcac` | `33cd63aa4a69fc410c9e600cc7e84cee048abc6cd756cfd11aa36232ff0468e8` |
+
+The earlier checked API used a patch-only `parse_module_iterative` entrypoint
+as a compile-time guard. The bundled parser now has one internal `parse_module`
+entrypoint, shared by raw and checked parsing. The raw public entrypoint raises
+the owned `ArtifactError` rather than upstream `ParserError`; see the
+[error-type and display migration](../docs/library-api.md#parser-distribution-and-error-migration).
 
 ## Upstream status and removal checklist
+
+The historical issue and package probe below refer to the singleton-rec fix.
+Both source fixes have since been confirmed upstream; version `0.6.0` keeps the
+reviewed `0.14.0` adaptations rather than substituting upstream development code.
 
 Checked on September 20, 2026:
 
@@ -54,19 +112,26 @@ let bytes = b"\x00asm\x01\x00\x00\x00\x01\x06\x01\x5f\x01\x63\x00\x00"
 // (module (type (struct (field (ref null 0)))))
 ```
 
-The closed issue is evidence of an upstream source fix, not evidence that the
-published package contains it. Keep `wasm_core@0.14.0` and this patch for now;
-do not switch the release to a development checkout.
+Checked again on September 29, 2026, upstream
+[`main` at `74a02453`](https://github.com/Milky2018/wasmoon/tree/74a02453afefbb5ba9c9476838ac0a0ba349e84a/modules/wasm_core/parser)
+contains both singleton and iterative-expression fixes. The latter was added by
+[`ff98fb9b`](https://github.com/Milky2018/wasmoon/commit/ff98fb9bd0e732059e7f8a4f151f5739a57e45c7).
+The official `0.16.0` archive, with the hash above, contains neither. A manifest
+version on the upstream development branch does not identify the same source
+as the already published archive.
 
-When a published package contains the fix:
+Bundling removes the consumer patch requirement now. Replacing the internal
+parser with a future published dependency is a separate change:
 
-1. Test it in a clean dependency directory without running the patch script.
+1. Test the published archive in a clean dependency directory.
    Run the singleton probe, malformed-mutability test, real recursive fixtures,
    and type-reindexing compatibility tests.
-2. Upgrade the pinned dependency only after those tests pass. Remove the patch
-   application from `scripts/verify-spike.ps1` and `.github/workflows/release.yml`.
-3. Update `scripts/validate_workflows.py` and its self-tests, which currently
-   require dependency resolution before applying the patch. Then remove the
-   patch file and its application script.
-4. Run the full verification and release-package gates and validate a clean
-   downstream consumer before publishing a new MoonHostABI version.
+2. Verify complete AST and malformed-input
+   parity across structured instructions and initializer expressions, deep
+   nesting on native DEBUG/release, JS and WasmGC, and real artifacts against
+   the replacement package.
+3. Review the shared `types.Module` identity and the public `ArtifactError`
+   contract, including preserved diagnostic payloads and `Show` output. Document
+   any migration, then update the dependency and provenance together.
+4. Run the full verification, isolated package-consumer, and release-package
+   gates before removing the bundled implementation or publishing a new version.

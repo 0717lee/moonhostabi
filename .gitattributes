@@ -2,3 +2,4 @@
 *.manifest.json text eol=lf
 *.ts text eol=lf
 *.wat text eol=lf
+third_party/wasm_core_parser/LICENSE text eol=lf

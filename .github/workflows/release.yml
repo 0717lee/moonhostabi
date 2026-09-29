@@ -6,7 +6,7 @@ on:
       version:
         description: Strict MAJOR.MINOR.PATCH matching moon.mod
         required: true
-        default: 0.5.1
+        default: 0.6.0
         type: string
 
 permissions:
@@ -113,15 +113,16 @@ jobs:
             }
           }
 
-      - name: Resolve dependencies and guarded parser patch
+      - name: Resolve dependencies and verify bundled parser
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           moon update
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -B scripts/verify-vendored-parser.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           moon check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & ./scripts/apply-wasm-core-patch.ps1
 
       - name: Build deterministic platform package and unpacked smoke evidence
         shell: pwsh

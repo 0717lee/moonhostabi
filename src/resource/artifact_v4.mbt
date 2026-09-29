@@ -241,9 +241,20 @@ fn artifact_memory_resource(
 pub fn project_resource_artifact(
   bytes : Bytes,
 ) -> ResourceSurfaceV4 raise ResourceError {
-  let wasm = @wasm_adapter.parse_artifact(bytes) catch {
+  let wasm = @wasm_adapter.parse_artifact_checked(bytes) catch {
     error => invalid_resource("artifact: \{error}")
   }
+  project_resource_artifact_from_module(bytes, wasm)
+}
+
+///|
+/// Compose resource metadata with a module already parsed from the same bytes.
+/// This low-level entrypoint trusts the caller to supply that exact pair; use
+/// `project_resource_artifact` for untrusted bytes and bounded parsing.
+pub fn project_resource_artifact_from_module(
+  bytes : Bytes,
+  wasm : @wasm_types.Module,
+) -> ResourceSurfaceV4 raise ResourceError {
   let surface = project_resource_surface(wasm)
   let shared_flags = artifact_memory_shared_flags(bytes, wasm)
   let memory_types : Array[@wasm_types.MemoryType] = []

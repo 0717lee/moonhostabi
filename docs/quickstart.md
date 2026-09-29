@@ -37,6 +37,18 @@ git status --short
 For a judge run, the command should print no lines. Do not add a path argument or
 an environment override; each script resolves its repository-relative inputs.
 
+Resolve dependencies, verify bundled-parser provenance, and check the source:
+
+```powershell
+moon update
+python -B scripts/verify-vendored-parser.py
+moon check
+```
+
+Version `0.6.0` includes the parser fixes; consumers do not edit `.mooncakes`.
+See the [API migration](library-api.md#parser-distribution-and-error-migration)
+and [input limits](input-limits.md) before upgrading existing integrations.
+
 ## 🚀 Run three checks
 
 ### CLI evidence
@@ -54,7 +66,7 @@ Expected final marker:
 MOONHOSTABI_VERIFY_STATUS=GO
 ```
 
-The `0.5.0` resource workflow has its own lock and contract versions.
+The resource workflow introduced in `0.5.0` has its own lock and contract versions.
 To lock and verify the committed memory/table/global/tag fixture, create a fresh
 temporary directory first:
 
@@ -87,8 +99,9 @@ the MoonBit and `wasm-tools` setup described above. The generated adapter checks
 artifact bytes and imported resource types before application instantiation;
 both `instantiate` and `instantiateWithResources` perform those checks. See the
 [resource protocol walkthrough](resource-protocol.md) for supported types,
-runtime requirements, report fields, and legacy migration. Use version `0.5.1`
-for this workflow; the `0.4.1` package does not include it.
+runtime requirements, report fields, and legacy migration. The `0.6.0` source
+retains this workflow; the `0.4.1` package does not include it. Check
+[release availability](library-api.md) before installing the package.
 
 The CLI evidence script also prints the individual help, version, timeout, exit-code,
 canonical-report, Unicode-path, and no-host-execution markers. A successful
@@ -207,6 +220,8 @@ result cannot be mistaken for a fresh one.
 
 Resource-aware generation also refuses `--update`. Generate into a new directory
 with `--resource-contract`, and regenerate whenever the artifact bytes change.
+When upgrading the CLI, generate function-only adapters into a new directory
+too: `--update` requires the exact current generator manifest version.
 
 ### The browser or full Spike check fails
 

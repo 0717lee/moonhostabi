@@ -1,0 +1,15 @@
+import {
+  "0717lee/moonhostabi/src/contract",
+  "0717lee/moonhostabi/src/generator",
+  "0717lee/moonhostabi/src/lockfile",
+  "0717lee/moonhostabi/src/projector",
+  "0717lee/moonhostabi/src/verification",
+  "0717lee/moonhostabi/src/wasm_adapter",
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"
