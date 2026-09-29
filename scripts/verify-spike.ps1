@@ -369,12 +369,19 @@ try {
     -Arguments @('-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-resources.ps1')) `
     -Description 'Resource protocol and generated adapter end-to-end verification'
 
-  $cliFileName = if ($IsWindows) { 'moonhostabi.exe' } else { 'moonhostabi' }
+  $cliCandidates = @(
+    (Join-Path $repositoryRoot '_build/native/debug/build/cmd/moonhostabi/moonhostabi.exe'),
+    (Join-Path $repositoryRoot '_build/native/debug/build/cmd/moonhostabi/moonhostabi')
+  )
+  $existingCli = @($cliCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
+  if ($existingCli.Count -ne 1) {
+    throw 'Could not resolve exactly one freshly built native MoonHostABI executable.'
+  }
   Invoke-Checked `
     -FilePath $pwshExecutable `
     -Arguments @(
       '-NoProfile', '-File', (Join-Path $repositoryRoot 'scripts/verify-type-policy.ps1'),
-      '-CliPath', (Join-Path $repositoryRoot "_build/native/debug/build/cmd/moonhostabi/$cliFileName"),
+      '-CliPath', $existingCli[0],
       '-WasmToolsPath', $wasmToolsExecutable
     ) `
     -Description 'large compiled artifact type policy verification'
