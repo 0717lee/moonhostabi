@@ -12,12 +12,24 @@ pub(all) struct MemoryResource {
 } derive(Eq, Debug)
 
 ///|
+pub extend MemoryResource with @debug.Debug::{to_repr}
+
+///|
+pub extend MemoryResource with Eq::{not_equal, equal}
+
+///|
 /// The standalone resource ABI surface. Function ABI remains in HostAbi v1.
 pub(all) struct ResourceAbi {
   schema_version : Int
   memories : Array[MemoryResource]
   unsupported : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend ResourceAbi with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceAbi with Eq::{not_equal, equal}
 
 ///|
 /// Explicit memory contract consumed by a host runtime.
@@ -28,6 +40,12 @@ pub(all) struct MemoryContract {
 } derive(Eq, Debug)
 
 ///|
+pub extend MemoryContract with @debug.Debug::{to_repr}
+
+///|
+pub extend MemoryContract with Eq::{not_equal, equal}
+
+///|
 /// Resource lockfile that fingerprints the canonical resource surface.
 pub(all) struct ResourceLockfile {
   lockfile_version : Int
@@ -36,6 +54,12 @@ pub(all) struct ResourceLockfile {
   abi_sha256 : String
   abi : ResourceAbi
 } derive(Eq, Debug)
+
+///|
+pub extend ResourceLockfile with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceLockfile with Eq::{not_equal, equal}
 
 ///|
 fn json_string(value : String) -> String {

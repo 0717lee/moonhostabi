@@ -8,6 +8,12 @@ pub struct AbiLockfile {
 } derive(Eq, Debug)
 
 ///|
+pub extend AbiLockfile with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiLockfile with Eq::{not_equal, equal}
+
+///|
 pub fn sha256_hex(bytes : Bytes) -> String {
   @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
 }

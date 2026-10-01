@@ -8,6 +8,12 @@ pub(all) struct ResourceChange {
 } derive(Eq, Debug)
 
 ///|
+pub extend ResourceChange with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceChange with Eq::{not_equal, equal}
+
+///|
 pub(all) struct ResourceComparison {
   schema_version : Int
   classification : String
@@ -15,6 +21,12 @@ pub(all) struct ResourceComparison {
   exit_code : Int
   changes : Array[ResourceChange]
 } derive(Eq, Debug)
+
+///|
+pub extend ResourceComparison with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceComparison with Eq::{not_equal, equal}
 
 ///|
 fn resource_fields(surface : ResourceSurfaceV4) -> Map[String, String] {

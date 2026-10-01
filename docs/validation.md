@@ -1,5 +1,45 @@
 # Validation evidence
 
+## Compiler upgrade acceptance, 2026-10-01
+
+The local `0.6.1` candidate based on `397ded8` passed the full Windows Spike
+with `moonc v0.10.14+7d59c7ec9 (2026-09-18)` and
+`moon` / `moonrun 0.1.20260920 (914d7da 2026-09-20)`.
+The toolchain is installed in `.tools/moonbit-0.10.14`; the README documents
+the environment assignments needed to select it in a new shell.
+
+| Check | Result |
+| --- | --- |
+| Format and compilation | `moon fmt --check`; native check; Wasm, JS and Wasm-GC checks with `--deny-warn` passed |
+| MoonBit tests | native 194/194; JS 157/157; Wasm-GC 157/157 |
+| Python self-tests | provenance 4/4; benchmark runner 20/20; package consumer 19/19 |
+| CLI, reproduction and packaging | CLI report, deterministic bundle, Windows package/unpacked smoke, release aggregation and workflow checks passed |
+| Generator transactions | `MOONHOSTABI_TRANSACTION_STATUS=GO` |
+| Host execution | Node checks passed; Chromium function 6/6 and resource 27/27 |
+| Large compiler artifact | 1,633 type groups; `MOONHOSTABI_TYPE_POLICY_STATUS=GO` |
+| Source SDK consumer | `MOONHOSTABI_SOURCE_CONSUMER_STATUS=GO` |
+| Isolated package installation | `MOONHOSTABI_PACKAGE_CONSUMER_STATUS=GO`; native, JS and Wasm-GC each checked, ran 4/4 tests and executed the smoke example |
+| Complete gate and demo | `MOONHOSTABI_SPIKE_STATUS=GO`; `MOONHOSTABI_JUDGE_DEMO_STATUS=GO` |
+| Third-party provenance | Passed against the original `wasm_core@0.14.0` ZIP, including the documented package import change |
+
+Both official platform archives were downloaded and hashed; their installed
+tool identities match the pins below. The Linux toolchain also rebuilt the five
+MoonBit fixtures under WSL Ubuntu 22.04, producing byte-identical Windows/Linux
+artifacts. The WAT changes from the old compiler contain only the `processed-by`
+version metadata. Canonical ABI and generated TypeScript bytes remain unchanged.
+Public trait methods now have explicit `extend` declarations so the new
+compiler's warning checks preserve the existing callable API.
+
+Local raw evidence is in `_build/toolchain-upgrade/verify-spike.log`,
+`_build/toolchain-upgrade/judge-demo.log`,
+`_build/toolchain-upgrade/linux-fixtures.log`, and
+`_build/package-consumer/20261001T024556Z-fc774b38/report.json`.
+These checks establish local candidate evidence. The release commit must also
+pass remote Windows/Linux Verification and Release dry run before publishing
+`0.6.1`.
+
+## Historical first Spike
+
 MoonHostABI reached a **local Spike GO** on 2026-09-04. The single verification
 entry point reproduced the parser, projection, canonicalization, compatibility,
 generation, Node.js, and Chromium evidence described below. The public
@@ -163,7 +203,7 @@ lock migration, field-level report formats, and artifact-bound runtime checks.
 The host must provide PowerShell 7, a MoonBit toolchain reporting the exact
 identities below, Node.js `24.12.0` with npm `11.6.2`, and `wasm-tools 1.258.0`.
 CI obtains those identities from the official MoonBit installer snapshot
-`0.10.11+6ff76a5f9`; the snapshot selector is not the same value as the
+`0.10.14+7d59c7ec9`; the snapshot selector is not the same value as the
 reported `moon` version. The script resolves dependencies, rebuilds all fixtures,
 installs the locked npm graph and Chromium, and stops at the first unexpected
 result. On a clean checkout, normal dependency setup is `moon update` followed
@@ -203,9 +243,9 @@ that verification does not instantiate or execute the artifact.
 
 | Tool | Locally verified version |
 | --- | --- |
-| `moon` | `0.1.20260827 (d0aaa07 2026-08-27)` |
-| `moonc` | `v0.10.11+6ff76a5f9 (2026-08-28)` |
-| `moonrun` | `0.1.20260827 (d0aaa07 2026-08-27)` |
+| `moon` | `0.1.20260920 (914d7da 2026-09-20)` |
+| `moonc` | `v0.10.14+7d59c7ec9 (2026-09-18)` |
+| `moonrun` | `0.1.20260920 (914d7da 2026-09-20)` |
 | `wasm-tools` | `1.258.0 (5c6d31c78 2026-08-24)` |
 | Node.js | `v24.12.0` |
 | npm | `11.6.2` |
@@ -213,10 +253,10 @@ that verification does not instantiate or execute the artifact.
 | Playwright | `1.62.1` |
 | Chromium used by Playwright | `151.0.7922.34` |
 
-The official installer/archive snapshot is `0.10.11+6ff76a5f9` (URL-encoded as
-`0.10.11%2B6ff76a5f9`). It is deliberately recorded separately from the
-reported tool identities: `moon` and `moonrun` report `0.1.20260827`, while
-`moonc` reports `v0.10.11+6ff76a5f9`. CI preflights the platform binary archive
+The official installer/archive snapshot is `0.10.14+7d59c7ec9` (URL-encoded as
+`0.10.14%2B7d59c7ec9`). It is deliberately recorded separately from the
+reported tool identities: `moon` and `moonrun` report `0.1.20260920`, while
+`moonc` reports `v0.10.14+7d59c7ec9`. CI preflights the platform binary archive
 for that snapshot, then passes the unencoded snapshot selector to the official
 installer and checks all three identities after installation.
 
@@ -238,8 +278,8 @@ hashes before installation:
 
 | Platform archive | Official URL path | SHA-256 |
 | --- | --- | --- |
-| Linux x86_64 | `/binaries/0.10.11%2B6ff76a5f9/moonbit-linux-x86_64.tar.gz` | `9573f4df56ff7fe99aa200ddeabc379919e80203c37986642d8e74add1a7e7be` |
-| Windows x86_64 | `/binaries/0.10.11%2B6ff76a5f9/moonbit-windows-x86_64.zip` | `f08e1d54efff3a99319f686b11ceb1a1454288e460e7f20a77219f8d4e08f538` |
+| Linux x86_64 | `/binaries/0.10.14%2B7d59c7ec9/moonbit-linux-x86_64.tar.gz` | `9226694de9ff978db1ecf820b7710c4224e84ec7a76b19a222d96f0cd4e31b6a` |
+| Windows x86_64 | `/binaries/0.10.14%2B7d59c7ec9/moonbit-windows-x86_64.zip` | `faae225a8287d0ce69e44b5b3f754af988e97f4446056d8f32ceb3ddb998fce7` |
 
 CI also downloads the official MoonBit installers as files rather than piping
 them directly into a shell. The installer SHA-256 values are
@@ -260,11 +300,11 @@ seven artifacts with `wasm-tools` before publishing them.
 
 | Fixture | Primary source | Source SHA-256 | Artifact SHA-256 |
 | --- | --- | --- | --- |
-| scalar | `fixtures/projects/scalar/main.mbt` | `b5ae50108cd0cf9947ac672a14a68da85e0cb0eb866d40a85f3558372100be99` | `04904560d0bd1289fe93858d96c4692a4865ba138e4f4db335478f3263cdcfbd` |
-| externref | `fixtures/projects/externref/main.mbt` | `9cd011eefe6c70c4dcd1fede619b8164826be810a2e428eccb9c91a65f2a6773` | `a748ac44370fd11670fc00d3a1a540809823b2370bc734518cbfc849a88da057` |
-| recursive | `fixtures/projects/recursive/main.mbt` | `2ab36bc8823e415b7750e6ca79098373f21d9694a4c742a2301595c1adf77d2c` | `d50b38d7d2aaae48688c94f35344fd78a4b831473750095806957e5743b99b3c` |
-| breaking v1 | `fixtures/projects/breaking_v1/main.mbt` | `9f121a57617f5f17965f50f81d840f829244e1ee2a38c2a5b413408f8f1da314` | `8b5ab1fb29df82f4183412accb55c6baaa969126fd08ec67c46c9c99f3fa1a8e` |
-| breaking v2 | `fixtures/projects/breaking_v2/main.mbt` | `08f71cff1f32ede8d4842abb29bd3b1ad2ee795859578bf65ae4b8b8b8771c8f` | `317eebbf2a61bafa96b2ad5be8c20a9fe82e0c31b75806ac156ebc8aa25e9d5c` |
+| scalar | `fixtures/projects/scalar/main.mbt` | `b5ae50108cd0cf9947ac672a14a68da85e0cb0eb866d40a85f3558372100be99` | `be817374900683570f87887b876ab8c24f9135c73bc554456524357bcbf3300b` |
+| externref | `fixtures/projects/externref/main.mbt` | `9cd011eefe6c70c4dcd1fede619b8164826be810a2e428eccb9c91a65f2a6773` | `24ccbe8633b8ad0fbf3a730e5aeecc862da6c764243a6855807de150e8af4663` |
+| recursive | `fixtures/projects/recursive/main.mbt` | `2ab36bc8823e415b7750e6ca79098373f21d9694a4c742a2301595c1adf77d2c` | `43f32236fa6234ae5176c913566c2ea79f445c2f78ee57a03d7a6d9cc0f78e1e` |
+| breaking v1 | `fixtures/projects/breaking_v1/main.mbt` | `9f121a57617f5f17965f50f81d840f829244e1ee2a38c2a5b413408f8f1da314` | `b936ce52001611715140278b7dce3eb78bdf78e2b8958bb935e467d027906203` |
+| breaking v2 | `fixtures/projects/breaking_v2/main.mbt` | `08f71cff1f32ede8d4842abb29bd3b1ad2ee795859578bf65ae4b8b8b8771c8f` | `9fbab7ae1cbe8cc0dd5d64407ea092a70ce2e58f3731ea852bc31a752b978c7a` |
 | recursive layout A | `fixtures/wat/rec-a.wat` | `edce02ba59eb680db518ac4b980b293ea06b461e3de0a1d20b1464396fb64b7a` | `885ebd2fa3c5f4cadb67905569e1566ef84a53bc9a9b6a4cea77a7187fe873cc` |
 | recursive reindexed | `fixtures/wat/rec-reindexed.wat` | `185536211967ff0c970e9e3055cf7b0b1251744a143f20ae0e37ec6bdb39e36c` | `c860e7e7fbdb91b8558a20bc5bc94f3a4fcbe71dd5036b3c6d32ac96a878cda5` |
 
@@ -272,7 +312,7 @@ seven artifacts with `wasm-tools` before publishing them.
 
 - Two independent `lock` invocations over `breaking_v1.wasm` produced
   byte-identical files with SHA-256
-  `2589ab342c39688bffdd7968d92262ac7865dcd06c4bde1a6ae1e90f2a0674d4`.
+  `17177ffdabf8b58537e187733d461fbcaad5b28753f3ed89dbf211fc5b11598a`.
 - The recursive compiler artifact projected two exports (`new_node` and
   `node_value`) and one reachable recursive struct with fields `i32` and
   mutable `ref null type[0]`. Its emitted ABI JSON SHA-256 was
@@ -567,8 +607,8 @@ the historical `0.4.1` candidate; later release evidence is recorded above.
   for the published candidate. Future versions must repeat the same checks before
   publication.
 - MoonBit's CI installer is content-hash pinned and receives the official
-  installer snapshot `0.10.11+6ff76a5f9` (not the reported `moon` identity
-  `0.1.20260827`). The Linux and Windows binary archives are preflighted with
+  installer snapshot `0.10.14+7d59c7ec9` (not the reported `moon` identity
+  `0.1.20260920`). The Linux and Windows binary archives are preflighted with
   the hashes recorded above, and the installed `moon`/`moonc`/`moonrun`
   identities are version-gated. The installer-selected core archives share the
   snapshot selector but do not currently have independent recorded hashes.

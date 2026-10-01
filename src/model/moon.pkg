@@ -1,1 +1,3 @@
-// Pure Host ABI domain model; no external imports.
+import {
+  "moonbitlang/core/debug",
+}

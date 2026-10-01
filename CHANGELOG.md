@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.1] - Unreleased
+
+### Changed
+
+- Pin the verification and release toolchains to `moonc v0.10.14+7d59c7ec9`
+  (`moon` / `moonrun 0.1.20260920`), including platform archive checksums.
+- Explicitly export existing public `Eq`, `Debug`, and `Show` methods for
+  compatibility with the new compiler's warning checks.
+- Remove unused package imports and refresh compiled fixtures and validation
+  evidence for the pinned compiler. Function and resource ABI formats are unchanged.
+
 ## [0.6.0] - 2026-09-29
 
 ### Added

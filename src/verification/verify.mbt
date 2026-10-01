@@ -5,11 +5,23 @@ pub(all) enum VerificationBaselineInput {
 } derive(Eq, Debug)
 
 ///|
+pub extend VerificationBaselineInput with @debug.Debug::{to_repr}
+
+///|
+pub extend VerificationBaselineInput with Eq::{not_equal, equal}
+
+///|
 pub(all) enum VerificationContractInput {
   ContractNotProvided
   ContractText(String)
   InvalidContractInput(String)
 } derive(Eq, Debug)
+
+///|
+pub extend VerificationContractInput with @debug.Debug::{to_repr}
+
+///|
+pub extend VerificationContractInput with Eq::{not_equal, equal}
 
 ///|
 fn verification_diagnostic(

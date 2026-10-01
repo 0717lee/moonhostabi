@@ -8,6 +8,12 @@ pub(all) struct GenerationResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend GenerationResult with @debug.Debug::{to_repr}
+
+///|
+pub extend GenerationResult with Eq::{not_equal, equal}
+
+///|
 fn generator_diagnostic(path : String, message : String) -> @model.Diagnostic {
   @model.Diagnostic::{
     code: @model.MHA_PROJECT_UNREPRESENTABLE,

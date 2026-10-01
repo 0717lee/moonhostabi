@@ -8,6 +8,12 @@ pub(all) enum VerificationOutcome {
 } derive(Eq, Debug)
 
 ///|
+pub extend VerificationOutcome with @debug.Debug::{to_repr}
+
+///|
+pub extend VerificationOutcome with Eq::{not_equal, equal}
+
+///|
 pub(all) enum ArtifactReportStatus {
   ArtifactValid
   ArtifactUnsupported
@@ -15,10 +21,22 @@ pub(all) enum ArtifactReportStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend ArtifactReportStatus with @debug.Debug::{to_repr}
+
+///|
+pub extend ArtifactReportStatus with Eq::{not_equal, equal}
+
+///|
 pub(all) enum BaselineReport {
   BaselineValid(String, String)
   BaselineInvalid(@model.Diagnostic)
 } derive(Eq, Debug)
+
+///|
+pub extend BaselineReport with @debug.Debug::{to_repr}
+
+///|
+pub extend BaselineReport with Eq::{not_equal, equal}
 
 ///|
 pub(all) enum ContractReport {
@@ -29,11 +47,23 @@ pub(all) enum ContractReport {
 } derive(Eq, Debug)
 
 ///|
+pub extend ContractReport with @debug.Debug::{to_repr}
+
+///|
+pub extend ContractReport with Eq::{not_equal, equal}
+
+///|
 pub(all) enum GeneratorReport {
   GeneratorRepresentable
   GeneratorUnrepresentable(Array[@model.Diagnostic])
   GeneratorNotEvaluated
 } derive(Eq, Debug)
+
+///|
+pub extend GeneratorReport with @debug.Debug::{to_repr}
+
+///|
+pub extend GeneratorReport with Eq::{not_equal, equal}
 
 ///|
 pub struct VerificationReport {
@@ -52,6 +82,12 @@ pub struct VerificationReport {
   contract : ContractReport
   generator : GeneratorReport
 } derive(Eq, Debug)
+
+///|
+pub extend VerificationReport with @debug.Debug::{to_repr}
+
+///|
+pub extend VerificationReport with Eq::{not_equal, equal}
 
 ///|
 fn report_json_string(value : String) -> String {

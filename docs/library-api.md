@@ -5,6 +5,10 @@ CLI is the recommended integration point for release pipelines. Library users
 can import the model, lockfile, compatibility, contract, generator, or
 verification packages when they need an in-process gate.
 
+The local `0.6.1` candidate targets `moonc 0.10.14` and explicitly exports the
+existing public trait methods. Its publication is pending; use the source and
+isolated package gates in [the consumer guide](consumer-example.md) to test it.
+
 For `0.6.0`, use the following commands in a downstream MoonBit project after
 confirming publication availability below:
 

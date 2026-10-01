@@ -11,6 +11,12 @@ pub(all) struct TableResource {
 } derive(Eq, Debug)
 
 ///|
+pub extend TableResource with @debug.Debug::{to_repr}
+
+///|
+pub extend TableResource with Eq::{not_equal, equal}
+
+///|
 /// A global crossing a compiled Wasm host boundary.
 pub(all) struct GlobalResource {
   path : String
@@ -21,6 +27,12 @@ pub(all) struct GlobalResource {
 } derive(Eq, Debug)
 
 ///|
+pub extend GlobalResource with @debug.Debug::{to_repr}
+
+///|
+pub extend GlobalResource with Eq::{not_equal, equal}
+
+///|
 /// An exception tag crossing a compiled Wasm host boundary.
 pub(all) struct TagResource {
   path : String
@@ -28,6 +40,12 @@ pub(all) struct TagResource {
   name : String
   type_index : Int64
 } derive(Eq, Debug)
+
+///|
+pub extend TagResource with @debug.Debug::{to_repr}
+
+///|
+pub extend TagResource with Eq::{not_equal, equal}
 
 ///|
 /// Complete resource ABI surface used by the resource protocol v3.
@@ -45,6 +63,12 @@ pub(all) struct ResourceSurface {
 } derive(Eq, Debug)
 
 ///|
+pub extend ResourceSurface with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceSurface with Eq::{not_equal, equal}
+
+///|
 /// Contract for all resources in a `ResourceSurface` (schema v4).
 pub(all) struct ResourceContract {
   schema_version : Int
@@ -57,6 +81,12 @@ pub(all) struct ResourceContract {
 } derive(Eq, Debug)
 
 ///|
+pub extend ResourceContract with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceContract with Eq::{not_equal, equal}
+
+///|
 /// Resource lockfile carrying a complete resource surface (schema v3).
 pub(all) struct ResourceLockfileV3 {
   lockfile_version : Int
@@ -65,6 +95,12 @@ pub(all) struct ResourceLockfileV3 {
   abi_sha256 : String
   abi : ResourceSurface
 } derive(Eq, Debug)
+
+///|
+pub extend ResourceLockfileV3 with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceLockfileV3 with Eq::{not_equal, equal}
 
 ///|
 fn encode_table_resource(value : TableResource) -> String {

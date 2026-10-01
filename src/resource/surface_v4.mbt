@@ -9,6 +9,12 @@ pub(all) struct TagSignatureResource {
 } derive(Eq, Debug)
 
 ///|
+pub extend TagSignatureResource with @debug.Debug::{to_repr}
+
+///|
+pub extend TagSignatureResource with Eq::{not_equal, equal}
+
+///|
 /// Resource protocol v4, independent of the legacy index-based v3 protocol.
 pub(all) struct ResourceSurfaceV4 {
   schema_version : Int
@@ -20,6 +26,12 @@ pub(all) struct ResourceSurfaceV4 {
 } derive(Eq, Debug)
 
 ///|
+pub extend ResourceSurfaceV4 with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceSurfaceV4 with Eq::{not_equal, equal}
+
+///|
 pub(all) struct ResourceLockfileV4 {
   lockfile_version : Int
   schema_sha256 : String
@@ -27,6 +39,12 @@ pub(all) struct ResourceLockfileV4 {
   abi_sha256 : String
   abi : ResourceSurfaceV4
 } derive(Eq, Debug)
+
+///|
+pub extend ResourceLockfileV4 with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceLockfileV4 with Eq::{not_equal, equal}
 
 ///|
 pub(all) struct ResourceContractV5 {
@@ -38,6 +56,12 @@ pub(all) struct ResourceContractV5 {
   tags : Array[TagSignatureResource]
   unsupported : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend ResourceContractV5 with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceContractV5 with Eq::{not_equal, equal}
 
 ///|
 fn resource_path(module_name : String?, name : String) -> String {

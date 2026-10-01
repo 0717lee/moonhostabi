@@ -6,6 +6,12 @@ pub(all) struct JsCapabilityPolicy {
 } derive(Eq, Debug)
 
 ///|
+pub extend JsCapabilityPolicy with @debug.Debug::{to_repr}
+
+///|
+pub extend JsCapabilityPolicy with Eq::{not_equal, equal}
+
+///|
 pub fn default_js_capability_policy() -> JsCapabilityPolicy {
   { allow_typed_gc_refs: false, allow_v128: false, externref_symbol: None, }
 }
@@ -20,11 +26,20 @@ pub(all) enum JsRepresentation {
 } derive(Eq, Debug)
 
 ///|
+pub extend JsRepresentation with @debug.Debug::{to_repr}
+
+///|
+pub extend JsRepresentation with Eq::{not_equal, equal}
+
+///|
 pub(all) struct ProjectionAnalysis {
   abi : @model.HostAbi
   diagnostics : Array[@model.Diagnostic]
   resources : Array[@model.AbiResource]
 } derive(Debug)
+
+///|
+pub extend ProjectionAnalysis with @debug.Debug::{to_repr}
 
 ///|
 fn unrepresentable(path : String, message : String) -> @model.Diagnostic {

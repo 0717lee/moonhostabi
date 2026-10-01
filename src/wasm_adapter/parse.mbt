@@ -20,6 +20,9 @@ pub(all) suberror ArtifactError {
 } derive(Debug)
 
 ///|
+pub extend ArtifactError with @debug.Debug::{to_repr}
+
+///|
 pub extend ArtifactError with Show::{to_string, output}
 
 ///|

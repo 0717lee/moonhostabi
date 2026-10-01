@@ -39,6 +39,9 @@ excluded. No encoder, WAT, validator or types implementation is copied.
 
 ## Local modifications
 
+The package manifest also removes the debug import that moonc 0.10.14 reports
+as unused. Its changed body and hash are recorded separately from the sources.
+
 1. **`rec_group_types.mbt`**: in the implicit singleton branch, pre-scan the
    composite kind without resolving references, reserve a placeholder in the type
    table, parse the subtype, then replace that reserved slot. This permits typed
@@ -108,7 +111,7 @@ for f in p["source_files"] + [p["package_manifest"]]:
     body = vendored.split(b"\n\n", 1)[1]
     if "implementation_changed_from_archive" in f:
         assert (body != original) == f["implementation_changed_from_archive"]
-        if body != original:
+        if body != original and f["source_path"].endswith(".mbt"):
             changed.append(f["source_path"])
     else:
         assert body == original

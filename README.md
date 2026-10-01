@@ -8,7 +8,8 @@ host-contract drift, and emits a strict TypeScript/ESM adapter. See [the
 validation evidence](docs/validation.md) for local results, historical public
 Linux/Windows CI runs, hashes, runtime observations, and limits.
 
-Release version: `0717lee/moonhostabi@0.6.0`. See
+Local candidate: `0717lee/moonhostabi@0.6.1` (unreleased), verified with
+`moonc v0.10.14+7d59c7ec9`. Published release: `0717lee/moonhostabi@0.6.0`. See
 [release availability and installation](docs/library-api.md).
 
 Version `0.6.0` adds [checked input limits](docs/input-limits.md),
@@ -72,9 +73,9 @@ before importing packages from a downstream module.
 ## Reproduce the Spike
 
 Prerequisites are PowerShell 7, a MoonBit toolchain reporting `moon
-0.1.20260827` / `moonc v0.10.11+6ff76a5f9` / `moonrun 0.1.20260827`, Node.js
+0.1.20260920` / `moonc v0.10.14+7d59c7ec9` / `moonrun 0.1.20260920`, Node.js
 `24.12.0` with npm `11.6.2`, and `wasm-tools 1.258.0`. CI obtains that
-toolchain from the official installer snapshot `0.10.11+6ff76a5f9`; the
+toolchain from the official installer snapshot `0.10.14+7d59c7ec9`; the
 snapshot selector is distinct from the reported `moon` version. The command
 below installs locked npm dependencies and the pinned Playwright Chromium
 build as part of the gate:
@@ -84,6 +85,9 @@ pwsh -NoProfile -File scripts/verify-spike.ps1
 ```
 
 Success ends with `MOONHOSTABI_SPIKE_STATUS=GO`.
+
+For a project-local Windows toolchain, follow the
+[installation and activation instructions](docs/toolchain.md).
 
 ## CLI surface
 

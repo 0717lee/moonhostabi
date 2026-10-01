@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/core/debug",
   "0717lee/moonhostabi/src/model",
   "moonbitlang/core/json",
   "moonbitlang/x/crypto",

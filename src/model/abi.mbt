@@ -12,6 +12,12 @@ pub(all) enum AbiValueType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AbiValueType with Eq::{not_equal, equal}
+
+///|
+pub extend AbiValueType with @debug.Debug::{to_repr}
+
+///|
 pub fn AbiValueType::stable_text(self : AbiValueType) -> String {
   match self {
     I32 => "i32"
@@ -38,6 +44,12 @@ pub(all) struct AbiFunction {
   params : Array[AbiValueType]
   results : Array[AbiValueType]
 } derive(Eq, Debug)
+
+///|
+pub extend AbiFunction with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiFunction with Eq::{not_equal, equal}
 
 ///|
 pub fn AbiFunction::stable_text(self : AbiFunction) -> String {
@@ -92,10 +104,22 @@ pub(all) enum AbiStorageType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AbiStorageType with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiStorageType with Eq::{not_equal, equal}
+
+///|
 pub(all) struct AbiField {
   storage : AbiStorageType
   mutable : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend AbiField with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiField with Eq::{not_equal, equal}
 
 ///|
 pub(all) struct AbiStructType {
@@ -106,6 +130,12 @@ pub(all) struct AbiStructType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AbiStructType with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiStructType with Eq::{not_equal, equal}
+
+///|
 pub(all) struct AbiArrayType {
   id : String
   supertypes : Array[String]
@@ -114,10 +144,22 @@ pub(all) struct AbiArrayType {
 } derive(Eq, Debug)
 
 ///|
+pub extend AbiArrayType with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiArrayType with Eq::{not_equal, equal}
+
+///|
 pub(all) enum AbiTypeDef {
   Struct(AbiStructType)
   Array(AbiArrayType)
 } derive(Eq, Debug)
+
+///|
+pub extend AbiTypeDef with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiTypeDef with Eq::{not_equal, equal}
 
 ///|
 pub(all) struct HostAbi {
@@ -127,6 +169,12 @@ pub(all) struct HostAbi {
   types : Array[AbiTypeDef]
   features : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend HostAbi with @debug.Debug::{to_repr}
+
+///|
+pub extend HostAbi with Eq::{not_equal, equal}
 
 ///|
 /// A non-function item crossing the Wasm host boundary.
@@ -142,6 +190,12 @@ pub(all) enum AbiResourceKind {
 } derive(Eq, Debug)
 
 ///|
+pub extend AbiResourceKind with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiResourceKind with Eq::{not_equal, equal}
+
+///|
 /// A table, memory, global, or exception tag import/export.
 pub(all) struct AbiResource {
   module_name : String?
@@ -149,6 +203,12 @@ pub(all) struct AbiResource {
   kind : AbiResourceKind
   details : String
 } derive(Eq, Debug)
+
+///|
+pub extend AbiResource with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiResource with Eq::{not_equal, equal}
 
 ///|
 /// Return a deterministic, human- and machine-readable resource summary.

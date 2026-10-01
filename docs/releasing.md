@@ -3,7 +3,7 @@
 MoonHostABI's release workflow builds and aggregates immutable artifacts but
 does not publish a tag or GitHub Release automatically. Publication remains a
 separate, authorized manual step after the release gates pass for the exact
-commit. Use this guide for the `0.6.0` candidate and subsequent releases.
+commit. Use this guide for the `0.6.1` candidate and subsequent releases.
 
 See [GitHub releases](https://github.com/0717lee/moonhostabi/releases) and
 [Mooncakes](https://mooncakes.io/docs/0717lee/moonhostabi) for publication
@@ -57,7 +57,7 @@ credential, workflow log, or self-hash.
 
 Prerequisites are PowerShell 7+, Python 3.11, the pinned MoonBit toolchain, and
 the repository setup described in the main README. The remote workflow selects
-MoonBit installer snapshot `0.10.11+6ff76a5f9` and verifies the reported `moon`,
+MoonBit installer snapshot `0.10.14+7d59c7ec9` and verifies the reported `moon`,
 `moonc`, and `moonrun` identities separately. Workflow validation uses
 PyYAML 6.0.3; CI installs it from
 `scripts/requirements-workflow-validation.txt` with platform wheel hashes.
@@ -69,7 +69,7 @@ $packageOutput = Join-Path ([IO.Path]::GetTempPath()) 'moonhostabi-package-new'
 $evidenceOutput = Join-Path ([IO.Path]::GetTempPath()) 'windows.evidence.json'
 [IO.Directory]::CreateDirectory($packageOutput) | Out-Null
 pwsh -NoProfile -File scripts/package-release.ps1 `
-  -Version 0.6.0 `
+  -Version 0.6.1 `
   -Output $packageOutput `
   -EvidenceOut $evidenceOutput
 ```
@@ -93,7 +93,7 @@ evidence, cannot claim smoke success, and is rejected by production aggregation
 unless the test-only switch is explicit. The workflow is configured to perform
 the real Linux package path on Ubuntu. Historical Verification and dispatch-only
 Release dry-run evidence is recorded in runs `34081779933` and `34081936398`.
-Repeat both gates for the exact `0.6.0` release commit before publication and
+Repeat both gates for the exact `0.6.1` release commit before publication and
 record their immutable run URLs in the GitHub release notes linked from
 [the validation record](validation.md).
 Future versions must repeat both gates for their own release commit.
@@ -123,7 +123,7 @@ binary archives, installs the pinned snapshot, runs `moon update`, verifies
 bundled-parser provenance with `python -B scripts/verify-vendored-parser.py`,
 and runs `moon check`. It rejects a moon/moonc/moonrun version mismatch before
 building. No dependency-cache patch is applied. Use the following acceptance
-procedure for `0.6.0` and future candidates:
+procedure for `0.6.1` and future candidates:
 
 1. Open **Actions → Release dry run → Run workflow**.
 2. Enter the exact version from `moon.mod`.

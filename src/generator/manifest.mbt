@@ -2,7 +2,7 @@
 const GENERATION_MANIFEST_VERSION : Int = 1
 
 ///|
-pub const MOONHOSTABI_VERSION : String = "0.6.0"
+pub const MOONHOSTABI_VERSION : String = "0.6.1"
 
 ///|
 const MAX_GENERATION_MANIFEST_LENGTH : Int = 64 * 1024
@@ -11,6 +11,12 @@ const MAX_GENERATION_MANIFEST_LENGTH : Int = 64 * 1024
 pub(all) suberror ManifestError {
   InvalidManifest(String)
 } derive(Debug)
+
+///|
+pub extend ManifestError with @debug.Debug::{to_repr}
+
+///|
+pub extend ManifestError with Show::{to_string, output}
 
 ///|
 pub impl Show for ManifestError with fn output(self, logger) {
@@ -26,6 +32,12 @@ pub struct GenerationManifest {
   contract_sha256 : String
   adapter_sha256 : String
 } derive(Eq, Debug)
+
+///|
+pub extend GenerationManifest with @debug.Debug::{to_repr}
+
+///|
+pub extend GenerationManifest with Eq::{not_equal, equal}
 
 ///|
 fn[T] invalid_manifest(message : String) -> T raise ManifestError {

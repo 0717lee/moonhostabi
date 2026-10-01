@@ -1,6 +1,6 @@
 # Consumer gates
 
-These gates cover the `0.6.0` source and package candidate, including the bundled
+These gates cover the `0.6.1` source and package candidate, including the bundled
 parser and checked entrypoints. A source workspace run and an isolated
 package-install run provide different evidence; public publication and
 third-party adoption require separate evidence. Check
@@ -27,14 +27,14 @@ validation, not third-party adoption or published-package validation.
 
 ## Inputs and prerequisites
 
-- Moon `0.1.20260827 (d0aaa07)` and moonc `v0.10.11+6ff76a5f9`, checked by the gate.
+- Moon `0.1.20260920 (914d7da)` and moonc `v0.10.14+7d59c7ec9`, checked by the gate.
 - A working native C toolchain for the SDK consumer and Node with WasmGC support
   (validated here with Node `24.12.0`).
 - The existing `runtime/node_modules/typescript/bin/tsc` and
   `runtime/node_modules/@types/node` installations. The gate does not run npm or
   install tools; its evidence records the actual TypeScript and Node versions.
 - Moon's existing dependency cache/registry access for the declared dependencies.
-  The consumer declares `0717lee/moonhostabi@0.6.0` and `moonbitlang/x@0.5.1`.
+  The consumer declares `0717lee/moonhostabi@0.6.1` and `moonbitlang/x@0.5.1`.
   Normal Moon dependency resolution happens inside the temporary workspace.
 - Optional bundled `.tools/wasm-tools/**/wasm-tools.exe`. If present, both
   freshly compiled artifacts must pass `wasm-tools validate`; absence prints
@@ -53,7 +53,7 @@ members = ["C:/absolute/path/to/moonhostabi-production", "C:/absolute/temp/moonh
 The string-array manifest and running commands from the workspace root follow
 [MoonBit's workspace documentation](https://docs.moonbitlang.com/en/latest/toolchain/moon/workspace.html).
 Absolute members were also exercised with the pinned toolchain. The consumer's
-declared version is `0.6.0`; the workspace member supplies the actual local
+declared version is `0.6.1`; the workspace member supplies the actual local
 library implementation. No library source is copied into the consumer.
 
 Before the SDK build, the gate saves `moon build --dry-run` output and requires

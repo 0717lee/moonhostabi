@@ -138,6 +138,12 @@ pub(all) struct ResourceContractSources {
 } derive(Eq, Debug)
 
 ///|
+pub extend ResourceContractSources with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceContractSources with Eq::{not_equal, equal}
+
+///|
 fn resource_source(value : String?) -> String {
   match value {
     Some(text) =>

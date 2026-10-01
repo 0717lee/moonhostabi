@@ -184,9 +184,10 @@
     "source_path": "parser/moon.pkg",
     "vendored_path": "src/internal/wasm_parser/moon.pkg",
     "original_normalized_sha256": "1a5232083254486a4be17edf5c8b913d68101df18c5b7c1a5d9816419055a2cf",
-    "vendored_sha256": "9f1adc08c6549e3f7c00c74ea08246c068e84d40be7c7e0cba9775dc3f8d1edf",
+    "vendored_sha256": "50dde16a13e1c5dc0805478138abc0ab6028848ca8bbccc8001248c67cab4393",
+    "implementation_changed_from_archive": true,
     "local_modifications": [
-      "Add SPDX/provenance and internal-API comments; preserve both imports."
+      "Add SPDX/provenance and internal-API comments; remove the debug import unused by moonc 0.10.14."
     ]
   },
   "exclusions": [

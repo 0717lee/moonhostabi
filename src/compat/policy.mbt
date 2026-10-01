@@ -6,10 +6,22 @@ pub(all) enum Compatibility {
 } derive(Eq, Debug)
 
 ///|
+pub extend Compatibility with @debug.Debug::{to_repr}
+
+///|
+pub extend Compatibility with Eq::{not_equal, equal}
+
+///|
 pub(all) enum CompatibilityPolicy {
   Semantic
   Strict
 } derive(Eq, Debug)
+
+///|
+pub extend CompatibilityPolicy with @debug.Debug::{to_repr}
+
+///|
+pub extend CompatibilityPolicy with Eq::{not_equal, equal}
 
 ///|
 pub fn semantic_policy() -> CompatibilityPolicy {
@@ -42,7 +54,19 @@ pub(all) struct AbiChange {
 } derive(Eq, Debug)
 
 ///|
+pub extend AbiChange with @debug.Debug::{to_repr}
+
+///|
+pub extend AbiChange with Eq::{not_equal, equal}
+
+///|
 pub(all) struct CompatibilityReport {
   classification : Compatibility
   changes : Array[AbiChange]
 } derive(Eq, Debug)
+
+///|
+pub extend CompatibilityReport with @debug.Debug::{to_repr}
+
+///|
+pub extend CompatibilityReport with Eq::{not_equal, equal}

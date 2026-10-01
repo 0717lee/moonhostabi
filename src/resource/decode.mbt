@@ -5,6 +5,12 @@ pub(all) suberror ResourceError {
 } derive(Debug)
 
 ///|
+pub extend ResourceError with @debug.Debug::{to_repr}
+
+///|
+pub extend ResourceError with Show::{to_string, output}
+
+///|
 pub impl Show for ResourceError with fn output(self, logger) {
   match self {
     InvalidResource(message) => logger.write_string(message)

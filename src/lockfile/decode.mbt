@@ -4,6 +4,12 @@ pub(all) suberror LockfileError {
 } derive(Debug)
 
 ///|
+pub extend LockfileError with @debug.Debug::{to_repr}
+
+///|
+pub extend LockfileError with Show::{to_string, output}
+
+///|
 pub impl Show for LockfileError with fn output(self, logger) {
   match self {
     InvalidLockfile(message) => logger.write_string(message)

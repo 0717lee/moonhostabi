@@ -6,6 +6,12 @@ pub(all) enum DiagnosticSeverity {
 } derive(Eq, Debug)
 
 ///|
+pub extend DiagnosticSeverity with @debug.Debug::{to_repr}
+
+///|
+pub extend DiagnosticSeverity with Eq::{not_equal, equal}
+
+///|
 pub(all) struct Diagnostic {
   code : String
   severity : DiagnosticSeverity
@@ -13,6 +19,12 @@ pub(all) struct Diagnostic {
   message : String
   byte_offset : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend Diagnostic with @debug.Debug::{to_repr}
+
+///|
+pub extend Diagnostic with Eq::{not_equal, equal}
 
 ///|
 pub const MHA_PARSE_MALFORMED : String = "MHA_PARSE_MALFORMED"

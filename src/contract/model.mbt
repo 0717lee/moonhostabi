@@ -16,6 +16,12 @@ pub(all) suberror ContractError {
 } derive(Debug)
 
 ///|
+pub extend ContractError with @debug.Debug::{to_repr}
+
+///|
+pub extend ContractError with Show::{to_string, output}
+
+///|
 pub impl Show for ContractError with fn output(self, logger) {
   let message = match self {
     ContractInputTooLarge => "contract: input exceeds 1 MiB limit"
@@ -49,11 +55,23 @@ pub struct ExternrefBinding {
 } derive(Eq, Debug)
 
 ///|
+pub extend ExternrefBinding with @debug.Debug::{to_repr}
+
+///|
+pub extend ExternrefBinding with Eq::{not_equal, equal}
+
+///|
 /// A validated, canonical schema-v2 Host ABI contract.
 pub struct Contract {
   abi_sha256 : String
   bindings : Array[ExternrefBinding]
 } derive(Eq, Debug)
+
+///|
+pub extend Contract with @debug.Debug::{to_repr}
+
+///|
+pub extend Contract with Eq::{not_equal, equal}
 
 ///|
 fn is_identifier_start(character : Char) -> Bool {
