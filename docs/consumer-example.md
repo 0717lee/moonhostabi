@@ -27,14 +27,14 @@ validation, not third-party adoption or published-package validation.
 
 ## Inputs and prerequisites
 
-- Moon `0.1.20260920 (914d7da)` and moonc `v0.10.14+7d59c7ec9`, checked by the gate.
+- Moon `0.1.20261016 (1af328f)` and moonc `v0.10.16+b1a0e846e`, checked by the gate.
 - A working native C toolchain for the SDK consumer and Node with WasmGC support
-  (validated here with Node `24.12.0`).
+  (validated here with Node `24.22.0`).
 - The existing `runtime/node_modules/typescript/bin/tsc` and
   `runtime/node_modules/@types/node` installations. The gate does not run npm or
   install tools; its evidence records the actual TypeScript and Node versions.
 - Moon's existing dependency cache/registry access for the declared dependencies.
-  The consumer declares `0717lee/moonhostabi@0.6.1` and `moonbitlang/x@0.5.1`.
+  The consumer declares `0717lee/moonhostabi@0.6.1` and `moonbitlang/x@0.5.6`.
   Normal Moon dependency resolution happens inside the temporary workspace.
 - Optional bundled `.tools/wasm-tools/**/wasm-tools.exe`. If present, both
   freshly compiled artifacts must pass `wasm-tools validate`; absence prints

@@ -4,6 +4,8 @@
 // Modified for MoonHostABI: pre-scan an implicit singleton's composite kind,
 // reserve its type-table placeholder before resolving self-references, then
 // replace that placeholder with the parsed subtype (reviewed 0.14.0 fix).
+// Adapt rec-group fields, signatures and supertypes to wasm_core 0.17.0
+// ReadOnlyArray storage.
 // License and provenance: third_party/wasm_core_parser/ (repository root).
 
 // ============================================================
@@ -35,7 +37,7 @@ fn Parser::read_struct_type(
   self : Parser,
 ) -> @types.StructType raise ParserError {
   let fields = self.read_vec(() => self.read_field_type())
-  { fields, }
+  { fields: ReadOnlyArray::from_array(fields) }
 }
 
 ///|
@@ -53,7 +55,10 @@ fn Parser::read_composite_type(
     0x60 => {
       let params = self.read_vec(() => self.read_value_type())
       let results = self.read_vec(() => self.read_value_type())
-      Func({ params, results, })
+      Func({
+        params: ReadOnlyArray::from_array(params),
+        results: ReadOnlyArray::from_array(results),
+      })
     }
     0x5f => Struct(self.read_struct_type())
     0x5e => Array(self.read_array_type())
@@ -82,7 +87,7 @@ fn Parser::read_subtype(self : Parser) -> @types.SubType raise ParserError {
       []
     }
     let composite = self.read_composite_type()
-    { final_, supertypes, composite, }
+    { final_, supertypes: ReadOnlyArray::from_array(supertypes), composite, }
   } else if tag == 0x4f {
     self.skip(1)
     let flags = self.read_byte()
@@ -96,11 +101,11 @@ fn Parser::read_subtype(self : Parser) -> @types.SubType raise ParserError {
       []
     }
     let composite = self.read_composite_type()
-    { final_: true, supertypes, composite, }
+    { final_: true, supertypes: ReadOnlyArray::from_array(supertypes), composite, }
   } else {
     // Implicit final subtype
     let composite = self.read_composite_type()
-    { final_: true, supertypes: [], composite, }
+    { final_: true, supertypes: ReadOnlyArray::from_array([]), composite, }
   }
 }
 
@@ -127,7 +132,7 @@ fn Parser::read_rec_group(
       }
       _ => raise ParseError("unknown composite type tag: \{composite_tag}")
     }
-    { final_: true, supertypes: [], composite, }
+    { final_: true, supertypes: ReadOnlyArray::from_array([]), composite, }
   }
 
   fn skip_value_type_no_resolve(self : Parser) -> Unit raise ParserError {

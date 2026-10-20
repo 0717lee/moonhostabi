@@ -8,6 +8,7 @@
 // capability wrapper; sections.mbt retains the single parse_module entrypoint.
 // Reuse the shared heap-type resolver for ref.null as well as ref.test/ref.cast.
 // Keep the helper ExprFrame private to satisfy first-party warning checks.
+// Adapt structured bodies to wasm_core 0.17.0 ReadOnlyArray storage.
 // License and provenance: third_party/wasm_core_parser/ (repository root).
 
 // ============================================================
@@ -31,7 +32,7 @@ priv enum ExprFrame {
 ///|
 fn Parser::read_expr(
   self : Parser,
-) -> Array[@types.Instruction] raise ParserError {
+) -> ReadOnlyArray[@types.Instruction] raise ParserError {
   let mut instructions : Array[@types.Instruction] = []
   let frames : Array[ExprFrame] = []
   while true {
@@ -69,13 +70,30 @@ fn Parser::read_expr(
           Array[@types.Instruction],
           @types.Instruction,
         ) = match frame {
-          Block(parent, bt) => (parent, Block(bt, instructions))
-          Loop(parent, bt) => (parent, Loop(bt, instructions))
-          IfThen(parent, bt) => (parent, If(bt, instructions, []))
+          Block(parent, bt) =>
+            (parent, Block(bt, ReadOnlyArray::from_array(instructions)))
+          Loop(parent, bt) =>
+            (parent, Loop(bt, ReadOnlyArray::from_array(instructions)))
+          IfThen(parent, bt) =>
+            (parent, If(bt, ReadOnlyArray::from_array(instructions), []))
           IfElse(parent, bt, then_body) =>
-            (parent, If(bt, then_body, instructions))
+            (
+              parent,
+              If(
+                bt,
+                ReadOnlyArray::from_array(then_body),
+                ReadOnlyArray::from_array(instructions),
+              ),
+            )
           TryTable(parent, bt, handlers) =>
-            (parent, TryTable(bt, handlers, instructions))
+            (
+              parent,
+              TryTable(
+                bt,
+                ReadOnlyArray::from_array(handlers),
+                ReadOnlyArray::from_array(instructions),
+              ),
+            )
         }
         parent.push(instruction)
         instructions = parent
@@ -120,7 +138,7 @@ fn Parser::read_expr(
       _ => instructions.push(self.read_instruction(opcode))
     }
   }
-  instructions
+  ReadOnlyArray::from_array(instructions)
 }
 
 ///|
@@ -140,7 +158,7 @@ fn Parser::read_instruction(
     0x0E => {
       let labels = self.read_vec(() => self.read_u32())
       let default = self.read_u32()
-      BrTable(labels, default)
+      BrTable(ReadOnlyArray::from_array(labels), default)
     }
     0x0F => Return
     0x10 => Call(self.read_u32())
@@ -723,7 +741,7 @@ fn Parser::parse_simd_instruction(
       for i in 0..<16 {
         lanes[i] = self.read_byte()
       }
-      I8x16Shuffle(lanes)
+      I8x16Shuffle(ReadOnlyArray::from_array(Array::from_fixed_array(lanes)))
     }
     14 => I8x16Swizzle
     // Splat operations

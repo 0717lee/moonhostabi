@@ -407,6 +407,7 @@ test "surface v4 unsupported resources remain unknown" {
     desc: @wasm_types.ImportDesc::Memory({
       limits: { min: 1L, max: None, },
       is_memory64: false,
+      is_shared: false,
       page_size_log2: 16,
     }),
   })

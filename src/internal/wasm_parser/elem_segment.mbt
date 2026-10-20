@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Vendored from Milky2018/wasm_core@0.14.0, parser/elem_segment.mbt.
 // Upstream: https://github.com/Milky2018/wasmoon
-// Modified for MoonHostABI: provenance header only; implementation unchanged.
+// Modified for MoonHostABI: adapt expression and element lists to
+// wasm_core 0.17.0 ReadOnlyArray storage.
 // License and provenance: third_party/wasm_core_parser/ (repository root).
 
 // ============================================================
@@ -14,7 +15,11 @@
 fn Parser::read_elem_segment(
   self : Parser,
   flags : Int,
-) -> (@types.ElemMode, @types.ValueType, Array[Array[@types.Instruction]]) raise ParserError {
+) -> (
+  @types.ElemMode,
+  @types.ValueType,
+  ReadOnlyArray[ReadOnlyArray[@types.Instruction]],
+) raise ParserError {
   // Flags encoding:
   // bit 0: 0 = active, 1 = passive/declarative
   // bit 1: 0 = implicit table 0, 1 = explicit table index (only if active)
@@ -69,7 +74,7 @@ fn Parser::read_elem_segment(
 
   // Read init expressions or function indices
   let elem_count = self.read_u32()
-  let init : Array[Array[@types.Instruction]] = []
+  let init : Array[ReadOnlyArray[@types.Instruction]] = []
   for _ in 0..<elem_count {
     if uses_expressions {
       // Read expression
@@ -77,7 +82,7 @@ fn Parser::read_elem_segment(
     } else {
       // Read function index, convert to ref.func expression
       let func_idx = self.read_u32()
-      init.push([RefFunc(func_idx)])
+      init.push(ReadOnlyArray::from_array([RefFunc(func_idx)]))
     }
   }
   let normalized_elem_type = if !uses_expressions && elem_type == FuncRef {
@@ -86,5 +91,5 @@ fn Parser::read_elem_segment(
   } else {
     elem_type
   }
-  (mode, normalized_elem_type, init)
+  (mode, normalized_elem_type, ReadOnlyArray::from_array(init))
 }

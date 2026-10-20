@@ -26,6 +26,6 @@ preferred_target = "native"
 description = "Artifact-first MoonBit Wasm-GC Host ABI lock, adapter, and validation toolchain"
 
 import {
-  "Milky2018/wasm_core@0.14.0",
-  "moonbitlang/x@0.5.1",
+  "Milky2018/wasm_core@0.17.0",
+  "moonbitlang/x@0.5.6",
 }

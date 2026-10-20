@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Vendored from Milky2018/wasm_core@0.14.0, parser/table_memory_types.mbt.
 // Upstream: https://github.com/Milky2018/wasmoon
-// Modified for MoonHostABI: provenance header only; implementation unchanged.
+// Modified for MoonHostABI: parse the wasm_core 0.17.0 shared-memory flag and
+// adapt table initializers to ReadOnlyArray storage.
 // License and provenance: third_party/wasm_core_parser/ (repository root).
 
 // ============================================================
@@ -138,7 +139,12 @@ fn Parser::read_memory_type(
   } else {
     16
   }
-  { limits: { min, max, }, is_memory64, page_size_log2, }
+  {
+    limits: { min, max, },
+    is_memory64,
+    is_shared: (flags & 0x02) != 0,
+    page_size_log2,
+  }
 }
 
 ///|

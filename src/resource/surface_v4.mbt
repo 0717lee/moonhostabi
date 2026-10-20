@@ -205,7 +205,13 @@ fn resource_value_type(value : @wasm_types.ValueType) -> String? {
     | RefStruct(_)
     | RefNullStruct(_)
     | RefArray(_)
-    | RefNullArray(_) => None
+    | RefNullArray(_)
+    | ContRef
+    | RefCont
+    | RefContTyped(_)
+    | RefNullContTyped(_)
+    | NullContRef
+    | RefNoCont => None
   }
 }
 

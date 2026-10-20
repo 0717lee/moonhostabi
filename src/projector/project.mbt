@@ -61,6 +61,12 @@ fn map_value_type(
     NullFuncRef => @model.Unknown("value_type.nullfuncref")
     NullExnRef => @model.Unknown("value_type.nullexnref")
     NullExternRef => @model.Unknown("value_type.nullexternref")
+    ContRef => @model.Unknown("value_type.contref")
+    RefCont => @model.Unknown("value_type.ref_cont")
+    RefContTyped(_) => @model.Unknown("value_type.ref_cont_typed")
+    RefNullContTyped(_) => @model.Unknown("value_type.ref_null_cont_typed")
+    NullContRef => @model.Unknown("value_type.nullcontref")
+    RefNoCont => @model.Unknown("value_type.ref_no_cont")
   }
 }
 
@@ -74,12 +80,12 @@ fn project_function(
   @model.AbiFunction::{
     module_name,
     name,
-    params: function_type.params.map(fn(value_type) {
+    params: Array::from_iter(function_type.params.map(fn(value_type) {
       map_value_type(value_type, canonical_type_indices)
-    }),
-    results: function_type.results.map(fn(value_type) {
+    }).iter()),
+    results: Array::from_iter(function_type.results.map(fn(value_type) {
       map_value_type(value_type, canonical_type_indices)
-    }),
+    }).iter()),
   }
 }
 
@@ -191,7 +197,7 @@ fn project_field(
 
 ///|
 fn project_supertypes(
-  supertypes : Array[Int],
+  supertypes : ReadOnlyArray[Int],
   canonical_type_indices : Array[Int],
 ) -> Array[String] {
   let projected : Array[String] = []
@@ -247,6 +253,7 @@ fn project_reachable_types(
           enqueue_field_type(field, worklist)
         }
       Array(array_type) => enqueue_field_type(array_type.element, worklist)
+      Cont(_) => ()
     }
   }
 
@@ -289,9 +296,9 @@ fn project_reachable_types(
             id: type_id,
             supertypes,
             final_: subtype.final_,
-            fields: struct_type.fields.map(fn(field) {
+            fields: Array::from_iter(struct_type.fields.map(fn(field) {
               project_field(field, canonical_type_indices)
-            }),
+            }).iter()),
           }),
         )
         emitted_ids.push(type_id)
@@ -308,6 +315,7 @@ fn project_reachable_types(
         emitted_ids.push(type_id)
       }
       Func(_) => ()
+      Cont(_) => ()
     }
   }
   definitions

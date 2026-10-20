@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Vendored from Milky2018/wasm_core@0.14.0, parser/sections.mbt.
 // Upstream: https://github.com/Milky2018/wasmoon
-// Modified for MoonHostABI: provenance header only; implementation unchanged.
+// Modified for MoonHostABI: adapt section payloads to wasm_core 0.17.0
+// ReadOnlyArray storage.
 // License and provenance: third_party/wasm_core_parser/ (repository root).
 
 // ============================================================
@@ -190,7 +191,10 @@ pub fn parse_module(data : Bytes) -> @types.Module raise ParserError {
             }
           }
           let body = parser.read_expr()
-          mod.codes.push({ locals, body, })
+          mod.codes.push({
+            locals: ReadOnlyArray::from_array(locals),
+            body,
+          })
         }
       }
       11 => {
@@ -198,8 +202,10 @@ pub fn parse_module(data : Bytes) -> @types.Module raise ParserError {
         let count = parser.read_u32()
         for _ in 0..<count {
           let flags = parser.read_u32()
-          let (memory_idx, offset) : (Int, Array[@types.Instruction]) = match
-            flags {
+          let (memory_idx, offset) : (
+            Int,
+            ReadOnlyArray[@types.Instruction],
+          ) = match flags {
             0 => {
               // Active segment with implicit memory 0
               let offset = parser.read_expr()

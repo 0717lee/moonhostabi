@@ -180,6 +180,12 @@ fn value_type_text(value_type : @wasm_types.ValueType) -> String {
     NullFuncRef => "nullfuncref"
     NullExnRef => "nullexnref"
     NullExternRef => "nullexternref"
+    ContRef => "contref"
+    RefCont => "ref cont"
+    RefContTyped(index) => "ref type[\{index}]"
+    RefNullContTyped(index) => "ref null type[\{index}]"
+    NullContRef => "nullcontref"
+    RefNoCont => "ref nocont"
   }
 }
 

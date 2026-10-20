@@ -57,7 +57,7 @@ credential, workflow log, or self-hash.
 
 Prerequisites are PowerShell 7+, Python 3.11, the pinned MoonBit toolchain, and
 the repository setup described in the main README. The remote workflow selects
-MoonBit installer snapshot `0.10.14+7d59c7ec9` and verifies the reported `moon`,
+MoonBit installer snapshot `0.10.16+b1a0e846e` and verifies the reported `moon`,
 `moonc`, and `moonrun` identities separately. Workflow validation uses
 PyYAML 6.0.3; CI installs it from
 `scripts/requirements-workflow-validation.txt` with platform wheel hashes.

@@ -41,7 +41,7 @@ fn function_type_needs_canonicalization(
     }
     // A malformed function index pointing at a GC definition must retain the
     // established projection and diagnostic behavior instead of dropping it.
-    Struct(_) | Array(_) => true
+    Struct(_) | Array(_) | Cont(_) => true
   }
 }
 

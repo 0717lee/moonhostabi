@@ -226,5 +226,5 @@ identify that boundary. The historical diffs remain as
 As verified on September 29, 2026, upstream source contains both parser fixes,
 while the latest published `wasm_core@0.16.0` archive contains neither. The
 `0.6.0` distribution removes consumer patching by bundling the parser, while
-retaining the `0.14.0` types dependency. See the
+retaining the `0.17.0` types dependency. See the
 [upstream status and replacement checklist](patches/README.md#upstream-status-and-removal-checklist).

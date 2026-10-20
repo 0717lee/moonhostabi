@@ -81,9 +81,9 @@ test "function index lookup covers imported defined and invalid indices" {
   guard function_type_at_index(wasm_module, 2) is Some(defined) else {
     fail("expected defined function type")
   }
-  debug_inspect(first_import.results, content="[F64]")
-  debug_inspect(second_import.results, content="[I64]")
-  debug_inspect(defined.results, content="[I32]")
+  debug_inspect(first_import.results, content="<ReadOnlyArray: [F64]>")
+  debug_inspect(second_import.results, content="<ReadOnlyArray: [I64]>")
+  debug_inspect(defined.results, content="<ReadOnlyArray: [I32]>")
   assert_true(function_type_at_index(wasm_module, -1) is None)
   assert_true(function_type_at_index(wasm_module, 3) is None)
 }
@@ -390,6 +390,7 @@ test "non-function public ABI items produce explicit diagnostics" {
   let memory = @wasm_types.MemoryType::{
     limits,
     is_memory64: false,
+    is_shared: false,
     page_size_log2: 16,
   }
   let global = @wasm_types.GlobalType::{ value_type: I32, mutable: false, }

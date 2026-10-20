@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Vendored from Milky2018/wasm_core@0.14.0, parser/value_types.mbt.
 // Upstream: https://github.com/Milky2018/wasmoon
-// Modified for MoonHostABI: provenance header only; implementation unchanged.
+// Modified for MoonHostABI: resolve wasm_core 0.17.0 continuation heap types.
 // License and provenance: third_party/wasm_core_parser/ (repository root).
 
 // ============================================================
@@ -39,6 +39,12 @@ fn Parser::resolve_heap_type_as_ref_value_type(
           RefNullArray(type_idx)
         } else {
           RefArray(type_idx)
+        }
+      Cont(_) =>
+        if nullable {
+          RefNullContTyped(type_idx)
+        } else {
+          RefContTyped(type_idx)
         }
     }
   }

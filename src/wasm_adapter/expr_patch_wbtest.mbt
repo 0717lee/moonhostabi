@@ -3,7 +3,7 @@ test "expression frames retain ordered siblings branches and catch handlers" {
   let bytes = test_code([
     b"\x00\x41\x07\x02\x40\x03\x40\x04\x40\x41\x01\x05\x41\x02\x0b\x1f\x40\x04\x00\x00\x01\x01\x02\x03\x02\x04\x03\x05\x01\x0b\x0b\x41\x08\x0b\x04\x40\x41\x09\x0b\x41\x03\x0b",
   ])
-  let expected : Array[@wasm_types.Instruction] = [
+  let expected : ReadOnlyArray[@wasm_types.Instruction] = [
     I32Const(7),
     Block(Empty, [
       Loop(Empty, [
