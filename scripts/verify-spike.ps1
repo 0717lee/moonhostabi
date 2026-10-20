@@ -177,7 +177,21 @@ try {
   Invoke-Checked -FilePath $moonExecutable -Arguments @('update') -Description 'moon update'
   Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', 'scripts/verify-vendored-parser.py') -Description 'bundled parser provenance verification'
   Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_vendored_parser.py', '-v') -Description 'bundled parser provenance self-tests'
-  Invoke-Checked -FilePath $moonExecutable -Arguments @('fmt', '--check') -Description 'moon fmt --check'
+  $savedGitConfigCount = $env:GIT_CONFIG_COUNT
+  $savedGitConfigKey0 = $env:GIT_CONFIG_KEY_0
+  $savedGitConfigValue0 = $env:GIT_CONFIG_VALUE_0
+  try {
+    # Git for Windows cannot hash the \\?\ paths emitted by moon fmt --check
+    # unless long-path support is enabled for the child git process.
+    $env:GIT_CONFIG_COUNT = '1'
+    $env:GIT_CONFIG_KEY_0 = 'core.longpaths'
+    $env:GIT_CONFIG_VALUE_0 = 'true'
+    Invoke-Checked -FilePath $moonExecutable -Arguments @('fmt', '--check') -Description 'moon fmt --check'
+  } finally {
+    $env:GIT_CONFIG_COUNT = $savedGitConfigCount
+    $env:GIT_CONFIG_KEY_0 = $savedGitConfigKey0
+    $env:GIT_CONFIG_VALUE_0 = $savedGitConfigValue0
+  }
   Invoke-Checked -FilePath $moonExecutable -Arguments @('check') -Description 'moon check'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('check', '--target', 'wasm', '--deny-warn') -Description 'moon check (wasm library target)'
   Invoke-Checked -FilePath $moonExecutable -Arguments @('check', '--target', 'js', '--deny-warn') -Description 'moon check (js library target)'
