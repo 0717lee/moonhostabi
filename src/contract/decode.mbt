@@ -1,5 +1,5 @@
 ///|
-const MAX_CONTRACT_LENGTH : Int = 1024 * 1024
+const MAX_CONTRACT_LENGTH : Int32 = 1024 * 1024
 
 ///|
 fn[T] invalid_shape(message : String) -> T raise ContractError {
@@ -85,7 +85,7 @@ fn contract_strings(
 }
 
 ///|
-fn contract_version(object : Map[String, Json]) -> Int raise ContractError {
+fn contract_version(object : Map[String, Json]) -> Int32 raise ContractError {
   guard contract_value(object, "schemaVersion", "contract")
     is Number(version, ..) else {
     return invalid_shape("contract.schemaVersion: expected integer")

@@ -63,7 +63,7 @@ pub fn AbiFunction::stable_text(self : AbiFunction) -> String {
 }
 
 ///|
-fn AbiFunction::surface_kind_order(self : AbiFunction) -> Int {
+fn AbiFunction::surface_kind_order(self : AbiFunction) -> Int32 {
   match self.module_name {
     Some(_) => 0
     None => 1
@@ -163,7 +163,7 @@ pub extend AbiTypeDef with Eq::{not_equal, equal}
 
 ///|
 pub(all) struct HostAbi {
-  schema_version : Int
+  schema_version : Int32
   imports : Array[AbiFunction]
   exports : Array[AbiFunction]
   types : Array[AbiTypeDef]

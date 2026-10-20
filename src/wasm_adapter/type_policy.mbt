@@ -16,7 +16,7 @@ fn value_type_needs_canonicalization(
 ///|
 fn function_type_needs_canonicalization(
   wasm_module : @wasm_types.Module,
-  type_index : Int,
+  type_index : Int32,
 ) -> Bool {
   if type_index < 0 || type_index >= wasm_module.types.length() {
     return true
@@ -56,7 +56,7 @@ fn function_type_needs_canonicalization(
 pub fn host_abi_needs_type_canonicalization(
   wasm_module : @wasm_types.Module,
 ) -> Bool {
-  let function_types : Array[Int] = []
+  let function_types : Array[Int32] = []
   for imported in wasm_module.imports {
     if imported.desc is Func(type_index) {
       if function_type_needs_canonicalization(wasm_module, type_index) {

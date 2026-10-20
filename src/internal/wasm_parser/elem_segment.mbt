@@ -14,7 +14,7 @@
 /// Returns (mode, elem_type, init_exprs)
 fn Parser::read_elem_segment(
   self : Parser,
-  flags : Int,
+  flags : Int32,
 ) -> (
   @types.ElemMode,
   @types.ValueType,

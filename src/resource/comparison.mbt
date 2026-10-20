@@ -15,10 +15,10 @@ pub extend ResourceChange with Eq::{not_equal, equal}
 
 ///|
 pub(all) struct ResourceComparison {
-  schema_version : Int
+  schema_version : Int32
   classification : String
   compatible : Bool
-  exit_code : Int
+  exit_code : Int32
   changes : Array[ResourceChange]
 } derive(Eq, Debug)
 

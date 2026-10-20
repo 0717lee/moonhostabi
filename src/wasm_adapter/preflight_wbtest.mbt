@@ -40,7 +40,7 @@ fn test_join(parts : Array[Bytes]) -> Bytes {
 }
 
 ///|
-fn test_u32(value : Int) -> Bytes {
+fn test_u32(value : Int32) -> Bytes {
   let out : Array[Byte] = []
   let mut remaining = value
   while remaining >= 128 {
@@ -52,7 +52,7 @@ fn test_u32(value : Int) -> Bytes {
 }
 
 ///|
-fn test_section(id : Int, payload : Bytes) -> Bytes {
+fn test_section(id : Int32, payload : Bytes) -> Bytes {
   test_join([
     Bytes::from_array([id.to_byte()]),
     test_u32(payload.length()),
@@ -66,7 +66,7 @@ fn test_module(sections : Array[Bytes]) -> Bytes {
 }
 
 ///|
-fn test_code(bodies : Array[Bytes], data_count? : Bool = false) -> Bytes {
+fn test_code(bodies : Array[Bytes], data_count~ : Bool = false) -> Bytes {
   let functions = [test_u32(bodies.length())]
   let codes = [test_u32(bodies.length())]
   for body in bodies {
@@ -86,7 +86,7 @@ fn test_code(bodies : Array[Bytes], data_count? : Bool = false) -> Bytes {
 }
 
 ///|
-fn test_nested(depth : Int) -> Bytes {
+fn test_nested(depth : Int32) -> Bytes {
   let parts : Array[Bytes] = []
   for _ in 0..<depth {
     parts.push(b"\x02\x40")
@@ -506,7 +506,7 @@ test "public signature expansion counts repeated exports and imported functions"
 
 ///|
 test "checked entry enforces production signature expansion budget" {
-  fn public_surface(params : Int) -> Bytes {
+  fn public_surface(params : Int32) -> Bytes {
     let signature = [b"\x01\x60", test_u32(params)]
     for _ in 0..<params {
       signature.push(b"\x7f")
@@ -601,7 +601,7 @@ test "public signature budget combines imported and exported functions and tags"
 
 ///|
 test "checked entry enforces production shared tag signature expansion budget" {
-  fn public_tags(params : Int) -> Bytes {
+  fn public_tags(params : Int32) -> Bytes {
     let signature = [b"\x01\x60", test_u32(params)]
     for _ in 0..<params {
       signature.push(b"\x7f")

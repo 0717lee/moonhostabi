@@ -17,7 +17,7 @@ pub(all) struct Diagnostic {
   severity : DiagnosticSeverity
   path : String
   message : String
-  byte_offset : Int?
+  byte_offset : Int32?
 } derive(Eq, Debug)
 
 ///|

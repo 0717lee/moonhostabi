@@ -8,7 +8,7 @@ pub(all) enum FailureKind {
 } derive(Eq, Debug)
 
 ///|
-pub fn exit_code_for_failure(failure : FailureKind) -> Int {
+pub fn exit_code_for_failure(failure : FailureKind) -> Int32 {
   match failure {
     Usage => 1
     BreakingAbi => 2
@@ -20,7 +20,7 @@ pub fn exit_code_for_failure(failure : FailureKind) -> Int {
 
 ///|
 pub(all) struct CommandResult {
-  exit_code : Int
+  exit_code : Int32
   stdout : String
   stderr : String
 } derive(Eq, Debug)
@@ -289,7 +289,7 @@ fn unsupported_result(
 ///|
 fn read_bytes(
   path : String,
-  limit? : Int = @wasm_adapter.MAX_ARTIFACT_BYTES,
+  limit~ : Int32 = @wasm_adapter.MAX_ARTIFACT_BYTES,
 ) -> Bytes raise CliExecutionError {
   let result = read_file_bounded_ffi(NativePath::from_string(path), limit)
   match result[0][0].to_int() {
@@ -439,14 +439,14 @@ fn NativePath::from_string(path : String) -> NativePath {
 extern "C" fn write_new_file_ffi(
   path : NativePath,
   bytes : Bytes,
-  length : Int,
-) -> Int = "moonhostabi_write_new_file"
+  length : Int32,
+) -> Int32 = "moonhostabi_write_new_file"
 
 ///|
 #borrow(path)
 extern "C" fn read_file_bounded_ffi(
   path : NativePath,
-  limit : Int,
+  limit : Int32,
 ) -> FixedArray[Bytes] = "moonhostabi_read_file_bounded"
 
 ///|
@@ -477,10 +477,10 @@ fn write_new_file(path : String, bytes : Bytes) -> Unit raise CliExecutionError 
 extern "C" fn rename_directory_noreplace_ffi(
   source : NativePath,
   destination : NativePath,
-) -> Int = "moonhostabi_rename_directory_noreplace"
+) -> Int32 = "moonhostabi_rename_directory_noreplace"
 
 ///|
-fn rename_directory_noreplace(source : String, destination : String) -> Int {
+fn rename_directory_noreplace(source : String, destination : String) -> Int32 {
   rename_directory_noreplace_ffi(
     NativePath::from_string(source),
     NativePath::from_string(destination),
@@ -489,10 +489,10 @@ fn rename_directory_noreplace(source : String, destination : String) -> Int {
 
 ///|
 #borrow(path)
-extern "C" fn directory_kind_ffi(path : NativePath) -> Int = "moonhostabi_directory_kind"
+extern "C" fn directory_kind_ffi(path : NativePath) -> Int32 = "moonhostabi_directory_kind"
 
 ///|
-fn directory_kind(path : String) -> Int {
+fn directory_kind(path : String) -> Int32 {
   directory_kind_ffi(NativePath::from_string(path))
 }
 
@@ -734,7 +734,7 @@ fn create_staging_directory(
 
 ///|
 #borrow(directory)
-extern "C" fn cleanup_generation_directory_ffi(directory : NativePath) -> Int = "moonhostabi_cleanup_generation_directory"
+extern "C" fn cleanup_generation_directory_ffi(directory : NativePath) -> Int32 = "moonhostabi_cleanup_generation_directory"
 
 ///|
 fn cleanup_owned_generation_directory(
@@ -789,7 +789,9 @@ fn read_owned_generation_bytes(
 
 ///|
 #borrow(directory)
-extern "C" fn validate_generation_directory_ffi(directory : NativePath) -> Int = "moonhostabi_validate_generation_directory"
+extern "C" fn validate_generation_directory_ffi(
+  directory : NativePath,
+) -> Int32 = "moonhostabi_validate_generation_directory"
 
 ///|
 fn validate_generation_file_set(
@@ -1574,7 +1576,7 @@ pub fn dispatch(args : Array[String]) -> CommandResult {
 
 ///|
 #borrow(bytes)
-extern "C" fn write_stderr_bytes(bytes : Bytes, length : Int) -> Int = "moonhostabi_write_stderr"
+extern "C" fn write_stderr_bytes(bytes : Bytes, length : Int32) -> Int32 = "moonhostabi_write_stderr"
 
 ///|
 fn write_stderr(text : String) -> Unit {

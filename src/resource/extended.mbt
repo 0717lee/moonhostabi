@@ -54,7 +54,7 @@ pub extend TagResource with Eq::{not_equal, equal}
 /// adds first-class table/global/tag entries for callers that need a complete
 /// host-resource lock and contract.
 pub(all) struct ResourceSurface {
-  schema_version : Int
+  schema_version : Int32
   memories : Array[MemoryResource]
   tables : Array[TableResource]
   globals : Array[GlobalResource]
@@ -71,7 +71,7 @@ pub extend ResourceSurface with Eq::{not_equal, equal}
 ///|
 /// Contract for all resources in a `ResourceSurface` (schema v4).
 pub(all) struct ResourceContract {
-  schema_version : Int
+  schema_version : Int32
   abi_sha256 : String
   memories : Array[MemoryResource]
   tables : Array[TableResource]
@@ -89,7 +89,7 @@ pub extend ResourceContract with Eq::{not_equal, equal}
 ///|
 /// Resource lockfile carrying a complete resource surface (schema v3).
 pub(all) struct ResourceLockfileV3 {
-  lockfile_version : Int
+  lockfile_version : Int32
   schema_sha256 : String
   artifact_sha256 : String
   abi_sha256 : String

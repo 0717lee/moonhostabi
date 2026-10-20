@@ -488,7 +488,7 @@ fn render_typescript(
   abi : @model.HostAbi,
   abi_sha256 : String,
   contract : @contract.Contract,
-  include_instantiate? : Bool = true,
+  include_instantiate~ : Bool = true,
 ) -> String raise @contract.ContractError {
   let imports = @model.sort_abi_functions(abi.imports)
   let exports = @model.sort_abi_functions(abi.exports)

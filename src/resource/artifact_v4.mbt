@@ -3,14 +3,14 @@
 // this reader limited to restoring and checking that resource metadata.
 priv struct ResourceMemoryReader {
   bytes : Bytes
-  mut position : Int
-  end : Int
+  mut position : Int32
+  end : Int32
 }
 
 ///|
 fn ResourceMemoryReader::read_byte(
   self : ResourceMemoryReader,
-) -> Int raise ResourceError {
+) -> Int32 raise ResourceError {
   if self.position >= self.end {
     invalid_resource("artifact: truncated memory metadata")
   }
@@ -22,7 +22,7 @@ fn ResourceMemoryReader::read_byte(
 ///|
 fn ResourceMemoryReader::read_size(
   self : ResourceMemoryReader,
-) -> Int raise ResourceError {
+) -> Int32 raise ResourceError {
   let mut value = 0L
   for index in 0..<5 {
     let byte = self.read_byte()
@@ -40,7 +40,7 @@ fn ResourceMemoryReader::read_size(
 ///|
 fn ResourceMemoryReader::skip_bytes(
   self : ResourceMemoryReader,
-  count : Int,
+  count : Int32,
 ) -> Unit raise ResourceError {
   if count < 0 || count > self.end - self.position {
     invalid_resource("artifact: truncated memory metadata")
@@ -51,7 +51,7 @@ fn ResourceMemoryReader::skip_bytes(
 ///|
 fn ResourceMemoryReader::skip_leb(
   self : ResourceMemoryReader,
-  maximum_bytes : Int,
+  maximum_bytes : Int32,
 ) -> Unit raise ResourceError {
   for _ in 0..<maximum_bytes {
     if (self.read_byte() & 0x80) == 0 {
@@ -91,7 +91,7 @@ fn ResourceMemoryReader::skip_value_type(
 ///|
 fn ResourceMemoryReader::skip_limits(
   self : ResourceMemoryReader,
-  flags : Int,
+  flags : Int32,
 ) -> Unit raise ResourceError {
   let width = if (flags & 0x04) != 0 { 10 } else { 5 }
   self.skip_leb(width)

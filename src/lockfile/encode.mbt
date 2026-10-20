@@ -1,6 +1,6 @@
 ///|
 pub struct AbiLockfile {
-  lockfile_version : Int
+  lockfile_version : Int32
   schema_sha256 : String
   artifact_sha256 : String
   abi_sha256 : String

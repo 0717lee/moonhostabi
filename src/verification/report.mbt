@@ -242,7 +242,7 @@ pub fn encode_verification_report(report : VerificationReport) -> String {
 ///|
 pub fn VerificationReport::recommended_exit_code(
   self : VerificationReport,
-) -> Int {
+) -> Int32 {
   match self.outcome {
     VerificationCompatible => 0
     VerificationBreaking => 2

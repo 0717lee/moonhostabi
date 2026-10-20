@@ -144,7 +144,7 @@ fn Parser::read_expr(
 ///|
 fn Parser::read_instruction(
   self : Parser,
-  opcode : Int,
+  opcode : Int32,
 ) -> @types.Instruction raise ParserError {
   match opcode {
     // Control instructions
@@ -562,7 +562,7 @@ fn Parser::read_instruction(
 /// Parse GC instruction given the subopcode after 0xFB prefix
 fn Parser::parse_gc_instruction(
   self : Parser,
-  subopcode : Int,
+  subopcode : Int32,
 ) -> @types.Instruction raise ParserError {
   match subopcode {
     0 => StructNew(self.read_u32())
@@ -666,7 +666,7 @@ fn Parser::parse_gc_instruction(
 /// Parse SIMD instruction given the subopcode after 0xFD prefix
 fn Parser::parse_simd_instruction(
   self : Parser,
-  subopcode : Int,
+  subopcode : Int32,
 ) -> @types.Instruction raise ParserError {
   match subopcode {
     // Memory operations
@@ -737,7 +737,7 @@ fn Parser::parse_simd_instruction(
     }
     13 => {
       // i8x16.shuffle: read 16 lane indices
-      let lanes : FixedArray[Int] = FixedArray::make(16, 0)
+      let lanes : FixedArray[Int32] = FixedArray::make(16, 0)
       for i in 0..<16 {
         lanes[i] = self.read_byte()
       }

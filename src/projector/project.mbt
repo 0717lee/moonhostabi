@@ -1,7 +1,7 @@
 ///|
 fn canonical_type_id(
-  raw_type_index : Int,
-  canonical_type_indices : Array[Int],
+  raw_type_index : Int32,
+  canonical_type_indices : Array[Int32],
 ) -> String? {
   if raw_type_index < 0 || raw_type_index >= canonical_type_indices.length() {
     return None
@@ -16,9 +16,9 @@ fn canonical_type_id(
 
 ///|
 fn typed_ref(
-  raw_type_index : Int,
+  raw_type_index : Int32,
   nullable : Bool,
-  canonical_type_indices : Array[Int],
+  canonical_type_indices : Array[Int32],
 ) -> @model.AbiValueType {
   match canonical_type_id(raw_type_index, canonical_type_indices) {
     Some(type_id) => @model.TypedRef(type_id, nullable)
@@ -29,7 +29,7 @@ fn typed_ref(
 ///|
 fn map_value_type(
   value_type : @wasm_types.ValueType,
-  canonical_type_indices : Array[Int],
+  canonical_type_indices : Array[Int32],
 ) -> @model.AbiValueType {
   match value_type {
     I32 => @model.I32
@@ -75,17 +75,21 @@ fn project_function(
   module_name : String?,
   name : String,
   function_type : @wasm_types.FuncType,
-  canonical_type_indices : Array[Int],
+  canonical_type_indices : Array[Int32],
 ) -> @model.AbiFunction {
   @model.AbiFunction::{
     module_name,
     name,
-    params: Array::from_iter(function_type.params.map(fn(value_type) {
-      map_value_type(value_type, canonical_type_indices)
-    }).iter()),
-    results: Array::from_iter(function_type.results.map(fn(value_type) {
-      map_value_type(value_type, canonical_type_indices)
-    }).iter()),
+    params: Array::from_iter(
+      function_type.params
+      .map(fn(value_type) { map_value_type(value_type, canonical_type_indices) })
+      .iter(),
+    ),
+    results: Array::from_iter(
+      function_type.results
+      .map(fn(value_type) { map_value_type(value_type, canonical_type_indices) })
+      .iter(),
+    ),
   }
 }
 
@@ -106,8 +110,8 @@ fn unresolved_function(
 ///|
 fn function_type_index_at_index(
   wasm_module : @wasm_types.Module,
-  function_index : Int,
-) -> Int? {
+  function_index : Int32,
+) -> Int32? {
   if function_index < 0 {
     return None
   }
@@ -133,7 +137,7 @@ fn function_type_index_at_index(
 ///|
 fn function_type_at_index(
   wasm_module : @wasm_types.Module,
-  function_index : Int,
+  function_index : Int32,
 ) -> @wasm_types.FuncType? {
   match function_type_index_at_index(wasm_module, function_index) {
     Some(type_index) => wasm_module.func_type_at(type_index)
@@ -144,7 +148,7 @@ fn function_type_at_index(
 ///|
 fn enqueue_value_type(
   value_type : @wasm_types.ValueType,
-  worklist : Array[Int],
+  worklist : Array[Int32],
 ) -> Unit {
   match value_type {
     RefFuncTyped(type_index)
@@ -160,7 +164,7 @@ fn enqueue_value_type(
 ///|
 fn enqueue_function_type(
   function_type : @wasm_types.FuncType,
-  worklist : Array[Int],
+  worklist : Array[Int32],
 ) -> Unit {
   for value_type in function_type.params {
     enqueue_value_type(value_type, worklist)
@@ -173,7 +177,7 @@ fn enqueue_function_type(
 ///|
 fn enqueue_field_type(
   field : @wasm_types.FieldType,
-  worklist : Array[Int],
+  worklist : Array[Int32],
 ) -> Unit {
   match field.storage_type {
     Val(value_type) => enqueue_value_type(value_type, worklist)
@@ -184,7 +188,7 @@ fn enqueue_field_type(
 ///|
 fn project_field(
   field : @wasm_types.FieldType,
-  canonical_type_indices : Array[Int],
+  canonical_type_indices : Array[Int32],
 ) -> @model.AbiField {
   let storage = match field.storage_type {
     Val(value_type) =>
@@ -197,8 +201,8 @@ fn project_field(
 
 ///|
 fn project_supertypes(
-  supertypes : ReadOnlyArray[Int],
-  canonical_type_indices : Array[Int],
+  supertypes : ReadOnlyArray[Int32],
+  canonical_type_indices : Array[Int32],
 ) -> Array[String] {
   let projected : Array[String] = []
   for supertype in supertypes {
@@ -212,9 +216,9 @@ fn project_supertypes(
 ///|
 fn project_reachable_types(
   wasm_module : @wasm_types.Module,
-  canonical_type_indices : Array[Int],
+  canonical_type_indices : Array[Int32],
 ) -> Array[@model.AbiTypeDef] {
-  let worklist : Array[Int] = []
+  let worklist : Array[Int32] = []
   for imported in wasm_module.imports {
     if imported.desc is Func(type_index) {
       worklist.push(type_index)
@@ -229,8 +233,8 @@ fn project_reachable_types(
     }
   }
 
-  let visited : Array[Int] = []
-  let reachable : Array[Int] = []
+  let visited : Array[Int32] = []
+  let reachable : Array[Int32] = []
   let mut cursor = 0
   while cursor < worklist.length() {
     let type_index = worklist[cursor]
@@ -296,9 +300,11 @@ fn project_reachable_types(
             id: type_id,
             supertypes,
             final_: subtype.final_,
-            fields: Array::from_iter(struct_type.fields.map(fn(field) {
-              project_field(field, canonical_type_indices)
-            }).iter()),
+            fields: Array::from_iter(
+              struct_type.fields
+              .map(fn(field) { project_field(field, canonical_type_indices) })
+              .iter(),
+            ),
           }),
         )
         emitted_ids.push(type_id)

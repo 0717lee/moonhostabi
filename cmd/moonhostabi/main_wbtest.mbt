@@ -1,6 +1,6 @@
 ///|
 test "CLI failure categories reserve stable exit codes" {
-  let cases : Array[(FailureKind, Int)] = [
+  let cases : Array[(FailureKind, Int32)] = [
     (Usage, 1),
     (BreakingAbi, 2),
     (InvalidArtifact, 3),

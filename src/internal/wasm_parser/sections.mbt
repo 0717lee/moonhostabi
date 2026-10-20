@@ -30,7 +30,7 @@ pub fn parse_module(data : Bytes) -> @types.Module raise ParserError {
   // Track last seen non-custom section id for ordering check
   let mut last_section_id = 0
   // Track data count from section 12 (if present)
-  let mut data_count : Int? = None
+  let mut data_count : Int32? = None
 
   // Parse sections
   while !parser.is_eof() {
@@ -46,7 +46,7 @@ pub fn parse_module(data : Bytes) -> @types.Module raise ParserError {
     // Check section ordering (non-custom sections must be in order, no duplicates)
     // The canonical order is: 1→2→3→4→5→13→6→7→8→9→12→10→11
     // (Tag=13 is before Global=6, DataCount=12 appears between Elem=9 and Code=10)
-    fn section_order(id : Int) -> Int {
+    fn section_order(id : Int32) -> Int32 {
       match id {
         1 => 1 // Type
         2 => 2 // Import
@@ -191,10 +191,7 @@ pub fn parse_module(data : Bytes) -> @types.Module raise ParserError {
             }
           }
           let body = parser.read_expr()
-          mod.codes.push({
-            locals: ReadOnlyArray::from_array(locals),
-            body,
-          })
+          mod.codes.push({ locals: ReadOnlyArray::from_array(locals), body, })
         }
       }
       11 => {
@@ -202,10 +199,8 @@ pub fn parse_module(data : Bytes) -> @types.Module raise ParserError {
         let count = parser.read_u32()
         for _ in 0..<count {
           let flags = parser.read_u32()
-          let (memory_idx, offset) : (
-            Int,
-            ReadOnlyArray[@types.Instruction],
-          ) = match flags {
+          let (memory_idx, offset) : (Int32, ReadOnlyArray[@types.Instruction]) = match
+            flags {
             0 => {
               // Active segment with implicit memory 0
               let offset = parser.read_expr()

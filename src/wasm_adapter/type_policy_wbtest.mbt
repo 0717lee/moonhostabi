@@ -1,5 +1,5 @@
 ///|
-fn type_policy_artifact(count : Int, boundary : String) -> Bytes {
+fn type_policy_artifact(count : Int32, boundary : String) -> Bytes {
   let types = [test_u32(count)]
   for index in 0..<count {
     types.push(

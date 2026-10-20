@@ -583,7 +583,7 @@ fn append_unknown_values(
 }
 
 ///|
-fn compatibility_rank(value : Compatibility) -> Int {
+fn compatibility_rank(value : Compatibility) -> Int32 {
   match value {
     Compatible => 0
     Breaking => 1

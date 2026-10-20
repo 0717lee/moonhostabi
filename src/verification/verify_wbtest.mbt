@@ -18,7 +18,7 @@ fn verification_test_baseline(bytes : Bytes) -> VerificationBaselineInput raise 
 fn assert_verification_golden(
   report : VerificationReport,
   expected : String,
-  exit_code : Int,
+  exit_code : Int32,
 ) -> Unit raise {
   inspect(encode_verification_report(report), content=expected)
   inspect(report.recommended_exit_code() == exit_code, content="true")

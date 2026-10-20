@@ -5,7 +5,7 @@ priv struct ResourceBinding {
   name : String
   kind : String
   typescript : String
-  probe : Array[Int]
+  probe : Array[Int32]
 }
 
 ///|
@@ -25,7 +25,7 @@ fn resource_scalar_type(value : String) -> Bool {
 }
 
 ///|
-fn resource_type_byte(value : String) -> Int {
+fn resource_type_byte(value : String) -> Int32 {
   match value {
     "i32" => 0x7f
     "i64" => 0x7e
@@ -38,7 +38,7 @@ fn resource_type_byte(value : String) -> Int {
 }
 
 ///|
-fn resource_uleb(bytes : Array[Int], value : Int64) -> Unit {
+fn resource_uleb(bytes : Array[Int32], value : Int64) -> Unit {
   let mut remaining = value
   while remaining >= 128L {
     bytes.push((remaining & 127L).to_int() | 128)
@@ -49,9 +49,9 @@ fn resource_uleb(bytes : Array[Int], value : Int64) -> Unit {
 
 ///|
 fn resource_probe_section(
-  bytes : Array[Int],
-  id : Int,
-  payload : Array[Int],
+  bytes : Array[Int32],
+  id : Int32,
+  payload : Array[Int32],
 ) -> Unit {
   bytes.push(id)
   resource_uleb(bytes, payload.length().to_int64())
@@ -60,10 +60,10 @@ fn resource_probe_section(
 
 ///|
 fn resource_probe(
-  kind : Int,
-  descriptor : Array[Int],
-  type_section? : Array[Int] = [],
-) -> Array[Int] {
+  kind : Int32,
+  descriptor : Array[Int32],
+  type_section~ : Array[Int32] = [],
+) -> Array[Int32] {
   let bytes = [0, 97, 115, 109, 1, 0, 0, 0]
   if !type_section.is_empty() {
     resource_probe_section(bytes, 1, type_section)
@@ -76,7 +76,7 @@ fn resource_probe(
 }
 
 ///|
-fn resource_limits(minimum : Int64, maximum : Int64?) -> Array[Int] {
+fn resource_limits(minimum : Int64, maximum : Int64?) -> Array[Int32] {
   let bytes = [if maximum is Some(_) { 1 } else { 0 }]
   resource_uleb(bytes, minimum)
   if maximum is Some(value) {

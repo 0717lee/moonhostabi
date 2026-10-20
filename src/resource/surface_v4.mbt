@@ -17,7 +17,7 @@ pub extend TagSignatureResource with Eq::{not_equal, equal}
 ///|
 /// Resource protocol v4, independent of the legacy index-based v3 protocol.
 pub(all) struct ResourceSurfaceV4 {
-  schema_version : Int
+  schema_version : Int32
   memories : Array[MemoryResource]
   tables : Array[TableResource]
   globals : Array[GlobalResource]
@@ -33,7 +33,7 @@ pub extend ResourceSurfaceV4 with Eq::{not_equal, equal}
 
 ///|
 pub(all) struct ResourceLockfileV4 {
-  lockfile_version : Int
+  lockfile_version : Int32
   schema_sha256 : String
   artifact_sha256 : String
   abi_sha256 : String
@@ -48,7 +48,7 @@ pub extend ResourceLockfileV4 with Eq::{not_equal, equal}
 
 ///|
 pub(all) struct ResourceContractV5 {
-  schema_version : Int
+  schema_version : Int32
   abi_sha256 : String
   memories : Array[MemoryResource]
   tables : Array[TableResource]
@@ -281,7 +281,7 @@ fn add_global(
 fn add_tag(
   surface : ResourceSurfaceV4,
   wasm : @wasm_types.Module,
-  type_index : Int,
+  type_index : Int32,
   module_name : String?,
   name : String,
 ) -> Unit raise ResourceError {
@@ -312,7 +312,7 @@ fn add_tag(
 ///|
 fn[T] indexed_resource(
   values : Array[T],
-  index : Int,
+  index : Int32,
   path : String,
 ) -> T raise ResourceError {
   if index < 0 || index >= values.length() {
@@ -338,7 +338,7 @@ pub fn project_resource_surface(
   let tables : Array[@wasm_types.TableType] = []
   let memories : Array[@wasm_types.MemoryType] = []
   let globals : Array[@wasm_types.GlobalType] = []
-  let tags : Array[Int] = []
+  let tags : Array[Int32] = []
   let imports : Map[String, Bool] = Map([])
   for imported in wasm_module.imports {
     let module_name = Some(imported.mod_name)

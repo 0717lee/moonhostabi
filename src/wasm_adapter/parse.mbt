@@ -61,12 +61,12 @@ pub fn parse_artifact_checked(
 ///|
 fn check_public_signature_budget(
   parsed : @wasm_types.Module,
-  limit : Int,
+  limit : Int32,
 ) -> Unit raise ArtifactError {
   // Many exports may reference one wide signature. Bound the expanded public
   // surface before the projector copies its slots for every import/export.
-  let function_types : Array[Int] = []
-  let tag_types : Array[Int] = []
+  let function_types : Array[Int32] = []
+  let tag_types : Array[Int32] = []
   let mut slots = 0
   for import_ in parsed.imports {
     let type_idx = match import_.desc {
@@ -111,7 +111,7 @@ fn check_public_signature_budget(
 }
 
 ///|
-fn signature_slots(parsed : @wasm_types.Module, type_idx : Int) -> Int {
+fn signature_slots(parsed : @wasm_types.Module, type_idx : Int32) -> Int32 {
   // Invalid indices remain the projector's existing validation responsibility.
   // The structural preflight already bounds the sum of params and results.
   match parsed.func_type_at(type_idx) {

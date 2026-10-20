@@ -1,5 +1,5 @@
 ///|
-fn memory_artifact_fixture(sections : Array[(Int, Bytes)]) -> Bytes {
+fn memory_artifact_fixture(sections : Array[(Int32, Bytes)]) -> Bytes {
   let bytes : Array[Byte] = [0, 0x61, 0x73, 0x6d, 1, 0, 0, 0]
   for section in sections {
     bytes.push(section.0.to_byte())

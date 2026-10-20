@@ -1,6 +1,6 @@
 ///|
 /// Maximum input size accepted by `parse_artifact_checked` (32 MiB).
-pub const MAX_ARTIFACT_BYTES : Int = 32 * 1024 * 1024
+pub const MAX_ARTIFACT_BYTES : Int32 = 32 * 1024 * 1024
 
 ///|
 // Keep policy internal and immutable. Tests use smaller budgets to exercise
@@ -8,24 +8,24 @@ pub const MAX_ARTIFACT_BYTES : Int = 32 * 1024 * 1024
 // The guarded iterative-expression parser patch removes control-stack recursion.
 // Keep a finite 256-frame budget, tested in native debug as well as other targets.
 priv struct PreflightLimits {
-  bytes : Int
-  types : Int
-  items : Int
-  locals : Int
-  function_locals : Int
-  instructions : Int
-  depth : Int
+  bytes : Int32
+  types : Int32
+  items : Int32
+  locals : Int32
+  function_locals : Int32
+  instructions : Int32
+  depth : Int32
 }
 
 ///|
 fn preflight_limits(
-  bytes? : Int = MAX_ARTIFACT_BYTES,
-  types? : Int = 2048,
-  items? : Int = 65536,
-  locals? : Int = 131072,
-  function_locals? : Int = 65536,
-  instructions? : Int = 262144,
-  depth? : Int = 256,
+  bytes~ : Int32 = MAX_ARTIFACT_BYTES,
+  types~ : Int32 = 2048,
+  items~ : Int32 = 65536,
+  locals~ : Int32 = 131072,
+  function_locals~ : Int32 = 65536,
+  instructions~ : Int32 = 262144,
+  depth~ : Int32 = 256,
 ) -> PreflightLimits {
   { bytes, types, items, locals, function_locals, instructions, depth, }
 }
@@ -34,17 +34,17 @@ fn preflight_limits(
 priv struct Preflight {
   bytes : Bytes
   limits : PreflightLimits
-  mut pos : Int
-  mut end : Int
-  mut types : Int
-  mut items : Int
-  mut locals : Int
-  mut instructions : Int
+  mut pos : Int32
+  mut end : Int32
+  mut types : Int32
+  mut items : Int32
+  mut locals : Int32
+  mut instructions : Int32
   mut has_data_count : Bool
 }
 
 ///|
-fn Preflight::byte(self : Preflight) -> Int raise ArtifactError {
+fn Preflight::byte(self : Preflight) -> Int32 raise ArtifactError {
   if self.pos >= self.end {
     raise InvalidArtifact("unexpected end of section or function body")
   }
@@ -54,7 +54,7 @@ fn Preflight::byte(self : Preflight) -> Int raise ArtifactError {
 }
 
 ///|
-fn Preflight::peek(self : Preflight) -> Int raise ArtifactError {
+fn Preflight::peek(self : Preflight) -> Int32 raise ArtifactError {
   if self.pos >= self.end {
     raise InvalidArtifact("unexpected end of section or function body")
   }
@@ -90,7 +90,7 @@ fn Preflight::u32(self : Preflight) -> Int64 raise ArtifactError {
 ///|
 fn Preflight::leb(
   self : Preflight,
-  bits : Int,
+  bits : Int32,
   signed : Bool,
 ) -> Unit raise ArtifactError {
   let count = (bits + 6) / 7
@@ -116,11 +116,11 @@ fn Preflight::leb(
 
 ///|
 fn bounded_add(
-  current : Int,
+  current : Int32,
   amount : Int64,
-  limit : Int,
+  limit : Int32,
   label : String,
-) -> Int raise ArtifactError {
+) -> Int32 raise ArtifactError {
   if amount < 0L || amount > (limit - current).to_int64() {
     raise LimitExceeded(label)
   }
@@ -128,7 +128,10 @@ fn bounded_add(
 }
 
 ///|
-fn Preflight::items(self : Preflight, count : Int64) -> Int raise ArtifactError {
+fn Preflight::items(
+  self : Preflight,
+  count : Int64,
+) -> Int32 raise ArtifactError {
   self.items = bounded_add(
     self.items,
     count,
@@ -139,7 +142,7 @@ fn Preflight::items(self : Preflight, count : Int64) -> Int raise ArtifactError 
 }
 
 ///|
-fn Preflight::vector(self : Preflight) -> Int raise ArtifactError {
+fn Preflight::vector(self : Preflight) -> Int32 raise ArtifactError {
   self.items(self.u32())
 }
 
@@ -373,7 +376,7 @@ fn Preflight::simd(self : Preflight) -> Unit raise ArtifactError {
 // Iterative traversal allocates only one small frame per bounded nesting level.
 // Count every opcode including end/else across every expression in the module.
 fn Preflight::expr(self : Preflight) -> Unit raise ArtifactError {
-  let frames : Array[Int] = []
+  let frames : Array[Int32] = []
   while true {
     let opcode = self.byte()
     self.instructions = bounded_add(
@@ -476,7 +479,7 @@ fn Preflight::expr(self : Preflight) -> Unit raise ArtifactError {
 }
 
 ///|
-fn section_order(id : Int) -> Int {
+fn section_order(id : Int32) -> Int32 {
   match id {
     1 | 2 | 3 | 4 | 5 => id
     13 => 6

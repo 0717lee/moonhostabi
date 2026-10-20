@@ -8,7 +8,7 @@ pub(all) struct MemoryResource {
   maximum_pages : Int64?
   shared : Bool
   memory64 : Bool
-  page_size_log2 : Int
+  page_size_log2 : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -20,7 +20,7 @@ pub extend MemoryResource with Eq::{not_equal, equal}
 ///|
 /// The standalone resource ABI surface. Function ABI remains in HostAbi v1.
 pub(all) struct ResourceAbi {
-  schema_version : Int
+  schema_version : Int32
   memories : Array[MemoryResource]
   unsupported : Array[String]
 } derive(Eq, Debug)
@@ -34,7 +34,7 @@ pub extend ResourceAbi with Eq::{not_equal, equal}
 ///|
 /// Explicit memory contract consumed by a host runtime.
 pub(all) struct MemoryContract {
-  schema_version : Int
+  schema_version : Int32
   abi_sha256 : String
   memories : Array[MemoryResource]
 } derive(Eq, Debug)
@@ -48,7 +48,7 @@ pub extend MemoryContract with Eq::{not_equal, equal}
 ///|
 /// Resource lockfile that fingerprints the canonical resource surface.
 pub(all) struct ResourceLockfile {
-  lockfile_version : Int
+  lockfile_version : Int32
   schema_sha256 : String
   artifact_sha256 : String
   abi_sha256 : String

@@ -17,7 +17,7 @@ pub impl Show for LockfileError with fn output(self, logger) {
 }
 
 ///|
-const MAX_LOCKFILE_LENGTH : Int = 8 * 1024 * 1024
+const MAX_LOCKFILE_LENGTH : Int32 = 8 * 1024 * 1024
 
 ///|
 fn[T] invalid_lockfile(message : String) -> T raise LockfileError {

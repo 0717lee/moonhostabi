@@ -21,7 +21,7 @@ fn legacy_resource_surface(
   wasm_module : @wasm_types.Module,
 ) -> @resource.ResourceSurface {
   let tags : Array[@resource.TagResource] = []
-  let tag_indices : Array[Int] = []
+  let tag_indices : Array[Int32] = []
   for imported in wasm_module.imports {
     if imported.desc is @wasm_types.Tag(index) {
       tag_indices.push(index)
