@@ -146,25 +146,25 @@ try {
   }
   $moonVersionText = $moonVersionLines -join "`n"
   $moonVersionLines | Write-Output
-  if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20260920 \(914d7da 2026-09-20\)') {
-    throw 'Expected moon 0.1.20260920 (914d7da).'
+  if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20261016 \(1af328f 2026-10-16\)') {
+    throw 'Expected moon 0.1.20261016 (1af328f).'
   }
-  if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.14\+7d59c7ec9 \(2026-09-18\)') {
-    throw 'Expected moonc v0.10.14+7d59c7ec9.'
+  if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.16\+b1a0e846e \(2026-10-16\)') {
+    throw 'Expected moonc v0.10.16+b1a0e846e.'
   }
 
   $nodeVersion = (& $nodeExecutable --version) -join "`n"
   $nodeVersionExit = $LASTEXITCODE
   Write-Output $nodeVersion
-  if ($nodeVersionExit -ne 0 -or $nodeVersion -cne 'v24.12.0') {
-    throw "Expected Node.js v24.12.0, received '$nodeVersion'."
+  if ($nodeVersionExit -ne 0 -or $nodeVersion -cne 'v24.22.0') {
+    throw "Expected Node.js v24.22.0, received '$nodeVersion'."
   }
   $npmVersionLines = & $npmExecutable --version
   $npmVersionExit = $LASTEXITCODE
   $npmVersion = $npmVersionLines -join "`n"
   $npmVersionLines | Write-Output
-  if ($npmVersionExit -ne 0 -or $npmVersion -cne '11.6.2') {
-    throw "Expected npm 11.6.2, received '$npmVersion'."
+  if ($npmVersionExit -ne 0 -or $npmVersion -cne '11.19.1') {
+    throw "Expected npm 11.19.1, received '$npmVersion'."
   }
 
   $wasmToolsVersion = (& $wasmToolsExecutable --version) -join "`n"
@@ -345,8 +345,8 @@ try {
   $playwrightVersionExit = $LASTEXITCODE
   $playwrightVersion = $playwrightVersionLines -join "`n"
   $playwrightVersionLines | Write-Output
-  if ($playwrightVersionExit -ne 0 -or $playwrightVersion -cne 'Version 1.62.1') {
-    throw "Expected Playwright 1.62.1, received '$playwrightVersion'."
+  if ($playwrightVersionExit -ne 0 -or $playwrightVersion -cne 'Version 1.64.1') {
+    throw "Expected Playwright 1.64.1, received '$playwrightVersion'."
   }
   $untypedMatches = @(
     Get-ChildItem -LiteralPath (Join-Path $runtimeRoot 'generated') -Filter '*.ts' -File |
