@@ -226,7 +226,7 @@ foreach ($name in $watFixtures) {
 }
 
 foreach ($item in $publishQueue) {
-  [IO.File]::Move($item.Staged, $item.Destination, $true)
+  Move-Item -LiteralPath $item.Staged -Destination $item.Destination -Force
 }
 
 Write-Output "Validated fixture artifacts:"

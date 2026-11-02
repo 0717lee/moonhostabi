@@ -21,6 +21,6 @@
   )
   (@producers
     (language "MoonBit" "")
-    (processed-by "moonc" "v0.10.16+b1a0e846e")
+    (processed-by "moonc" "v0.10.19+97801ee1b")
   )
 )
