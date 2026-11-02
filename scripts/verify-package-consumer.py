@@ -133,7 +133,34 @@ def manifest(files: dict[str, bytes]) -> dict:
 
 
 def archive_route(name: str, version: str) -> str:
+    username, unqualified = name.split("/", 1)
+    return (
+        "/user/"
+        + urllib.parse.quote(username, safe="")
+        + "/"
+        + urllib.parse.quote(unqualified, safe="")
+        + "/"
+        + urllib.parse.quote(version, safe="")
+        + ".zip"
+    )
+
+
+def legacy_archive_route(name: str, version: str) -> str:
     return "/user/" + urllib.parse.quote(f"{name}/{version}", safe="") + ".zip"
+
+
+def canonical_archive_path(path: str, canonical_routes: set[str]) -> str | None:
+    if path in canonical_routes:
+        return path
+    prefix = "/user/"
+    if path.startswith(prefix) and path.endswith(".zip"):
+        decoded = urllib.parse.unquote(path[len(prefix):-4])
+        if "/" in decoded:
+            name, version = decoded.rsplit("/", 1)
+            candidate = archive_route(name, version)
+            if candidate in canonical_routes:
+                return candidate
+    return None
 
 
 def isolated_env(base: dict[str, str], home: Path, toolchain: Path) -> dict[str, str]:
@@ -236,7 +263,7 @@ def fetch_worker(url: str, destination: Path) -> None:
         def redirect_request(self, req, fp, code, msg, headers, newurl):
             # The official download endpoint currently redirects to this CDN.
             # Permit only the identical allowlisted object, never arbitrary hosts.
-            expected = "https://d15l9c1mnzh3r.cloudfront.net" + urllib.parse.urlsplit(url).path
+            expected = "https://d251robtodj7m8.cloudfront.net" + urllib.parse.urlsplit(url).path
             if not url.startswith("https://download.mooncakes.io/") or newurl != expected:
                 raise GateError("unexpected redirect from pinned download endpoint")
             return super().redirect_request(req, fp, code, msg, headers, newurl)
@@ -402,6 +429,7 @@ def execute(args) -> int:
                 pkg_version, data, files, info = package
                 route = archive_route(name, pkg_version)
                 archives[route] = data
+                archives[legacy_archive_route(name, pkg_version)] = data
                 entry = {"name": name, "version": pkg_version, "deps": info.get("deps", {}),
                          "checksum": sha256(data), "yanked": False}
                 owner, module = name.split("/", 1)
@@ -485,8 +513,19 @@ def execute(args) -> int:
                 report["installed_bytes_unchanged"] = before == after
                 if before != after:
                     raise GateError("dependency bytes changed during consumer checks")
-            fetched = {e["path"] for e in report["http_fetches"] if e["status"] == 200}
-            if fetched != set(archives) or any(e["status"] != 200 for e in report["http_fetches"]):
+            canonical_routes = {
+                archive_route(name, package[0]) for name, package in packages.items()
+            }
+            fetched = {
+                canonical_archive_path(e["path"], canonical_routes)
+                for e in report["http_fetches"]
+                if e["status"] == 200
+            }
+            if (
+                None in fetched
+                or fetched != canonical_routes
+                or any(e["status"] != 200 for e in report["http_fetches"])
+            ):
                 raise GateError("real HTTP fetches differ from exact registry allowlist")
             if report["policy_issues"]:
                 raise GateError("; ".join(report["policy_issues"]))
