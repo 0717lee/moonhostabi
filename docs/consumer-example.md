@@ -27,7 +27,7 @@ validation, not third-party adoption or published-package validation.
 
 ## Inputs and prerequisites
 
-- Moon `0.1.20261016 (1af328f)` and moonc `v0.10.16+b1a0e846e`, checked by the gate.
+- Moon `0.1.20261029 (ee2274c)` and moonc `v0.10.19+97801ee1b`, checked by the gate.
 - A working native C toolchain for the SDK consumer and Node with WasmGC support
   (validated here with Node `24.22.0`).
 - The existing `runtime/node_modules/typescript/bin/tsc` and

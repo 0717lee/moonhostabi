@@ -146,11 +146,11 @@ try {
   }
   $moonVersionText = $moonVersionLines -join "`n"
   $moonVersionLines | Write-Output
-  if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20261016 \(1af328f 2026-10-16\)') {
-    throw 'Expected moon 0.1.20261016 (1af328f).'
+  if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20261029 \(ee2274c 2026-10-29\)') {
+    throw 'Expected moon 0.1.20261029 (ee2274c).'
   }
-  if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.16\+b1a0e846e \(2026-10-16\)') {
-    throw 'Expected moonc v0.10.16+b1a0e846e.'
+  if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.19\+97801ee1b \(2026-10-30\)') {
+    throw 'Expected moonc v0.10.19+97801ee1b.'
   }
 
   $nodeVersion = (& $nodeExecutable --version) -join "`n"
@@ -177,7 +177,7 @@ try {
   Invoke-Checked -FilePath $moonExecutable -Arguments @('update') -Description 'moon update'
   Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', 'scripts/verify-vendored-parser.py') -Description 'bundled parser provenance verification'
   Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_vendored_parser.py', '-v') -Description 'bundled parser provenance self-tests'
-  # moon 0.10.16 on Windows passes \\?\ paths to git, which Git for Windows
+  # moon 0.10.19 on Windows passes \\?\ paths to git, which Git for Windows
   # cannot read. Formatting is platform-independent and is verified by the
   # Linux Spike job.
   if (-not $IsWindows) {

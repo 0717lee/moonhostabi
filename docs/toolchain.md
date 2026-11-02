@@ -4,10 +4,10 @@ For a project-local Windows toolchain, install the pinned snapshot once from
 the repository root (the installer checksum is also pinned in CI):
 
 ```powershell
-$env:MOON_HOME = Join-Path (Get-Location) '.tools/moonbit-0.10.16'
+$env:MOON_HOME = Join-Path (Get-Location) '.tools/moonbit-0.10.19'
 $env:MOON_TOOLCHAIN_ROOT = $env:MOON_HOME
 $env:PATH = "$env:MOON_HOME\bin;$env:PATH"
-$env:MOONBIT_INSTALL_VERSION = '0.10.16+b1a0e846e'
+$env:MOONBIT_INSTALL_VERSION = '0.10.19+97801ee1b'
 New-Item -ItemType Directory -Force $env:MOON_HOME | Out-Null
 $installer = Join-Path $env:MOON_HOME 'install.ps1'
 Invoke-WebRequest https://cli.moonbitlang.com/install/powershell.ps1 -OutFile $installer
@@ -21,5 +21,5 @@ moon version --all
 ```
 
 In a new PowerShell session, repeat the first three environment assignments
-before running the gates. Confirm that `moonc` reports `v0.10.16+b1a0e846e`;
+before running the gates. Confirm that `moonc` reports `v0.10.19+97801ee1b`;
 the `moon` build-tool version and the package version are separate identities.
