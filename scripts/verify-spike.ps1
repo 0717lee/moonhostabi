@@ -202,13 +202,13 @@ try {
     -Description 'fixture rebuild and validation'
 
   $expectedArtifactHashes = [ordered]@{
-    'breaking_v1.wasm' = 'd8d3b8aa5f34b4fb4905aa26ddd15bd4ac3a70e291fd04ca3d55bd83e6591fab'
-    'breaking_v2.wasm' = '8e621439bdb4ab754e1e58fea8cea9baf97f5f1a7a402143f1d786f509fdc79e'
-    'externref.wasm' = 'e834be3a25b1adb35adb8b0d8cbc6a13fb420d0123699c2f82f8e7f4fdef873e'
+    'breaking_v1.wasm' = '1d38ed67f00b18f6f7a69d6ebfec559d723eb0dbb0117efdfff1a1aa62e6d33d'
+    'breaking_v2.wasm' = 'b908821d4863e689d63168872dfacdfa9087f5f6bf9929e202154bd30aca1943'
+    'externref.wasm' = '1552bddee16f12cdecd511e821df30a5ff1ab285e405a5e653ed3f50a67233d3'
     'rec-a.wasm' = '885ebd2fa3c5f4cadb67905569e1566ef84a53bc9a9b6a4cea77a7187fe873cc'
     'rec-reindexed.wasm' = 'c860e7e7fbdb91b8558a20bc5bc94f3a4fcbe71dd5036b3c6d32ac96a878cda5'
-    'recursive.wasm' = '68ad745b9ddd51e4beb63447c663378691868014c0525ff17561392ec074f282'
-    'scalar.wasm' = 'a706f8d6752557febea3c3ea6f3ce63714212d310b35705575aa4148d72fac35'
+    'recursive.wasm' = '6a02304f6cef5276a21e63827b98b26c0f14b4036feaee7c10095bdebe0ea0fc'
+    'scalar.wasm' = '9ea5d25a3e75ffead0802c0c57abf4a1abdf2ad74720d4b5f639ffaed00d5dec'
   }
   foreach ($entry in $expectedArtifactHashes.GetEnumerator()) {
     $artifactPath = Join-Path $repositoryRoot "fixtures/artifacts/$($entry.Key)"
