@@ -98,7 +98,7 @@ class RegistryTests(unittest.TestCase):
         with gate.registry_server({route: data}, events) as url:
             with opener.open(url + route, timeout=5) as response:
                 self.assertEqual(response.read(), data)
-        self.assertEqual(events, [{"method": "GET", "path": "/user/a%2Fb%2F1.0.0.zip",
+        self.assertEqual(events, [{"method": "GET", "path": route,
                                   "status": 200, "bytes": len(data), "sha256": gate.sha256(data)}])
 
     def test_unknown_encoded_traversal_and_proxy_urls_are_denied(self):
