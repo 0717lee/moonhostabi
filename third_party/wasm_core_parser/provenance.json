@@ -159,11 +159,12 @@
       "vendored_path": "src/internal/wasm_parser/state.mbt",
       "original_normalized_sha256": "35b59da9a7c1a60e0da6f553f325eddc1c5da24476015df3ad6c633e1ad6ae79",
       "reviewed_normalized_sha256": "35b59da9a7c1a60e0da6f553f325eddc1c5da24476015df3ad6c633e1ad6ae79",
-      "vendored_sha256": "c6ca7e60588bcb6ac0ef5f957dc49b77c148c7ddddd76d5029a97b22a8d88643",
+      "vendored_sha256": "eba947c451d476ad96648cabf13db10218dc3991a964d2cbedf7243ad16e1957",
       "implementation_changed_from_archive": true,
       "local_modifications": [
         "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF.",
-        "Formatting with the MoonBit 0.10.16 formatter (Int to Int32 canonicalization)."
+        "Formatting with the MoonBit 0.10.16 formatter (Int to Int32 canonicalization).",
+        "Migrate `} derive(...)` to `#derive(...)` for MoonBit 0.10.20 --deny-warn."
       ]
     },
     {

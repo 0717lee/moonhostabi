@@ -30,6 +30,7 @@ CI 的 Spike 在 Linux / Windows 双平台执行完整验证，覆盖 native / j
 ## 适配记录
 
 - Wasm fixtures 用 0.10.20 重新生成：`fixtures/artifacts/*.wasm` 与 `fixtures/oracle/*.wat` 的 `processed-by` 版本更新，`scripts/verify-spike.ps1` 的期望哈希、`docs/report-schema.md` 的机器校验示例同步更新；`abiSha256` 保持不变。
+- 语法迁移改到了 vendored 的 `src/internal/wasm_parser/state.mbt`，`third_party/wasm_core_parser/provenance.json` 中该文件的 `vendored_sha256` 与修改说明同步更新，`scripts/verify-vendored-parser.py` 返回 `VENDORED_PARSER_PROVENANCE=GO`。
 - 修正测试隔离缺陷：`cleanup_generation_test_directory` 现在也清理 `notes.txt`。此前若中途断言失败留下该文件，目录删不掉，后续每次运行都会在第 707 行报出假失败，掩盖真实原因。产品侧 `cleanup_owned_generation_directory` 拒绝删除未知文件的语义不变。
 - 迁移 63 处 `} derive(...)` 旧语法为 `#derive(...)` 前缀形式。CI 对 wasm / js / wasm-gc 库目标使用 `--deny-warn`，会把 `deprecated_syntax` 警告升级为错误，因此这一步是必须的语法适配，而不只是重装工具链。迁移后 `moon fmt --check`、三目标 `--deny-warn` 检查与测试全部通过。
 
