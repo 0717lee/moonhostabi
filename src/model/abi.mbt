@@ -1,4 +1,5 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum AbiValueType {
   I32
   I64
@@ -9,7 +10,7 @@ pub(all) enum AbiValueType {
   FuncRef
   TypedRef(String, Bool)
   Unknown(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiValueType with Eq::{not_equal, equal}
@@ -38,12 +39,13 @@ pub fn AbiValueType::stable_text(self : AbiValueType) -> String {
 }
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct AbiFunction {
   module_name : String?
   name : String
   params : Array[AbiValueType]
   results : Array[AbiValueType]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiFunction with @debug.Debug::{to_repr}
@@ -97,11 +99,12 @@ pub fn sort_abi_functions(functions : Array[AbiFunction]) -> Array[AbiFunction] 
 }
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum AbiStorageType {
   PackedI8
   PackedI16
   Value(AbiValueType)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiStorageType with @debug.Debug::{to_repr}
@@ -110,10 +113,11 @@ pub extend AbiStorageType with @debug.Debug::{to_repr}
 pub extend AbiStorageType with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct AbiField {
   storage : AbiStorageType
   mutable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiField with @debug.Debug::{to_repr}
@@ -122,12 +126,13 @@ pub extend AbiField with @debug.Debug::{to_repr}
 pub extend AbiField with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct AbiStructType {
   id : String
   supertypes : Array[String]
   final_ : Bool
   fields : Array[AbiField]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiStructType with @debug.Debug::{to_repr}
@@ -136,12 +141,13 @@ pub extend AbiStructType with @debug.Debug::{to_repr}
 pub extend AbiStructType with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct AbiArrayType {
   id : String
   supertypes : Array[String]
   final_ : Bool
   element : AbiField
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiArrayType with @debug.Debug::{to_repr}
@@ -150,10 +156,11 @@ pub extend AbiArrayType with @debug.Debug::{to_repr}
 pub extend AbiArrayType with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum AbiTypeDef {
   Struct(AbiStructType)
   Array(AbiArrayType)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiTypeDef with @debug.Debug::{to_repr}
@@ -162,13 +169,14 @@ pub extend AbiTypeDef with @debug.Debug::{to_repr}
 pub extend AbiTypeDef with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct HostAbi {
   schema_version : Int32
   imports : Array[AbiFunction]
   exports : Array[AbiFunction]
   types : Array[AbiTypeDef]
   features : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HostAbi with @debug.Debug::{to_repr}
@@ -182,12 +190,13 @@ pub extend HostAbi with Eq::{not_equal, equal}
 /// Resources are inventory-only in the current adapter: they are surfaced so
 /// callers can inspect and gate them explicitly while generation remains
 /// fail-closed for unsupported JavaScript bindings.
+#derive(Eq, Debug)
 pub(all) enum AbiResourceKind {
   Table
   Memory
   Global
   Tag
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiResourceKind with @debug.Debug::{to_repr}
@@ -197,12 +206,13 @@ pub extend AbiResourceKind with Eq::{not_equal, equal}
 
 ///|
 /// A table, memory, global, or exception tag import/export.
+#derive(Eq, Debug)
 pub(all) struct AbiResource {
   module_name : String?
   name : String
   kind : AbiResourceKind
   details : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiResource with @debug.Debug::{to_repr}

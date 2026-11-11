@@ -1,11 +1,12 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum VerificationOutcome {
   VerificationCompatible
   VerificationBreaking
   VerificationUnknown
   VerificationInvalid
   VerificationAdapterMismatch
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend VerificationOutcome with @debug.Debug::{to_repr}
@@ -14,11 +15,12 @@ pub extend VerificationOutcome with @debug.Debug::{to_repr}
 pub extend VerificationOutcome with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum ArtifactReportStatus {
   ArtifactValid
   ArtifactUnsupported
   ArtifactInvalid
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ArtifactReportStatus with @debug.Debug::{to_repr}
@@ -27,10 +29,11 @@ pub extend ArtifactReportStatus with @debug.Debug::{to_repr}
 pub extend ArtifactReportStatus with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum BaselineReport {
   BaselineValid(String, String)
   BaselineInvalid(@model.Diagnostic)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BaselineReport with @debug.Debug::{to_repr}
@@ -39,12 +42,13 @@ pub extend BaselineReport with @debug.Debug::{to_repr}
 pub extend BaselineReport with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum ContractReport {
   ContractNotProvidedReport
   ContractValidReport
   ContractInvalidReport(@model.Diagnostic)
   ContractNotEvaluatedReport
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ContractReport with @debug.Debug::{to_repr}
@@ -53,11 +57,12 @@ pub extend ContractReport with @debug.Debug::{to_repr}
 pub extend ContractReport with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum GeneratorReport {
   GeneratorRepresentable
   GeneratorUnrepresentable(Array[@model.Diagnostic])
   GeneratorNotEvaluated
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend GeneratorReport with @debug.Debug::{to_repr}
@@ -66,6 +71,7 @@ pub extend GeneratorReport with @debug.Debug::{to_repr}
 pub extend GeneratorReport with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub struct VerificationReport {
   outcome : VerificationOutcome
   artifact_status : ArtifactReportStatus
@@ -81,7 +87,7 @@ pub struct VerificationReport {
   resource_compatibility : @compat.CompatibilityReport?
   contract : ContractReport
   generator : GeneratorReport
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend VerificationReport with @debug.Debug::{to_repr}

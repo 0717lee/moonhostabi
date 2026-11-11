@@ -8,9 +8,10 @@ pub const MOONHOSTABI_VERSION : String = "0.6.1"
 const MAX_GENERATION_MANIFEST_LENGTH : Int32 = 64 * 1024
 
 ///|
+#derive(Debug)
 pub(all) suberror ManifestError {
   InvalidManifest(String)
-} derive(Debug)
+}
 
 ///|
 pub extend ManifestError with @debug.Debug::{to_repr}
@@ -26,12 +27,13 @@ pub impl Show for ManifestError with fn output(self, logger) {
 }
 
 ///|
+#derive(Eq, Debug)
 pub struct GenerationManifest {
   abi_sha256 : String
   generator_version : String
   contract_sha256 : String
   adapter_sha256 : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend GenerationManifest with @debug.Debug::{to_repr}

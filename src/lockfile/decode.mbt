@@ -1,7 +1,8 @@
 ///|
+#derive(Debug)
 pub(all) suberror LockfileError {
   InvalidLockfile(String)
-} derive(Debug)
+}
 
 ///|
 pub extend LockfileError with @debug.Debug::{to_repr}

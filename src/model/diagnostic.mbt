@@ -1,9 +1,10 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum DiagnosticSeverity {
   Info
   Warning
   Error
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DiagnosticSeverity with @debug.Debug::{to_repr}
@@ -12,13 +13,14 @@ pub extend DiagnosticSeverity with @debug.Debug::{to_repr}
 pub extend DiagnosticSeverity with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct Diagnostic {
   code : String
   severity : DiagnosticSeverity
   path : String
   message : String
   byte_offset : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Diagnostic with @debug.Debug::{to_repr}

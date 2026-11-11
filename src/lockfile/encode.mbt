@@ -1,11 +1,12 @@
 ///|
+#derive(Eq, Debug)
 pub struct AbiLockfile {
   lockfile_version : Int32
   schema_sha256 : String
   artifact_sha256 : String
   abi_sha256 : String
   abi : @model.HostAbi
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AbiLockfile with @debug.Debug::{to_repr}

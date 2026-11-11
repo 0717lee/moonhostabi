@@ -1,5 +1,6 @@
 ///|
 /// A memory crossing a compiled Wasm host boundary.
+#derive(Eq, Debug)
 pub(all) struct MemoryResource {
   path : String
   module_name : String?
@@ -9,7 +10,7 @@ pub(all) struct MemoryResource {
   shared : Bool
   memory64 : Bool
   page_size_log2 : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryResource with @debug.Debug::{to_repr}
@@ -19,11 +20,12 @@ pub extend MemoryResource with Eq::{not_equal, equal}
 
 ///|
 /// The standalone resource ABI surface. Function ABI remains in HostAbi v1.
+#derive(Eq, Debug)
 pub(all) struct ResourceAbi {
   schema_version : Int32
   memories : Array[MemoryResource]
   unsupported : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceAbi with @debug.Debug::{to_repr}
@@ -33,11 +35,12 @@ pub extend ResourceAbi with Eq::{not_equal, equal}
 
 ///|
 /// Explicit memory contract consumed by a host runtime.
+#derive(Eq, Debug)
 pub(all) struct MemoryContract {
   schema_version : Int32
   abi_sha256 : String
   memories : Array[MemoryResource]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MemoryContract with @debug.Debug::{to_repr}
@@ -47,13 +50,14 @@ pub extend MemoryContract with Eq::{not_equal, equal}
 
 ///|
 /// Resource lockfile that fingerprints the canonical resource surface.
+#derive(Eq, Debug)
 pub(all) struct ResourceLockfile {
   lockfile_version : Int32
   schema_sha256 : String
   artifact_sha256 : String
   abi_sha256 : String
   abi : ResourceAbi
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceLockfile with @debug.Debug::{to_repr}

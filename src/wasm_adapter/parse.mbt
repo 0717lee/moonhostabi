@@ -14,10 +14,11 @@ pub fn parse_artifact(bytes : Bytes) -> @wasm_types.Module raise ArtifactError {
 
 ///|
 /// A checked artifact either exceeds this adapter's resource policy or is invalid.
+#derive(Debug)
 pub(all) suberror ArtifactError {
   LimitExceeded(String)
   InvalidArtifact(String)
-} derive(Debug)
+}
 
 ///|
 pub extend ArtifactError with @debug.Debug::{to_repr}

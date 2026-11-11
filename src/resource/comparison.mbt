@@ -1,11 +1,12 @@
 ///|
+#derive(Eq, Debug)
 pub(all) struct ResourceChange {
   path : String
   before : String?
   after : String?
   classification : String
   recommendation : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceChange with @debug.Debug::{to_repr}
@@ -14,13 +15,14 @@ pub extend ResourceChange with @debug.Debug::{to_repr}
 pub extend ResourceChange with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct ResourceComparison {
   schema_version : Int32
   classification : String
   compatible : Bool
   exit_code : Int32
   changes : Array[ResourceChange]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceComparison with @debug.Debug::{to_repr}

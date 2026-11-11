@@ -1,4 +1,5 @@
 ///|
+#derive(Debug)
 pub(all) suberror ContractError {
   ContractInputTooLarge
   InvalidContractJson
@@ -13,7 +14,7 @@ pub(all) suberror ContractError {
   ConflictingExternrefAlias(String)
   AmbiguousExternrefPath(String)
   InvalidLegacyImport(String)
-} derive(Debug)
+}
 
 ///|
 pub extend ContractError with @debug.Debug::{to_repr}
@@ -49,10 +50,11 @@ pub impl Show for ContractError with fn output(self, logger) {
 }
 
 ///|
+#derive(Eq, Debug)
 pub struct ExternrefBinding {
   path : String
   semantic_name : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ExternrefBinding with @debug.Debug::{to_repr}
@@ -62,10 +64,11 @@ pub extend ExternrefBinding with Eq::{not_equal, equal}
 
 ///|
 /// A validated, canonical schema-v2 Host ABI contract.
+#derive(Eq, Debug)
 pub struct Contract {
   abi_sha256 : String
   bindings : Array[ExternrefBinding]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Contract with @debug.Debug::{to_repr}

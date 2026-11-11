@@ -5,12 +5,13 @@
 /// runtime can provide its own guard implementation. This helper provides a
 /// stable, structured payload for every resource kind without requiring
 /// callers to hand-build JSON strings.
+#derive(Eq, Debug)
 pub(all) struct ResourceContractSources {
   memory : String?
   table : String?
   global : String?
   tag : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceContractSources with @debug.Debug::{to_repr}

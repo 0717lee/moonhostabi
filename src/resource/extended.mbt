@@ -1,5 +1,6 @@
 ///|
 /// A table crossing a compiled Wasm host boundary.
+#derive(Eq, Debug)
 pub(all) struct TableResource {
   path : String
   module_name : String?
@@ -8,7 +9,7 @@ pub(all) struct TableResource {
   minimum_elements : Int64
   maximum_elements : Int64?
   table64 : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TableResource with @debug.Debug::{to_repr}
@@ -18,13 +19,14 @@ pub extend TableResource with Eq::{not_equal, equal}
 
 ///|
 /// A global crossing a compiled Wasm host boundary.
+#derive(Eq, Debug)
 pub(all) struct GlobalResource {
   path : String
   module_name : String?
   name : String
   value_type : String
   mutable : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend GlobalResource with @debug.Debug::{to_repr}
@@ -34,12 +36,13 @@ pub extend GlobalResource with Eq::{not_equal, equal}
 
 ///|
 /// An exception tag crossing a compiled Wasm host boundary.
+#derive(Eq, Debug)
 pub(all) struct TagResource {
   path : String
   module_name : String?
   name : String
   type_index : Int64
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TagResource with @debug.Debug::{to_repr}
@@ -53,6 +56,7 @@ pub extend TagResource with Eq::{not_equal, equal}
 /// The existing `ResourceAbi` and memory contract remain stable. This surface
 /// adds first-class table/global/tag entries for callers that need a complete
 /// host-resource lock and contract.
+#derive(Eq, Debug)
 pub(all) struct ResourceSurface {
   schema_version : Int32
   memories : Array[MemoryResource]
@@ -60,7 +64,7 @@ pub(all) struct ResourceSurface {
   globals : Array[GlobalResource]
   tags : Array[TagResource]
   unsupported : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceSurface with @debug.Debug::{to_repr}
@@ -70,6 +74,7 @@ pub extend ResourceSurface with Eq::{not_equal, equal}
 
 ///|
 /// Contract for all resources in a `ResourceSurface` (schema v4).
+#derive(Eq, Debug)
 pub(all) struct ResourceContract {
   schema_version : Int32
   abi_sha256 : String
@@ -78,7 +83,7 @@ pub(all) struct ResourceContract {
   globals : Array[GlobalResource]
   tags : Array[TagResource]
   unsupported : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceContract with @debug.Debug::{to_repr}
@@ -88,13 +93,14 @@ pub extend ResourceContract with Eq::{not_equal, equal}
 
 ///|
 /// Resource lockfile carrying a complete resource surface (schema v3).
+#derive(Eq, Debug)
 pub(all) struct ResourceLockfileV3 {
   lockfile_version : Int32
   schema_sha256 : String
   artifact_sha256 : String
   abi_sha256 : String
   abi : ResourceSurface
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceLockfileV3 with @debug.Debug::{to_repr}

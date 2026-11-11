@@ -1,9 +1,10 @@
 ///|
+#derive(Eq, Debug)
 pub(all) struct JsCapabilityPolicy {
   allow_typed_gc_refs : Bool
   allow_v128 : Bool
   externref_symbol : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend JsCapabilityPolicy with @debug.Debug::{to_repr}
@@ -17,13 +18,14 @@ pub fn default_js_capability_policy() -> JsCapabilityPolicy {
 }
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum JsRepresentation {
   Number
   BigInt
   Callable
   Opaque(String)
   Unsupported(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend JsRepresentation with @debug.Debug::{to_repr}
@@ -32,11 +34,12 @@ pub extend JsRepresentation with @debug.Debug::{to_repr}
 pub extend JsRepresentation with Eq::{not_equal, equal}
 
 ///|
+#derive(Debug)
 pub(all) struct ProjectionAnalysis {
   abi : @model.HostAbi
   diagnostics : Array[@model.Diagnostic]
   resources : Array[@model.AbiResource]
-} derive(Debug)
+}
 
 ///|
 pub extend ProjectionAnalysis with @debug.Debug::{to_repr}

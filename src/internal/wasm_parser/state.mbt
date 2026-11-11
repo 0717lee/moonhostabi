@@ -9,12 +9,13 @@
 // ============================================================
 
 ///|
+#derive(Debug)
 struct Parser {
   data : Bytes
   mut pos : Int32
   mut has_data_count : Bool // true if data count section was seen
   types : Array[@types.SubType]
-} derive(Debug)
+}
 
 ///|
 /// Create a new parser from bytes

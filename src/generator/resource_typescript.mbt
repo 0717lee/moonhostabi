@@ -130,12 +130,13 @@ pub fn generate_typescript_adapter_with_memory(
 ///|
 /// JSON contract sources for the four Wasm resource kinds. The generator keeps
 /// these opaque so runtime packages can evolve their own guard implementations.
+#derive(Eq, Debug)
 pub(all) struct ResourceContractSources {
   memory : String?
   table : String?
   global : String?
   tag : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceContractSources with @debug.Debug::{to_repr}

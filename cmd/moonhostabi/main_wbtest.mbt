@@ -433,7 +433,7 @@ fn cleanup_generation_test_directory(path : String) -> Unit {
       // the next run fail on the very first generate instead of reporting the
       // real failure. This helper is test-only; cleanup_owned_generation_directory
       // still refuses to delete unknown files.
-      "notes.txt",
+       "notes.txt",
     ] {
     let file = "\{path}/\{name}"
     if @fs.path_exists(file) {

@@ -1,11 +1,12 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum FailureKind {
   Usage
   BreakingAbi
   InvalidArtifact
   AdapterMismatch
   RuntimeFailure
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn exit_code_for_failure(failure : FailureKind) -> Int32 {
@@ -19,20 +20,23 @@ pub fn exit_code_for_failure(failure : FailureKind) -> Int32 {
 }
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct CommandResult {
   exit_code : Int32
   stdout : String
   stderr : String
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum GenerateMode {
   Fresh
   Update
   DryRun
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum CliCommand {
   Help
   Version
@@ -46,12 +50,13 @@ pub(all) enum CliCommand {
   Check(String, String)
   Verify(String, String, String?)
   Generate(String, String?, String?, String, GenerateMode)
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Debug)
 suberror CliExecutionError {
   CliExecutionError(String, String)
-} derive(Debug)
+}
 
 ///|
 pub impl Show for CliExecutionError with fn output(self, logger) {
@@ -580,24 +585,26 @@ fn generate_adapter(
 }
 
 ///|
+#derive(Eq)
 priv enum GenerationFault {
   FailSecondWrite
   FailAfterBackup
   RetainStaging
   ReplaceBeforeClaim
   DisappearBeforeScan
-} derive(Eq)
+}
 
 ///|
 priv struct OwnedGenerationDirectory(String)
 
 ///|
+#derive(Eq)
 priv struct OwnedGenerationSnapshot {
   adapter_bytes : Bytes
   contract_bytes : Bytes
   manifest_bytes : Bytes
   contract_text : String
-} derive(Eq)
+}
 
 ///|
 priv enum UpdateTransactionState {

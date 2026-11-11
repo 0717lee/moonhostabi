@@ -1,8 +1,9 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum VerificationBaselineInput {
   ValidBaseline(@lockfile.AbiLockfile)
   InvalidBaseline(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend VerificationBaselineInput with @debug.Debug::{to_repr}
@@ -11,11 +12,12 @@ pub extend VerificationBaselineInput with @debug.Debug::{to_repr}
 pub extend VerificationBaselineInput with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum VerificationContractInput {
   ContractNotProvided
   ContractText(String)
   InvalidContractInput(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend VerificationContractInput with @debug.Debug::{to_repr}

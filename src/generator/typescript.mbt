@@ -1,11 +1,12 @@
 ///|
+#derive(Eq, Debug)
 pub(all) struct GenerationResult {
   typescript : String
   contract : String
   manifest : String
   abi_sha256 : String
   diagnostics : Array[@model.Diagnostic]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend GenerationResult with @debug.Debug::{to_repr}

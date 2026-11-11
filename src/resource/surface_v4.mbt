@@ -1,12 +1,13 @@
 ///|
 /// Exception identity uses its resolved function signature, never a type index.
+#derive(Eq, Debug)
 pub(all) struct TagSignatureResource {
   path : String
   module_name : String?
   name : String
   params : Array[String]
   results : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TagSignatureResource with @debug.Debug::{to_repr}
@@ -16,6 +17,7 @@ pub extend TagSignatureResource with Eq::{not_equal, equal}
 
 ///|
 /// Resource protocol v4, independent of the legacy index-based v3 protocol.
+#derive(Eq, Debug)
 pub(all) struct ResourceSurfaceV4 {
   schema_version : Int32
   memories : Array[MemoryResource]
@@ -23,7 +25,7 @@ pub(all) struct ResourceSurfaceV4 {
   globals : Array[GlobalResource]
   tags : Array[TagSignatureResource]
   unsupported : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceSurfaceV4 with @debug.Debug::{to_repr}
@@ -32,13 +34,14 @@ pub extend ResourceSurfaceV4 with @debug.Debug::{to_repr}
 pub extend ResourceSurfaceV4 with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct ResourceLockfileV4 {
   lockfile_version : Int32
   schema_sha256 : String
   artifact_sha256 : String
   abi_sha256 : String
   abi : ResourceSurfaceV4
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceLockfileV4 with @debug.Debug::{to_repr}
@@ -47,6 +50,7 @@ pub extend ResourceLockfileV4 with @debug.Debug::{to_repr}
 pub extend ResourceLockfileV4 with Eq::{not_equal, equal}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct ResourceContractV5 {
   schema_version : Int32
   abi_sha256 : String
@@ -55,7 +59,7 @@ pub(all) struct ResourceContractV5 {
   globals : Array[GlobalResource]
   tags : Array[TagSignatureResource]
   unsupported : Array[String]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResourceContractV5 with @debug.Debug::{to_repr}

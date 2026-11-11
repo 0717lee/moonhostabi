@@ -1,8 +1,9 @@
 ///|
 /// Errors returned when decoding the standalone resource protocol.
+#derive(Debug)
 pub(all) suberror ResourceError {
   InvalidResource(String)
-} derive(Debug)
+}
 
 ///|
 pub extend ResourceError with @debug.Debug::{to_repr}
