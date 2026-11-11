@@ -38,7 +38,7 @@ DEPENDENCIES = {
     "Milky2018/wasm_core": ("0.17.0", "5b060d59145c2ca76182497c5c98addda8eddf115a03a58c547fb6bc0c718902"),
     "moonbitlang/x": ("0.5.6", "76e14604debf264a07b788be96ae83f797cc21230e56ac5c9dc819a5877ac725"),
 }
-OFFICIAL_SOURCE = "https://raw.githubusercontent.com/moonbitlang/moon/ee2274c/"
+OFFICIAL_SOURCE = "https://raw.githubusercontent.com/moonbitlang/moon/940aa18/"
 CLIENT_SOURCES = [
     "crates/moonutil/src/mooncakes.rs",
     "crates/moonutil/src/moon_dir.rs",
@@ -408,8 +408,8 @@ def execute(args) -> int:
                 return run_process([str(x) for x in command], cwd, env, timeout or args.timeout,
                                    report, output, label, required)
             versions = run([moon, "version", "--all"], "toolchain")
-            if not re.search(r"(?m)^moon 0\.1\.20261029 \(ee2274c 2026-10-29\)", versions) or not re.search(r"(?m)^moonc v0\.10\.19\+97801ee1b \(2026-10-30\)", versions):
-                raise GateError("expected pinned moon ee2274c / moonc 0.10.19 toolchain")
+            if not re.search(r"(?m)^moon 0\.1\.20261104 \(940aa18 2026-11-04\)", versions) or not re.search(r"(?m)^moonc v0\.10\.20\+65efd5b93 \(2026-11-05\)", versions):
+                raise GateError("expected pinned moon 940aa18 / moonc 0.10.20 toolchain")
             # Design references only; exercising the installed client does not
             # require GitHub to serve its implementation on every gate run.
             report["official_client_source_references"] = [OFFICIAL_SOURCE + source for source in CLIENT_SOURCES]

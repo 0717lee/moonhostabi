@@ -146,11 +146,11 @@ try {
   }
   $moonVersionText = $moonVersionLines -join "`n"
   $moonVersionLines | Write-Output
-  if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20261029 \(ee2274c 2026-10-29\)') {
-    throw 'Expected moon 0.1.20261029 (ee2274c).'
+  if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20261104 \(940aa18 2026-11-04\)') {
+    throw 'Expected moon 0.1.20261104 (940aa18).'
   }
-  if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.19\+97801ee1b \(2026-10-30\)') {
-    throw 'Expected moonc v0.10.19+97801ee1b.'
+  if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.20\+65efd5b93 \(2026-11-05\)') {
+    throw 'Expected moonc v0.10.20+65efd5b93.'
   }
 
   $nodeVersion = (& $nodeExecutable --version) -join "`n"
@@ -177,7 +177,7 @@ try {
   Invoke-Checked -FilePath $moonExecutable -Arguments @('update') -Description 'moon update'
   Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', 'scripts/verify-vendored-parser.py') -Description 'bundled parser provenance verification'
   Invoke-Checked -FilePath $pythonExecutable -Arguments @('-B', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_vendored_parser.py', '-v') -Description 'bundled parser provenance self-tests'
-  # moon 0.10.19 on Windows passes \\?\ paths to git, which Git for Windows
+  # moon 0.10.20 on Windows passes \\?\ paths to git, which Git for Windows
   # cannot read. Formatting is platform-independent and is verified by the
   # Linux Spike job.
   if (-not $IsWindows) {
@@ -202,13 +202,13 @@ try {
     -Description 'fixture rebuild and validation'
 
   $expectedArtifactHashes = [ordered]@{
-    'breaking_v1.wasm' = '1d38ed67f00b18f6f7a69d6ebfec559d723eb0dbb0117efdfff1a1aa62e6d33d'
-    'breaking_v2.wasm' = 'b908821d4863e689d63168872dfacdfa9087f5f6bf9929e202154bd30aca1943'
-    'externref.wasm' = '1552bddee16f12cdecd511e821df30a5ff1ab285e405a5e653ed3f50a67233d3'
+    'breaking_v1.wasm' = 'b3fded318c52169620572c91cef8e867f691ec133551a710307e069a0da5287b'
+    'breaking_v2.wasm' = '9c6f5728cd9ae80b3c1637c4369a215b7a3c68b5321d9df194bd5e39e9868045'
+    'externref.wasm' = 'a21118f0ba5ee4ed051ea54b7b0ec95c7e06431392ce6e7da1f842ee0e8b571c'
     'rec-a.wasm' = '885ebd2fa3c5f4cadb67905569e1566ef84a53bc9a9b6a4cea77a7187fe873cc'
     'rec-reindexed.wasm' = 'c860e7e7fbdb91b8558a20bc5bc94f3a4fcbe71dd5036b3c6d32ac96a878cda5'
-    'recursive.wasm' = '6a02304f6cef5276a21e63827b98b26c0f14b4036feaee7c10095bdebe0ea0fc'
-    'scalar.wasm' = '9ea5d25a3e75ffead0802c0c57abf4a1abdf2ad74720d4b5f639ffaed00d5dec'
+    'recursive.wasm' = '04413b7d362ab735e5c8bb313da4420911de165f4f986c984208fb034b0d24a0'
+    'scalar.wasm' = '36c761904a3e4fd363114ed4f4e800b167925e22c0b818aaef69b4c4aacac0fd'
   }
   foreach ($entry in $expectedArtifactHashes.GetEnumerator()) {
     $artifactPath = Join-Path $repositoryRoot "fixtures/artifacts/$($entry.Key)"

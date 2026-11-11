@@ -428,6 +428,12 @@ fn cleanup_generation_test_directory(path : String) -> Unit {
   for
     name in [
       "adapter.ts", "moonhostabi.contract.json", "moonhostabi.manifest.json",
+      // Keep the scratch file used by the unowned-output assertions here too.
+      // If an earlier assertion aborts a test, leaving it behind would make
+      // the next run fail on the very first generate instead of reporting the
+      // real failure. This helper is test-only; cleanup_owned_generation_directory
+      // still refuses to delete unknown files.
+      "notes.txt",
     ] {
     let file = "\{path}/\{name}"
     if @fs.path_exists(file) {
