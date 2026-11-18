@@ -1474,7 +1474,7 @@ fn execute_command(command : CliCommand) -> CommandResult raise {
       contract_path,
       resource_contract_path,
       output_directory,
-      mode
+      mode,
     ) => {
       let artifact = read_bytes(artifact_path)
       let wasm = parse_checked_artifact(artifact)

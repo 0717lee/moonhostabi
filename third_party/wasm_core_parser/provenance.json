@@ -102,7 +102,7 @@
       "vendored_path": "src/internal/wasm_parser/instructions.mbt",
       "original_normalized_sha256": "b80083580f7b12847500c4836ab3f2b6c09494bb87868d249b88e31f148dfcac",
       "reviewed_normalized_sha256": "33cd63aa4a69fc410c9e600cc7e84cee048abc6cd756cfd11aa36232ff0468e8",
-      "vendored_sha256": "59b6ecd63229d52100090b9992d9840d1e568ead233338f8e6a811bb1b56712d",
+      "vendored_sha256": "c7574b185bad44e6a28223c3432ce4c511f1eb9b31f2c8805de8010c16425568",
       "implementation_changed_from_archive": true,
       "local_modifications": [
         "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF.",

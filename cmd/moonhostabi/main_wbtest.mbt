@@ -200,7 +200,7 @@ test "verify dispatch reports success and readable invalid inputs on stdout" {
         "contract": Object(_),
         "generator": Object(_),
         ..
-      }
+      },
     ) else {
     fail("expected canonical verification report")
   }
@@ -248,7 +248,7 @@ test "inspect emits machine-assertable scalar ABI JSON" {
         "types": Array(types),
         "features": Array(features),
         ..
-      }
+      },
     ) else {
     fail("expected canonical ABI JSON object")
   }
@@ -264,7 +264,7 @@ test "inspect emits machine-assertable scalar ABI JSON" {
         "params": Array(first_params),
         "results": Array(first_results),
         ..
-      }
+      },
     ) else {
     fail("expected first exported function")
   }
@@ -278,7 +278,7 @@ test "inspect emits machine-assertable scalar ABI JSON" {
         "params": Array(second_params),
         "results": Array(second_results),
         ..
-      }
+      },
     ) else {
     fail("expected second exported function")
   }
