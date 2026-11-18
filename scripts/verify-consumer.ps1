@@ -73,9 +73,9 @@ try {
     throw 'Expected the existing runtime/node_modules TypeScript installation.'
   }
   $version = Invoke-Checked $moon @('version', '--all') 'toolchain'
-  if ($version -notmatch '(?m)^moon 0\.1\.20261104 \(940aa18 2026-11-04\)' -or
-      $version -notmatch '(?m)^moonc v0\.10\.20\+65efd5b93 \(2026-11-05\)') {
-    throw "Expected the pinned MoonBit 0.10.20 toolchain.`n$version"
+  if ($version -notmatch '(?m)^moon 0\.1\.20261117 \(eb64713 2026-11-17\)' -or
+      $version -notmatch '(?m)^moonc v0\.10\.21\+06da1ed44 \(2026-11-16\)') {
+    throw "Expected the pinned MoonBit 0.10.21 toolchain.`n$version"
   }
   $null = Invoke-Checked $node @('--version') 'node-version'
   $null = Invoke-Checked $node @($tsc, '--version') 'typescript-version'

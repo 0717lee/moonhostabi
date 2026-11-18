@@ -164,7 +164,7 @@
       "local_modifications": [
         "Add an Apache-2.0 SPDX/provenance header; preserve upstream source headers; normalize CRLF/CR to LF.",
         "Formatting with the MoonBit 0.10.16 formatter (Int to Int32 canonicalization).",
-        "Migrate `} derive(...)` to `#derive(...)` for MoonBit 0.10.20 --deny-warn."
+        "Migrate `} derive(...)` to `#derive(...)` for --deny-warn CI gates."
       ]
     },
     {

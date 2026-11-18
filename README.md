@@ -11,7 +11,7 @@ validation evidence](docs/validation.md) for local results, historical public
 Linux/Windows CI runs, hashes, runtime observations, and limits.
 
 Published release: `0717lee/moonhostabi@0.6.1`, verified with
-`moonc v0.10.20+65efd5b93`. See
+`moonc v0.10.21+06da1ed44`. See
 [release availability and installation](docs/library-api.md),
 [Mooncakes](https://mooncakes.io/docs/0717lee/moonhostabi) and the
 [Changelog](CHANGELOG.md).
@@ -77,9 +77,9 @@ before importing packages from a downstream module.
 ## Reproduce the Spike
 
 Prerequisites are PowerShell 7, a MoonBit toolchain reporting `moon
-0.1.20261104` / `moonc v0.10.20+65efd5b93` / `moonrun 0.1.20261104`, Node.js
+0.1.20261117` / `moonc v0.10.21+06da1ed44` / `moonrun 0.1.20261117`, Node.js
 `24.22.0` with npm `11.19.1`, and `wasm-tools 1.258.0`. CI obtains that
-toolchain from the official installer snapshot `0.10.20+65efd5b93`; the
+toolchain from the official installer snapshot `0.10.21+06da1ed44`; the
 snapshot selector is distinct from the reported `moon` version. The command
 below installs locked npm dependencies and the pinned Playwright Chromium
 build as part of the gate:
