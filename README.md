@@ -1,5 +1,7 @@
 # MoonHostABI
 
+[![Verification](https://github.com/0717lee/moonhostabi/actions/workflows/ci.yml/badge.svg)](https://github.com/0717lee/moonhostabi/actions/workflows/ci.yml)
+
 Artifact-first MoonBit Wasm-GC Host ABI lock, adapter, and validation toolchain.
 
 MoonHostABI projects a runtime-facing ABI from compiled MoonBit Wasm-GC,
@@ -8,9 +10,11 @@ host-contract drift, and emits a strict TypeScript/ESM adapter. See [the
 validation evidence](docs/validation.md) for local results, historical public
 Linux/Windows CI runs, hashes, runtime observations, and limits.
 
-Local candidate: `0717lee/moonhostabi@0.6.1` (unreleased), verified with
-`moonc v0.10.20+65efd5b93`. Published release: `0717lee/moonhostabi@0.6.0`. See
-[release availability and installation](docs/library-api.md).
+Published release: `0717lee/moonhostabi@0.6.1`, verified with
+`moonc v0.10.20+65efd5b93`. See
+[release availability and installation](docs/library-api.md),
+[Mooncakes](https://mooncakes.io/docs/0717lee/moonhostabi) and the
+[Changelog](CHANGELOG.md).
 
 Version `0.6.0` adds [checked input limits](docs/input-limits.md),
 [reproducible native benchmarks](docs/performance.md), and

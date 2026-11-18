@@ -1,15 +1,18 @@
 # Changelog
 
-## [0.6.1] - Unreleased
+## [0.6.1] - 2026-11-18
 
 ### Changed
 
-- Pin the verification and release toolchains to `moonc v0.10.14+7d59c7ec9`
-  (`moon` / `moonrun 0.1.20260920`), including platform archive checksums.
-- Explicitly export existing public `Eq`, `Debug`, and `Show` methods for
-  compatibility with the new compiler's warning checks.
-- Remove unused package imports and refresh compiled fixtures and validation
-  evidence for the pinned compiler. Function and resource ABI formats are unchanged.
+- Pin the verification and release toolchains to `moonc v0.10.20+65efd5b93`
+  (`moon` / `moonrun 0.1.20261104`), including Linux/Windows archive checksums.
+- Migrate 63 `} derive(...)` declarations to `#derive(...)` so the
+  `--deny-warn` library gates no longer treat `deprecated_syntax` as an error.
+- Regenerate Wasm fixtures, oracle text, expected hashes, the machine-checked
+  report example, and vendored parser provenance for the new compiler.
+- Fix test isolation: `cleanup_generation_test_directory` now removes the
+  scratch `notes.txt`, so a failed assertion cannot poison later runs.
+- Record the compatibility check in `docs/TOOLCHAIN-COMPATIBILITY.md`.
 
 ## [0.6.0] - 2026-09-29
 
