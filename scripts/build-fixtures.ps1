@@ -41,11 +41,11 @@ if ($LASTEXITCODE -ne 0) {
   throw "moon version --all failed with exit code $LASTEXITCODE"
 }
 $moonVersionText = $moonVersionOutput -join "`n"
-if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20261117 \(eb64713 2026-11-17\)\s+.+$') {
-  throw "Expected moon 0.1.20261117 (eb64713), got '$($moonVersionOutput -join ' ')'."
+if ($moonVersionText -notmatch '(?m)^moon 0\.1\.20261126 \(ccd306a 2026-11-26\)\s+.+$') {
+  throw "Expected moon 0.1.20261126 (ccd306a), got '$($moonVersionOutput -join ' ')'."
 }
-if ($moonVersionText -notmatch '(?m)^moonc v0\.10\.21\+06da1ed44 \(2026-11-16\)\s+.+$') {
-  throw "Expected moonc v0.10.21+06da1ed44, got '$($moonVersionOutput -join ' ')'."
+if ($moonVersionText -notmatch '(?m)^moonc v1\.0\.0-rc1\+3c0520448 \(2026-11-26\)\s+.+$') {
+  throw "Expected moonc v1.0.0-rc1+3c0520448, got '$($moonVersionOutput -join ' ')'."
 }
 
 $bundledTools = @()

@@ -1,22 +1,23 @@
-# 工具链兼容验证（2026-11-11）
+# 工具链兼容验证（2026-11-26）
 
 按 MoonBit 开源大赛组委会统一维护提醒，使用官方当前发布工具链重新验证。
 
 ## 实际工具链（`moon version --all`）
 
 ```
-moon     0.1.20261117 (eb64713 2026-11-17)
-moonc    v0.10.21+06da1ed44 (2026-11-16)
-moonrun  0.1.20261117 (eb64713 2026-11-17)
+moon     0.1.20261126 (ccd306a 2026-11-26)
+moonc    v1.0.0-rc1+3c0520448 (2026-11-26)
+moonrun  0.1.20261126 (ccd306a 2026-11-26)
 ```
 
-CI 固定版本：`0.10.21+06da1ed44`（`ci.yml`、`release.yml`，含 Linux/Windows 归档 SHA-256 校验），常量由 `scripts/validate_workflows.py` 双处校验。
+CI 固定版本：`1.0.0-rc1+3c0520448`（`ci.yml`、`release.yml`，含 Linux/Windows 归档 SHA-256 校验），常量由 `scripts/validate_workflows.py` 双处校验。
 
 ## 标准入口验证结果
 
 | 项目 | 结果 |
 |---|---|
-| `moon check` | 0 errors（62 warnings） |
+| `moon check` | 0 errors |
+| `moon check --target wasm/js/wasm-gc --deny-warn` | 三目标均通过（无警告） |
 | `moon build` | 通过 |
 | `moon test --target native` | 194/194 |
 | `moon test --target js` | 157/157 |
@@ -38,8 +39,8 @@ CI 的 Spike 在 Linux / Windows 双平台执行完整验证，覆盖 native / j
 
 完整 `scripts/verify-spike.ps1` 需要 PowerShell 7 与 `wasm-tools 1.258.0`（CI 已提供）；本机仅有 PowerShell 5.1，因此 fixture 重建使用 `-KeepBuild`，完整 Spike 由 CI 执行。
 
-## 0.10.21 升级（2026-11-18）
+## 1.0 升级（2026-11-26）
 
-- 官方发布 `moonc 0.10.21+06da1ed44`，CI/Release 的快照、归档 SHA-256、版本常量与全部校验脚本同步固定。
-- Wasm fixtures 重新生成，`verify-spike.ps1` 期望哈希、`docs/report-schema.md` 机器校验示例与 vendored provenance 同步更新；`abiSha256` 保持不变。
-- 三目标 `--deny-warn` 检查通过，测试 194 / 157 / 157，隔离包消费者 GO。
+- 官方发布 `moonc 1.0.0-rc1+3c0520448`（`moon` / `moonrun 0.1.20261126`），CI/Release 的快照、归档 SHA-256、版本常量与全部校验脚本同步固定。
+- Wasm fixtures 用 1.0 工具链重新生成：5 个 `fixtures/artifacts/*.wasm` 与对应 `fixtures/oracle/*.wat` 仅 `processed-by` 版本串变化（每个文件 +2 字节），`scripts/verify-spike.ps1` 期望哈希与 `docs/report-schema.md` 的机器校验示例同步更新；`abiSha256` 保持不变。
+- 三目标 `--deny-warn` 检查通过，测试 194 / 157 / 157，`moon info` 无接口漂移。

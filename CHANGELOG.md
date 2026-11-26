@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Pin the verification and release toolchains to `moonc v1.0.0-rc1+3c0520448`
+  (`moon` / `moonrun 0.1.20261126`), including updated Linux/Windows archive
+  and installer checksums.
+- Regenerate the Wasm fixtures and oracle text for the new compiler; only the
+  embedded `processed-by` producer string changes, `abiSha256` is unchanged.
+- Refresh the expected fixture hashes in `scripts/verify-spike.ps1` and the
+  machine-checked report example in `docs/report-schema.md`.
+
 ## [0.6.1] - 2026-11-18
 
 ### Changed
